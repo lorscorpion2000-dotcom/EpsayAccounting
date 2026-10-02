@@ -43,3 +43,44 @@ snapshot.txt
 # ═══════════════════════════════════════════════════════════
 /modules/
 /snapshot.txt
+
+# ═══════════════════════════════════════════════════════════
+# User uploads
+# ═══════════════════════════════════════════════════════════
+backend/uploads/
+
+# ═══════════════════════════════════════════════════════════
+# Corrupted backup files
+# ═══════════════════════════════════════════════════════════
+*.corrupt-bak
+*.corrupted
+*.corrupt
+
+# ═══════════════════════════════════════════════════════════
+# Build cache
+# ═══════════════════════════════════════════════════════════
+*.tsbuildinfo
+
+# ═══════════════════════════════════════════════════════════
+# One-off patch scripts (root level)
+# ═══════════════════════════════════════════════════════════
+/scripts/add-*.mjs
+/scripts/check-*.mjs
+/scripts/fix-*.mjs
+/scripts/patch-*.mjs
+/scripts/setup-*.mjs
+/scripts/recover-*.mjs
+/scripts/rebuild-*.mjs
+/scripts/rearrange-*.mjs
+/scripts/enhance-*.mjs
+/scripts/diagnose-*.mjs
+/scripts/create-*.mjs
+/scripts/optimize-*.mjs
+/scripts/find-*.mjs
+/scripts/replace-*.mjs
+/scripts/show-*.mjs
+/scripts/try-*.mjs
+/scripts/update-*.mjs
+/scripts/rewrite-*.mjs
+/scripts/audit-*.mjs
+/scripts/bundle-*.mjs
