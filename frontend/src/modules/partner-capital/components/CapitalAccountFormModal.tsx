@@ -1,0 +1,126 @@
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { X, Save, Wallet } from 'lucide-react';
+import { partnerCapitalApi } from '../services/partner-capital.api';
+import { partnersApi } from '@/modules/partners/services/partners.api';
+import { api } from '@/services/api';
+import type { Partner, Project } from '@/types/project';
+import type { CapitalAccount } from '../services/partner-capital.api';
+
+interface Props {
+  isOpen: boolean;
+  editing?: CapitalAccount | null;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+interface FormData {
+  partnerId: string;
+  projectId?: string;
+  notes?: string;
+}
+
+export default function CapitalAccountFormModal({ isOpen, editing, onClose, onSaved }: Props) {
+  const isEdit = !!editing;
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    Promise.all([
+      partnersApi.list({ type: 'PARTNER' }).catch(() => []),
+      api.get('/projects').then((r) => r.data).catch(() => []),
+    ]).then(([p, pr]) => { setPartners(p); setProjects(pr); });
+
+    if (editing) {
+      reset({
+        partnerId: editing.partnerId,
+        projectId: editing.projectId || undefined,
+        notes: editing.notes || undefined,
+      });
+    } else {
+      reset({ partnerId: '', projectId: undefined, notes: undefined });
+    }
+  }, [isOpen, editing, reset]);
+
+  if (!isOpen) return null;
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      const payload = { ...data, projectId: data.projectId || undefined };
+      if (isEdit) {
+        toast.error('حساب سرمایه قابل ویرایش نیست');
+        return;
+      }
+      await partnerCapitalApi.accounts.create(payload);
+      toast.success('حساب سرمایه ایجاد شد');
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-md">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">
+              {isEdit ? 'حساب سرمایه' : 'حساب سرمایه جدید'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          <div>
+            <label className="label">شریک *</label>
+            <select
+              {...register('partnerId', { required: 'انتخاب شریک الزامی است' })}
+              className="input"
+              disabled={isEdit}
+            >
+              <option value="">— انتخاب کنید —</option>
+              {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            {errors.partnerId && <p className="text-xs text-red-500 mt-1">{errors.partnerId.message}</p>}
+          </div>
+
+          <div>
+            <label className="label">پروژه (اختیاری)</label>
+            <select {...register('projectId')} className="input" disabled={isEdit}>
+              <option value="">— شرکت (عمومی) —</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              خالی بگذارید تا حساب به‌عنوان حساب عمومی شرکت ایجاد شود
+            </p>
+          </div>
+
+          <div>
+            <label className="label">توضیحات</label>
+            <textarea rows={2} {...register('notes')} className="input resize-none" />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="btn-secondary">انصراف</button>
+            <button type="submit" className="btn-primary">
+              <Save className="w-4 h-4" />
+              ایجاد حساب
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,572 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../shared/prisma/prisma.service';
+
+@Injectable()
+export class ApprovalsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getPending(userId?: string) {
+    const [
+      pettyCashTxs,
+      pettyCashRequests,
+      purchaseReqs,
+      purchaseOrders,
+      dailyReports,
+      goodsReceipts,
+      subcontractorStatements,
+      leaveRequests,
+      advanceRequests,
+    ] = await Promise.all([
+      this.prisma.pettyCashTransaction.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          account: {
+            select: {
+              id: true, code: true, name: true,
+              holder: { select: { id: true, fullName: true } },
+            },
+          },
+          project: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.pettyCashRequest.findMany({
+        where: { status: { in: ['PENDING', 'APPROVED'] } },
+        include: {
+          account: {
+            select: {
+              id: true, code: true, name: true,
+              holder: { select: { id: true, fullName: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.purchaseRequest.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          project: { select: { id: true, code: true, name: true } },
+          requester: { select: { id: true, fullName: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.purchaseOrder.findMany({
+        where: { status: 'DRAFT' },
+        include: {
+          project: { select: { id: true, code: true, name: true } },
+          supplier: { select: { id: true, code: true, name: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.dailyReport.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          project: { select: { id: true, code: true, name: true } },
+          createdBy: { select: { id: true, fullName: true } },
+          _count: { select: { workers: true, equipments: true, materials: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.goodsReceipt.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          project: { select: { id: true, code: true, name: true } },
+          supplier: { select: { id: true, code: true, name: true } },
+          warehouse: { select: { id: true, code: true, name: true } },
+          createdBy: { select: { id: true, fullName: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.subcontractorStatement.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          contractor: { select: { id: true, code: true, name: true } },
+          project: { select: { id: true, code: true, name: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.leaveRequest.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          employee: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.advanceRequest.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          employee: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      pettyCashTransactions: pettyCashTxs.map((tx) => ({
+        id: tx.id,
+        module: 'petty-cash-transaction',
+        type: 'EXPENSE',
+        code: tx.code,
+        title: `تراکنش تنخواه ${tx.type === 'EXPENSE' ? 'هزینه' : 'شارژ'}`,
+        description: tx.description,
+        amount: tx.amount,
+        date: tx.txDate,
+        status: tx.status,
+        requester: tx.account?.holder?.fullName || '—',
+        accountName: tx.account?.name,
+        accountCode: tx.account?.code,
+        projectName: tx.project?.name || null,
+        recipient: tx.recipient,
+        category: tx.category,
+        invoiceNumber: tx.invoiceNumber,
+        createdAt: tx.createdAt,
+        raw: tx,
+      })),
+
+      pettyCashRequests: pettyCashRequests.map((req) => ({
+        id: req.id,
+        module: 'petty-cash-request',
+        type: 'FUNDING',
+        code: req.code,
+        title: 'درخواست شارژ تنخواه',
+        description: req.reason,
+        amount: req.amount,
+        date: req.requestDate,
+        status: req.status,
+        requester: req.account?.holder?.fullName || '—',
+        accountName: req.account?.name,
+        accountCode: req.account?.code,
+        currentBalance: req.currentBalance,
+        iban: req.iban,
+        createdAt: req.createdAt,
+        raw: req,
+      })),
+
+      purchaseRequests: purchaseReqs.map((pr) => ({
+        id: pr.id,
+        module: 'purchase-request',
+        type: 'PURCHASE',
+        code: pr.code,
+        title: 'درخواست خرید',
+        description: pr.reason || `${pr._count?.items || 0} قلم کالا/خدمت`,
+        amount: 0,
+        date: pr.requestDate,
+        status: pr.status,
+        requester: pr.requester?.fullName || '—',
+        projectName: pr.project?.name || null,
+        projectCode: pr.project?.code,
+        itemCount: pr._count?.items || 0,
+        department: pr.department,
+        deliveryLocation: pr.deliveryLocation,
+        createdAt: pr.createdAt,
+        raw: pr,
+      })),
+
+      purchaseOrders: purchaseOrders.map((po) => ({
+        id: po.id,
+        module: 'purchase-order',
+        type: 'PO',
+        code: po.code,
+        title: 'دستور خرید',
+        description: `${po._count?.items || 0} قلم - تأمین‌کننده: ${po.supplier?.name || '—'}`,
+        amount: po.totalAmount,
+        date: po.poDate,
+        status: po.status,
+        requester: 'سیستم',
+        supplierName: po.supplier?.name,
+        projectName: po.project?.name || null,
+        projectCode: po.project?.code,
+        itemCount: po._count?.items || 0,
+        createdAt: po.createdAt,
+        raw: po,
+      })),
+
+      dailyReports: dailyReports.map((dr) => ({
+        id: dr.id,
+        module: 'daily-report',
+        type: 'SITE_OPS',
+        code: dr.code,
+        title: 'گزارش روزانه کارگاه',
+        description: dr.operations
+          ? dr.operations.slice(0, 120)
+          : `${dr._count?.workers || 0} اکیپ، ${dr._count?.equipments || 0} ماشین`,
+        amount: 0,
+        date: dr.reportDate,
+        status: dr.status,
+        requester: dr.createdBy?.fullName || '—',
+        projectName: dr.project?.name || null,
+        projectCode: dr.project?.code,
+        itemCount: (dr._count?.workers || 0) + (dr._count?.equipments || 0) + (dr._count?.materials || 0),
+        createdAt: dr.createdAt,
+        raw: dr,
+      })),
+
+      goodsReceipts: goodsReceipts.map((gr) => ({
+        id: gr.id,
+        module: 'goods-receipt',
+        type: 'RECEIPT',
+        code: gr.code,
+        title: 'رسید انبار',
+        description: `${gr._count?.items || 0} قلم - انبار: ${gr.warehouse?.name || '—'}`,
+        amount: gr.totalValue,
+        date: gr.receiptDate,
+        status: gr.status,
+        requester: gr.createdBy?.fullName || '—',
+        supplierName: gr.supplier?.name,
+        projectName: gr.project?.name || null,
+        projectCode: gr.project?.code,
+        warehouseName: gr.warehouse?.name,
+        itemCount: gr._count?.items || 0,
+        createdAt: gr.createdAt,
+        raw: gr,
+      })),
+
+      subcontractorStatements: subcontractorStatements.map((s) => ({
+        id: s.id,
+        module: 'subcontractor-statement',
+        type: 'STATEMENT',
+        code: s.code,
+        title: `صورت‌وضعیت شماره ${s.statementNumber}`,
+        description: `پیمانکار: ${s.contractor?.name || '—'} - ${s._count?.items || 0} قلم`,
+        amount: s.netPayable,
+        date: s.periodEnd,
+        status: s.status,
+        requester: s.contractor?.name || '—',
+        projectName: s.project?.name || null,
+        projectCode: s.project?.code,
+        supplierName: s.contractor?.name,
+        itemCount: s._count?.items || 0,
+        createdAt: s.createdAt,
+        raw: s,
+      })),
+
+      leaveRequests: leaveRequests.map((lr) => ({
+        id: lr.id,
+        module: 'leave-request',
+        type: 'LEAVE',
+        code: lr.code,
+        title: 'درخواست مرخصی',
+        description: `${lr.leaveType} - ${lr.days} روز`,
+        amount: 0,
+        date: lr.startDate,
+        status: lr.status,
+        requester: lr.employee?.name || '—',
+        employeeName: lr.employee?.name,
+        leaveType: lr.leaveType,
+        days: lr.days,
+        createdAt: lr.createdAt,
+        raw: lr,
+      })),
+
+      advanceRequests: advanceRequests.map((ar) => ({
+        id: ar.id,
+        module: 'advance-request',
+        type: 'ADVANCE',
+        code: ar.code,
+        title: 'درخواست مساعده',
+        description: ar.reason || 'درخواست مساعده از حقوق',
+        amount: ar.amount,
+        date: ar.requestDate,
+        status: ar.status,
+        requester: ar.employee?.name || '—',
+        employeeName: ar.employee?.name,
+        createdAt: ar.createdAt,
+        raw: ar,
+      })),
+    };
+  }
+
+  async getStats() {
+    const [
+      pettyCashTxCount,
+      pettyCashReqCount,
+      purchaseReqCount,
+      purchaseOrderCount,
+      dailyReportCount,
+      goodsReceiptCount,
+      subcontractorStatementCount,
+      leaveRequestCount,
+      advanceRequestCount,
+      pettyCashTxAmount,
+      pettyCashReqAmount,
+      purchaseOrderAmount,
+    ] = await Promise.all([
+      this.prisma.pettyCashTransaction.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.pettyCashRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.purchaseRequest.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.purchaseOrder.count({ where: { status: 'DRAFT' } }),
+      this.prisma.dailyReport.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.goodsReceipt.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.subcontractorStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.advanceRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.pettyCashTransaction.aggregate({
+        where: { status: 'SUBMITTED' },
+        _sum: { amount: true },
+      }),
+      this.prisma.pettyCashRequest.aggregate({
+        where: { status: 'PENDING' },
+        _sum: { amount: true },
+      }),
+      this.prisma.purchaseOrder.aggregate({
+        where: { status: 'DRAFT' },
+        _sum: { totalAmount: true },
+      }),
+    ]);
+
+    return {
+      total:
+        pettyCashTxCount +
+        pettyCashReqCount +
+        purchaseReqCount +
+        purchaseOrderCount +
+        dailyReportCount +
+        goodsReceiptCount +
+        subcontractorStatementCount +
+        leaveRequestCount +
+        advanceRequestCount,
+      byModule: {
+        pettyCashTransactions: {
+          count: pettyCashTxCount,
+          amount: Number(pettyCashTxAmount._sum.amount || 0),
+        },
+        pettyCashRequests: {
+          count: pettyCashReqCount,
+          amount: Number(pettyCashReqAmount._sum.amount || 0),
+        },
+        purchaseRequests: {
+          count: purchaseReqCount,
+          amount: 0,
+        },
+        purchaseOrders: {
+          count: purchaseOrderCount,
+          amount: Number(purchaseOrderAmount._sum.totalAmount || 0),
+        },
+        dailyReports: {
+          count: dailyReportCount,
+          amount: 0,
+        },
+        goodsReceipts: {
+          count: goodsReceiptCount,
+          amount: 0,
+        },
+        subcontractorStatements: {
+          count: subcontractorStatementCount,
+          amount: 0,
+        },
+        leaveRequests: {
+          count: leaveRequestCount,
+          amount: 0,
+        },
+        advanceRequests: {
+          count: advanceRequestCount,
+          amount: 0,
+        },
+      },
+    };
+  }
+
+  async approve(module: string, id: string, userId: string) {
+    switch (module) {
+      case 'petty-cash-transaction':
+        return this.prisma.pettyCashTransaction.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      case 'petty-cash-request':
+        return this.prisma.pettyCashRequest.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      case 'purchase-request':
+        return this.approvePurchaseRequest(id, userId);
+
+      case 'purchase-order':
+        return this.prisma.purchaseOrder.update({
+          where: { id },
+          data: { status: 'APPROVED' },
+        });
+
+      case 'daily-report':
+        return this.prisma.dailyReport.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      case 'goods-receipt':
+        return this.prisma.goodsReceipt.update({
+          where: { id },
+          data: { status: 'APPROVED' },
+        });
+
+      case 'subcontractor-statement':
+        return this.prisma.subcontractorStatement.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      case 'leave-request':
+        return this.prisma.leaveRequest.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      case 'advance-request':
+        return this.prisma.advanceRequest.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+        });
+
+      default:
+        throw new Error('ماژول نامعتبر: ' + module);
+    }
+  }
+
+  async reject(module: string, id: string, reason: string, userId: string) {
+    switch (module) {
+      case 'petty-cash-transaction':
+        return this.prisma.pettyCashTransaction.update({
+          where: { id },
+          data: {
+            status: 'REJECTED',
+            rejectedReason: reason,
+            rejectedById: userId,
+            rejectedAt: new Date(),
+          },
+        });
+
+      case 'petty-cash-request': {
+        const req = await this.prisma.pettyCashRequest.findUnique({ where: { id } });
+        return this.prisma.pettyCashRequest.update({
+          where: { id },
+          data: {
+            status: 'REJECTED',
+            reason: (req?.reason || '') + ' | دلیل رد: ' + reason,
+          },
+        });
+      }
+
+      case 'purchase-request':
+        return this.prisma.purchaseRequest.update({
+          where: { id },
+          data: { status: 'REJECTED', rejectedReason: reason },
+        });
+
+      case 'purchase-order':
+        return this.prisma.purchaseOrder.update({
+          where: { id },
+          data: { status: 'CANCELLED', notes: 'رد شده: ' + reason },
+        });
+
+      case 'daily-report':
+        return this.prisma.dailyReport.update({
+          where: { id },
+          data: { status: 'REJECTED', rejectedReason: reason },
+        });
+
+      case 'goods-receipt':
+        return this.prisma.goodsReceipt.update({
+          where: { id },
+          data: { status: 'CANCELLED' },
+        });
+
+      case 'subcontractor-statement':
+        return this.prisma.subcontractorStatement.update({
+          where: { id },
+          data: { status: 'DRAFT' },
+        });
+
+      default:
+        throw new Error('ماژول نامعتبر: ' + module);
+    }
+  }
+
+  private async approvePurchaseRequest(prId: string, userId: string) {
+    const pr = await this.prisma.purchaseRequest.findUnique({
+      where: { id: prId },
+      include: { items: true, purchaseOrders: true },
+    });
+    if (!pr) throw new NotFoundException('درخواست خرید پیدا نشد');
+
+    if (pr.purchaseOrders && pr.purchaseOrders.length > 0) {
+      return this.prisma.purchaseRequest.update({
+        where: { id: prId },
+        data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+      });
+    }
+
+    // کارپرداز
+    let assignedToId: string | null = null;
+    const purchaserRole = await this.prisma.role.findFirst({
+      where: { code: 'purchaser' },
+      include: { users: true },
+    });
+    if (purchaserRole && purchaserRole.users.length > 0) {
+      assignedToId = purchaserRole.users[0].userId;
+    }
+
+    // کد PO
+    const year = new Date().getFullYear();
+    const prefix = 'PO-' + year + '-';
+    const lastPo = await this.prisma.purchaseOrder.findFirst({
+      where: { code: { startsWith: prefix } },
+      orderBy: { code: 'desc' },
+      select: { code: true },
+    });
+    const lastNum = lastPo ? parseInt(lastPo.code.slice(prefix.length), 10) : 0;
+    const code = prefix + String(lastNum + 1).padStart(4, '0');
+
+    return this.prisma.$transaction(async (tx) => {
+      const po = await tx.purchaseOrder.create({
+        data: {
+          code,
+          prId: pr.id,
+          projectId: pr.projectId,
+          supplierId: null,
+          poDate: new Date(),
+          status: 'DRAFT',
+          notes: 'تبدیل خودکار از درخواست خرید ' + pr.code,
+          assignedToId,
+          assignedAt: new Date(),
+          createdById: userId,
+          items: {
+            create: pr.items.map((it) => ({
+              rowNumber: it.rowNumber,
+              description: it.description,
+              quantity: it.quantity,
+              unit: it.unit,
+              unitPrice: 0,
+              totalPrice: 0,
+              notes: it.notes,
+            })),
+          },
+        },
+      });
+
+      await tx.purchaseRequest.update({
+        where: { id: prId },
+        data: {
+          status: 'ORDERED',
+          approvedById: userId,
+          approvedAt: new Date(),
+        },
+      });
+
+      return po;
+    });
+  }
+}

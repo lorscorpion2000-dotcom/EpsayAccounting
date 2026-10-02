@@ -1,0 +1,126 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../shared/prisma/prisma.service';
+import { CreateAttendanceDto } from './dto/attendance.dto';
+
+@Injectable()
+export class AttendanceService {
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(query?: {
+    employeeId?: string;
+    fromDate?: string;
+    toDate?: string;
+    status?: string;
+  }) {
+    const where: any = {};
+    if (query?.employeeId) where.employeeId = query.employeeId;
+    if (query?.status) where.status = query.status;
+    if (query?.fromDate || query?.toDate) {
+      where.attendanceDate = {};
+      if (query.fromDate) where.attendanceDate.gte = new Date(query.fromDate);
+      if (query.toDate) where.attendanceDate.lte = new Date(query.toDate);
+    }
+    return this.prisma.attendance.findMany({
+      where,
+      include: {
+        employee: { select: { id: true, code: true, name: true } },
+      },
+      orderBy: { attendanceDate: 'desc' },
+      take: 500,
+    });
+  }
+
+  async findOne(id: string) {
+    const a = await this.prisma.attendance.findUnique({
+      where: { id },
+      include: { employee: true },
+    });
+    if (!a) throw new NotFoundException('رکورد حضور یافت نشد');
+    return a;
+  }
+
+  async upsert(dto: CreateAttendanceDto, userId: string) {
+    const date = new Date(dto.attendanceDate);
+    const existing = await this.prisma.attendance.findUnique({
+      where: {
+        employeeId_attendanceDate: {
+          employeeId: dto.employeeId,
+          attendanceDate: date,
+        },
+      },
+    });
+
+    if (existing) {
+      return this.prisma.attendance.update({
+        where: { id: existing.id },
+        data: {
+          checkIn: dto.checkIn,
+          checkOut: dto.checkOut,
+          workHours: dto.workHours ?? 0,
+          overtimeHours: dto.overtimeHours ?? 0,
+          status: (dto.status as any) || 'PRESENT',
+          notes: dto.notes,
+        },
+      });
+    }
+
+    return this.prisma.attendance.create({
+      data: {
+        employeeId: dto.employeeId,
+        attendanceDate: date,
+        checkIn: dto.checkIn,
+        checkOut: dto.checkOut,
+        workHours: dto.workHours ?? 0,
+        overtimeHours: dto.overtimeHours ?? 0,
+        status: (dto.status as any) || 'PRESENT',
+        notes: dto.notes,
+        createdById: userId,
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    await this.prisma.attendance.delete({ where: { id } });
+    return { success: true };
+  }
+
+  /**
+   * دریافت خلاصه حضور در یک بازه برای یک پرسنل
+   */
+  async summary(employeeId: string, fromDate: string, toDate: string) {
+    const records = await this.prisma.attendance.findMany({
+      where: {
+        employeeId,
+        attendanceDate: { gte: new Date(fromDate), lte: new Date(toDate) },
+      },
+    });
+
+    const summary = {
+      totalDays: records.length,
+      present: 0,
+      absent: 0,
+      leave: 0,
+      sick: 0,
+      holiday: 0,
+      mission: 0,
+      totalWorkHours: 0,
+      totalOvertimeHours: 0,
+    };
+
+    records.forEach((r) => {
+      summary.totalWorkHours += Number(r.workHours);
+      summary.totalOvertimeHours += Number(r.overtimeHours);
+      switch (r.status) {
+        case 'PRESENT': summary.present++; break;
+        case 'ABSENT': summary.absent++; break;
+        case 'LEAVE': summary.leave++; break;
+        case 'SICK': summary.sick++; break;
+        case 'HOLIDAY': summary.holiday++; break;
+        case 'MISSION': summary.mission++; break;
+      }
+    });
+
+    return summary;
+  }
+}

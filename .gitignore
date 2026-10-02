@@ -1,0 +1,45 @@
+# ─── Backups ──────────────────────────────────
+backups/
+*.sql
+*.sql.gz
+
+# ─── Snapshots ────────────────────────────────
+snapshots/
+
+# ─── Node ─────────────────────────────────────
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+
+# ─── Env files (contain secrets) ──────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ─── IDE ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ─── OS ───────────────────────────────────────
+Thumbs.db
+.DS_Store
+
+# ─── Backups made by our scripts ──────────────
+*.bak
+*.bak-*
+*.bak-v*
+*.bak-menu-fix
+*.bak-es-fix
+# Snapshot text files
+snapshot.txt
+!snapshot.bat
+
+# ═══════════════════════════════════════════════════════════
+# Legacy dead code (old structure, replaced by frontend/src/modules)
+# ═══════════════════════════════════════════════════════════
+/modules/
+/snapshot.txt

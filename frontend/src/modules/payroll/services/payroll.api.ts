@@ -1,0 +1,225 @@
+import { api } from '@/services/api';
+import type {
+  Employee, PayrollPeriod, PayrollRecord, AttendanceRecord, WorkLog,
+  LeaveRequest, AdvanceRequest, SubcontractorStatement,
+} from '@/types/payroll';
+
+export const payrollApi = {
+  // ===== Employees =====
+  employees: {
+    list: async (params?: { active?: boolean; type?: string; search?: string; department?: string }) => {
+      const { data } = await api.get<Employee[]>('/payroll/employees', { params });
+      return data;
+    },
+    stats: async () => {
+      const { data } = await api.get('/payroll/employees/stats');
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<Employee>('/payroll/employees/' + id);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<Employee>('/payroll/employees', payload);
+      return data;
+    },
+    update: async (id: string, payload: any) => {
+      const { data } = await api.patch<Employee>('/payroll/employees/' + id, payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/employees/' + id);
+      return data;
+    },
+  },
+
+  // ===== Periods =====
+  periods: {
+    list: async (params?: { year?: number; status?: string; projectId?: string }) => {
+      const { data } = await api.get<PayrollPeriod[]>('/payroll/periods', { params });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<PayrollPeriod>('/payroll/periods/' + id);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<PayrollPeriod>('/payroll/periods', payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/periods/' + id);
+      return data;
+    },
+    calculate: async (id: string) => {
+      const { data } = await api.patch('/payroll/periods/' + id + '/calculate');
+      return data;
+    },
+    approve: async (id: string) => {
+      const { data } = await api.patch('/payroll/periods/' + id + '/approve');
+      return data;
+    },
+    pay: async (id: string) => {
+      const { data } = await api.patch('/payroll/periods/' + id + '/pay');
+      return data;
+    },
+  },
+
+  // ===== Attendance =====
+  attendance: {
+    list: async (params?: { employeeId?: string; fromDate?: string; toDate?: string; status?: string }) => {
+      const { data } = await api.get<AttendanceRecord[]>('/payroll/attendance', { params });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<AttendanceRecord>('/payroll/attendance/' + id);
+      return data;
+    },
+    summary: async (employeeId: string, fromDate: string, toDate: string) => {
+      const { data } = await api.get('/payroll/attendance/summary', {
+        params: { employeeId, fromDate, toDate },
+      });
+      return data;
+    },
+    upsert: async (payload: any) => {
+      const { data } = await api.post<AttendanceRecord>('/payroll/attendance', payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/attendance/' + id);
+      return data;
+    },
+  },
+
+  // ===== Work Logs =====
+  workLogs: {
+    list: async (params?: { employeeId?: string; projectId?: string; fromDate?: string; toDate?: string }) => {
+      const { data } = await api.get<WorkLog[]>('/payroll/work-logs', { params });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<WorkLog>('/payroll/work-logs/' + id);
+      return data;
+    },
+    summary: async (employeeId: string, fromDate: string, toDate: string) => {
+      const { data } = await api.get('/payroll/work-logs/summary', {
+        params: { employeeId, fromDate, toDate },
+      });
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<WorkLog>('/payroll/work-logs', payload);
+      return data;
+    },
+    update: async (id: string, payload: any) => {
+      const { data } = await api.patch<WorkLog>('/payroll/work-logs/' + id, payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/work-logs/' + id);
+      return data;
+    },
+  },
+
+  // ===== Leave Requests =====
+  leaveRequests: {
+    list: async (params?: { employeeId?: string; status?: string }) => {
+      const { data } = await api.get<LeaveRequest[]>('/payroll/leave-requests', { params });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<LeaveRequest>('/payroll/leave-requests/' + id);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<LeaveRequest>('/payroll/leave-requests', payload);
+      return data;
+    },
+    approve: async (id: string) => {
+      const { data } = await api.patch('/payroll/leave-requests/' + id + '/approve');
+      return data;
+    },
+    reject: async (id: string, reason: string) => {
+      const { data } = await api.patch('/payroll/leave-requests/' + id + '/reject', { reason });
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/leave-requests/' + id);
+      return data;
+    },
+  },
+
+  // ===== Advance Requests =====
+  advanceRequests: {
+    list: async (params?: { employeeId?: string; status?: string }) => {
+      const { data } = await api.get<AdvanceRequest[]>('/payroll/advance-requests', { params });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<AdvanceRequest>('/payroll/advance-requests/' + id);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<AdvanceRequest>('/payroll/advance-requests', payload);
+      return data;
+    },
+    approve: async (id: string) => {
+      const { data } = await api.patch('/payroll/advance-requests/' + id + '/approve');
+      return data;
+    },
+    reject: async (id: string, reason: string) => {
+      const { data } = await api.patch('/payroll/advance-requests/' + id + '/reject', { reason });
+      return data;
+    },
+    pay: async (id: string) => {
+      const { data } = await api.patch('/payroll/advance-requests/' + id + '/pay');
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/advance-requests/' + id);
+      return data;
+    },
+  },
+
+  // ===== Subcontractor Statements =====
+  statements: {
+    list: async (params?: { projectId?: string; contractorId?: string; status?: string }) => {
+      const { data } = await api.get<SubcontractorStatement[]>('/payroll/subcontractor-statements', { params });
+      return data;
+    },
+    stats: async (projectId?: string) => {
+      const { data } = await api.get('/payroll/subcontractor-statements/stats', {
+        params: projectId ? { projectId } : {},
+      });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get<SubcontractorStatement>('/payroll/subcontractor-statements/' + id);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post<SubcontractorStatement>('/payroll/subcontractor-statements', payload);
+      return data;
+    },
+    update: async (id: string, payload: any) => {
+      const { data } = await api.patch<SubcontractorStatement>('/payroll/subcontractor-statements/' + id, payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/subcontractor-statements/' + id);
+      return data;
+    },
+    submit: async (id: string) => {
+      const { data } = await api.patch('/payroll/subcontractor-statements/' + id + '/submit');
+      return data;
+    },
+    approve: async (id: string) => {
+      const { data } = await api.patch('/payroll/subcontractor-statements/' + id + '/approve');
+      return data;
+    },
+    pay: async (id: string) => {
+      const { data } = await api.patch('/payroll/subcontractor-statements/' + id + '/pay');
+      return data;
+    },
+  },
+};

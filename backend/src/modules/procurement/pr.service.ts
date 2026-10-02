@@ -1,0 +1,158 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../shared/prisma/prisma.service';
+import { CreatePRDto } from './dto/create-pr.dto';
+import { UpdatePRDto } from './dto/update-pr.dto';
+
+@Injectable()
+export class PurchaseRequestsService {
+  constructor(private prisma: PrismaService) {}
+
+  private async generateCode(): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.prisma.purchaseRequest.count();
+    return 'PR-' + year + '-' + String(count + 1).padStart(4, '0');
+  }
+
+  async findAll(query?: { status?: string; projectId?: string; search?: string }) {
+    const where: any = {};
+    if (query?.status) where.status = query.status;
+    if (query?.projectId) where.projectId = query.projectId;
+    if (query?.search) {
+      where.OR = [
+        { code: { contains: query.search, mode: 'insensitive' } },
+        { reason: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    return this.prisma.purchaseRequest.findMany({
+      where,
+      include: {
+        project: { select: { id: true, code: true, name: true } },
+        requester: { select: { id: true, fullName: true } },
+        _count: { select: { items: true, rfqs: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(id: string) {
+    const pr = await this.prisma.purchaseRequest.findUnique({
+      where: { id },
+      include: {
+        project: { select: { id: true, code: true, name: true } },
+        wbsItem: { select: { id: true, code: true, title: true } },
+        requester: { select: { id: true, fullName: true } },
+        approvedBy: { select: { id: true, fullName: true } },
+        items: { orderBy: { rowNumber: 'asc' } },
+        rfqs: { select: { id: true, code: true, status: true, _count: { select: { responses: true } } } },
+      },
+    });
+    if (!pr) throw new NotFoundException('درخواست خرید یافت نشد');
+    return pr;
+  }
+
+  async create(dto: CreatePRDto, userId: string) {
+    const code = await this.generateCode();
+    return this.prisma.purchaseRequest.create({
+      data: {
+        code,
+        projectId: dto.projectId,
+        wbsItemId: dto.wbsItemId,
+        requestDate: new Date(dto.requestDate),
+        requiredDate: dto.requiredDate ? new Date(dto.requiredDate) : null,
+        requesterId: userId,
+        department: dto.department,
+        deliveryLocation: dto.deliveryLocation,
+        reason: dto.reason,
+        status: 'DRAFT',
+        createdById: userId,
+        items: {
+          create: dto.items.map((it, idx) => ({
+            rowNumber: idx + 1,
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit as any,
+            priority: (it.priority as any) || 'NORMAL',
+            notes: it.notes,
+          })),
+        },
+      },
+      include: {
+        project: { select: { id: true, code: true, name: true } },
+        items: { orderBy: { rowNumber: 'asc' } },
+      },
+    });
+  }
+
+  async update(id: string, dto: UpdatePRDto) {
+    const pr = await this.findOne(id);
+    if (pr.status !== 'DRAFT') {
+      throw new BadRequestException('فقط درخواست‌های پیش‌نویس قابل ویرایش هستند');
+    }
+
+    const data: any = {};
+    if (dto.wbsItemId !== undefined) data.wbsItemId = dto.wbsItemId;
+    if (dto.requestDate) data.requestDate = new Date(dto.requestDate);
+    if (dto.requiredDate !== undefined) data.requiredDate = dto.requiredDate ? new Date(dto.requiredDate) : null;
+    if (dto.department !== undefined) data.department = dto.department;
+    if (dto.deliveryLocation !== undefined) data.deliveryLocation = dto.deliveryLocation;
+    if (dto.reason !== undefined) data.reason = dto.reason;
+
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.items) {
+        await tx.purchaseRequestItem.deleteMany({ where: { prId: id } });
+        data.items = {
+          create: dto.items.map((it, idx) => ({
+            rowNumber: idx + 1,
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit as any,
+            priority: (it.priority as any) || 'NORMAL',
+            notes: it.notes,
+          })),
+        };
+      }
+      return tx.purchaseRequest.update({
+        where: { id },
+        data,
+        include: { items: { orderBy: { rowNumber: 'asc' } } },
+      });
+    });
+  }
+
+  async remove(id: string) {
+    const pr = await this.findOne(id);
+    if (pr.status !== 'DRAFT') {
+      throw new BadRequestException('فقط درخواست‌های پیش‌نویس قابل حذف هستند');
+    }
+    await this.prisma.purchaseRequest.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async submit(id: string) {
+    const pr = await this.findOne(id);
+    if (pr.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ارسال است');
+    if (!pr.items.length) throw new BadRequestException('درخواست باید حداقل یک قلم داشته باشد');
+    return this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { status: 'SUBMITTED' },
+    });
+  }
+
+  async approve(id: string, userId: string) {
+    const pr = await this.findOne(id);
+    if (pr.status !== 'SUBMITTED') throw new BadRequestException('فقط درخواست‌های ارسال‌شده قابل تایید هستند');
+    return this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+    });
+  }
+
+  async reject(id: string, reason: string, userId: string) {
+    const pr = await this.findOne(id);
+    if (pr.status !== 'SUBMITTED') throw new BadRequestException('فقط درخواست‌های ارسال‌شده قابل رد هستند');
+    return this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { status: 'REJECTED', rejectedReason: reason },
+    });
+  }
+}

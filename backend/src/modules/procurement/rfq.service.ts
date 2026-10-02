@@ -1,0 +1,181 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../shared/prisma/prisma.service';
+import { CreateRFQDto } from './dto/create-rfq.dto';
+import { CreateRFQResponseDto } from './dto/create-rfq-response.dto';
+import { SelectSupplierDto } from './dto/select-supplier.dto';
+
+@Injectable()
+export class RFQService {
+  constructor(private prisma: PrismaService) {}
+
+  private async generateCode(): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.prisma.rFQ.count();
+    return 'RFQ-' + year + '-' + String(count + 1).padStart(4, '0');
+  }
+
+  async findAll(query?: { prId?: string }) {
+    return this.prisma.rFQ.findMany({
+      where: query?.prId ? { prId: query.prId } : undefined,
+      include: {
+        pr: { select: { id: true, code: true, projectId: true } },
+        _count: { select: { responses: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(id: string) {
+    const rfq = await this.prisma.rFQ.findUnique({
+      where: { id },
+      include: {
+        pr: {
+          include: {
+            items: { orderBy: { rowNumber: 'asc' } },
+            project: { select: { id: true, code: true, name: true } },
+          },
+        },
+        responses: {
+          include: {
+            supplier: { select: { id: true, code: true, name: true, phone: true } },
+            items: { include: { prItem: true } },
+          },
+        },
+      },
+    });
+    if (!rfq) throw new NotFoundException('استعلام یافت نشد');
+    return rfq;
+  }
+
+  async create(dto: CreateRFQDto, userId: string) {
+    // بررسی وضعیت PR
+    const pr = await this.prisma.purchaseRequest.findUnique({ where: { id: dto.prId } });
+    if (!pr) throw new NotFoundException('درخواست خرید یافت نشد');
+    if (pr.status !== 'APPROVED') {
+      throw new BadRequestException('فقط درخواست‌های تاییدشده قابل استعلام هستند');
+    }
+
+    const code = await this.generateCode();
+
+    return this.prisma.$transaction(async (tx) => {
+      const rfq = await tx.rFQ.create({
+        data: {
+          code,
+          prId: dto.prId,
+          rfqDate: new Date(dto.rfqDate),
+          validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
+          minSuppliers: dto.minSuppliers ?? 3,
+          notes: dto.notes,
+          status: 'OPEN',
+          createdById: userId,
+          responses: {
+            create: dto.suppliers.map((s) => ({
+              supplierId: s.supplierId,
+              totalAmount: 0,
+            })),
+          },
+        },
+        include: { responses: { include: { supplier: true } } },
+      });
+
+      // به‌روزرسانی وضعیت PR
+      await tx.purchaseRequest.update({
+        where: { id: dto.prId },
+        data: { status: 'IN_RFQ' },
+      });
+
+      return rfq;
+    });
+  }
+
+  async addResponse(dto: CreateRFQResponseDto, userId: string) {
+    const rfq = await this.findOne(dto.rfqId);
+    if (rfq.status !== 'OPEN') throw new BadRequestException('استعلام بسته شده است');
+
+    // محاسبه مجموع
+    let totalAmount = 0;
+    const items = dto.items.map((it) => {
+      const prItem = rfq.pr.items.find((p) => p.id === it.prItemId);
+      if (!prItem) throw new BadRequestException('قلم ' + it.prItemId + ' یافت نشد');
+      const total = Number(it.unitPrice) * Number(prItem.quantity);
+      totalAmount += total;
+      return {
+        prItemId: it.prItemId,
+        unitPrice: it.unitPrice,
+        totalPrice: total,
+        deliveryDays: it.deliveryDays,
+        notes: it.notes,
+      };
+    });
+
+    // بررسی وجود Response قبلی برای این تأمین‌کننده
+    const existing = rfq.responses.find((r) => r.supplierId === dto.supplierId);
+
+    return this.prisma.$transaction(async (tx) => {
+      if (existing) {
+        await tx.rFQResponseItem.deleteMany({ where: { rfqResponseId: existing.id } });
+        return tx.rFQResponse.update({
+          where: { id: existing.id },
+          data: {
+            respondedAt: new Date(),
+            totalAmount,
+            items: { create: items },
+          },
+          include: { items: true, supplier: true },
+        });
+      } else {
+        return tx.rFQResponse.create({
+          data: {
+            rfqId: dto.rfqId,
+            supplierId: dto.supplierId,
+            respondedAt: new Date(),
+            totalAmount,
+            items: { create: items },
+          },
+          include: { items: true, supplier: true },
+        });
+      }
+    });
+  }
+
+  async selectSupplier(dto: SelectSupplierDto, userId: string) {
+    const response = await this.prisma.rFQResponse.findUnique({
+      where: { id: dto.rfqResponseId },
+      include: { rfq: true },
+    });
+    if (!response) throw new NotFoundException('پاسخ استعلام یافت نشد');
+    if (response.rfq.status !== 'OPEN') throw new BadRequestException('استعلام بسته شده است');
+
+    return this.prisma.$transaction(async (tx) => {
+      // لغو انتخاب‌های قبلی
+      await tx.rFQResponse.updateMany({
+        where: { rfqId: response.rfqId },
+        data: { isSelected: false },
+      });
+
+      // انتخاب جدید
+      const updated = await tx.rFQResponse.update({
+        where: { id: dto.rfqResponseId },
+        data: {
+          isSelected: true,
+          selectedAt: new Date(),
+          selectionNotes: dto.notes,
+        },
+        include: { supplier: true, items: true },
+      });
+
+      // بستن استعلام و به‌روزرسانی PR
+      await tx.rFQ.update({
+        where: { id: response.rfqId },
+        data: { status: 'CLOSED' },
+      });
+
+      await tx.purchaseRequest.update({
+        where: { id: response.rfq.prId },
+        data: { status: 'RFQ_COMPLETED' },
+      });
+
+      return updated;
+    });
+  }
+}
