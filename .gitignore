@@ -117,3 +117,4 @@ backend/uploads/
 /scripts/rewrite-*.mjs
 /scripts/audit-*.mjs
 /scripts/bundle-*.mjs
+scripts/corrupted-files.txt
