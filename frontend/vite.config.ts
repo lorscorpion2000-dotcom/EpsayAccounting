@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
@@ -59,7 +59,16 @@ export default defineConfig({
       '/api': { target: 'http://127.0.0.1:3000', changeOrigin: true },
     },
   },
-  build: {
+  preview: {
+    port: 4173,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+    },
+  },  build: {
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 800,

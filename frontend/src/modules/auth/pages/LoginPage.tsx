@@ -66,6 +66,7 @@ export default function LoginPage() {
                 <User className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
+                  autoComplete="username"
                   {...register('username', { required: 'نام کاربری الزامی است' })}
                   className="input ps-4 pe-10"
                   placeholder="admin"
@@ -84,6 +85,7 @@ export default function LoginPage() {
                 <Lock className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="password"
+                  autoComplete="current-password"
                   {...register('password', { required: 'رمز عبور الزامی است' })}
                   className="input ps-4 pe-10"
                   placeholder="••••••••"
