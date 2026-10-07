@@ -13,6 +13,28 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
   ) {}
+  // ─── helper ها برای صدور توکن ───
+  private signAccessToken(user: { id: string; username: string }): string {
+    return this.jwt.sign(
+      { sub: user.id, username: user.username },
+      {
+        secret: this.config.get<string>('jwt.secret'),
+        expiresIn: this.config.get<string>('jwt.expiresIn'),
+      },
+    );
+  }
+
+  private signRefreshToken(userId: string): string {
+    return this.jwt.sign(
+      { sub: userId, type: 'refresh' },
+      {
+        secret: this.config.get<string>('jwt.refreshSecret'),
+        expiresIn: this.config.get<string>('jwt.refreshExpiresIn'),
+      },
+    );
+  }
+
+
 
   async login(dto: LoginDto) {
     const MAX_ATTEMPTS = 5;
@@ -97,16 +119,12 @@ export class AuthService {
       ur.role.permissions.forEach((rp) => permissions.add(rp.permission.code)),
     );
 
-    const token = this.jwt.sign(
-      { sub: user.id, username: user.username },
-      {
-        secret: this.config.get<string>('jwt.secret'),
-        expiresIn: this.config.get<string>('jwt.expiresIn'),
-      },
-    );
+    const accessToken = this.signAccessToken(user);
+    const refreshToken = this.signRefreshToken(user.id);
 
     return {
-      accessToken: token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -200,5 +218,34 @@ export class AuthService {
       },
       select: { id: true, username: true, fullName: true, email: true, mobile: true },
     });
+  }
+
+  async refresh(refreshToken: string) {
+    let payload: { sub: string; type: string };
+    try {
+      payload = this.jwt.verify(refreshToken, {
+        secret: this.config.get<string>('jwt.refreshSecret'),
+      }) as { sub: string; type: string };
+    } catch {
+      throw new UnauthorizedException('توکن تازه‌سازی نامعتبر یا منقضی شده است');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('توکن تازه‌سازی نامعتبر است');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, username: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('کاربر یافت نشد یا غیرفعال است');
+    }
+
+    const accessToken = this.signAccessToken(user);
+    const refreshTokenNew = this.signRefreshToken(user.id);
+
+    return { accessToken, refreshToken: refreshTokenNew };
   }
 }

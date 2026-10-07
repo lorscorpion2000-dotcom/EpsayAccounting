@@ -24,7 +24,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login(data.username, data.password);
-      setAuth(res.accessToken, res.user);
+      setAuth(res.accessToken, res.user, res.refreshToken);
 
       // اعمال theme ذخیره‌شده کاربر
       const savedTheme = (res.user as any).themePreference;

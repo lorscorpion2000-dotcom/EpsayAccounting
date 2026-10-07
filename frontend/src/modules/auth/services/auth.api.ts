@@ -6,6 +6,10 @@ export const authApi = {
     const { data } = await api.post<LoginResponse>('/auth/login', { username, password });
     return data;
   },
+  refresh: async (refreshToken: string) => {
+    const { data } = await api.post('/auth/refresh', { refreshToken });
+    return data;
+  },
   me: async () => {
     const { data } = await api.get('/auth/me');
     return data;

@@ -49,8 +49,7 @@ import { HealthController } from './common/health/health.controller';
 @Module({
   imports: [
     ThrottlerModule.forRoot([
-      { name: 'global', ttl: 60_000, limit: 200 },
-      { name: 'login', ttl: 15 * 60_000, limit: 5 },
+      { ttl: 60_000, limit: 1000 },
     ]),
     UnitsModule,
     RecycleBinModule,
