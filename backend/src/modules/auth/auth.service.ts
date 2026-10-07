@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { validatePassword } from '../../common/validators/password.validator';
 
 @Injectable()
 export class AuthService {
@@ -172,8 +173,11 @@ export class AuthService {
     const valid = await bcrypt.compare(oldPassword, user.passwordHash);
     if (!valid) throw new UnauthorizedException('رمز عبور فعلی اشتباه است');
 
-    if (!newPassword || newPassword.length < 6) {
-      throw new UnauthorizedException('رمز جدید باید حداقل ۶ کاراکتر باشد');
+    const pwErrors = validatePassword(newPassword, user.username);
+    if (pwErrors.length) {
+      throw new BadRequestException(
+        'رمز عبور ضعیف است: ' + pwErrors.join('، '),
+      );
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);

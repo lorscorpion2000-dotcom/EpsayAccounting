@@ -14,7 +14,7 @@ export class CreateUserDto {
   @MinLength(4)
   password!: string;
 
-  @ApiProperty({ example: 'Ø¹Ù„ÛŒ Ø±Ø¶Ø§ÛŒÛŒ' })
+  @ApiProperty({ example: 'علی رضایی' })
   @IsString()
   fullName!: string;
 
@@ -38,7 +38,7 @@ export class CreateUserDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ type: [String], description: 'Ø¢Ø±Ø§ÛŒÙ‡ Ø´Ù†Ø§Ø³Ù‡ Ù†Ù‚Ø´â€ŒÙ‡Ø§' })
+  @ApiPropertyOptional({ type: [String], description: 'آرایه شناسه نقش‌ها' })
   @IsOptional()
   @IsArray()
   roleIds?: string[];

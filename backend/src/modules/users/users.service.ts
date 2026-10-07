@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { validatePassword } from '../../common/validators/password.validator';
 
 @Injectable()
 export class UsersService {
@@ -42,7 +43,7 @@ export class UsersService {
       where: { id },
       select: this.userSelect,
     });
-    if (!user) throw new NotFoundException('کاربر ÛŒافت Ù†شد');
+    if (!user) throw new NotFoundException('کاربر یافت نشد');
     return { ...user, roles: user.roles.map((r) => r.role) };
   }
 
@@ -50,7 +51,14 @@ export class UsersService {
     const exists = await this.prisma.user.findUnique({
       where: { username: dto.username },
     });
-    if (exists) throw new ConflictException('Ù†Ø§Ù… Ú©Ø§Ø±Ø¨Ø±ÛŒ ØªÚ©Ø±Ø§Ø±ÛŒ است');
+    if (exists) throw new ConflictException('نام کاربری تکراری است');
+
+    const pwErrors = validatePassword(dto.password, dto.username);
+    if (pwErrors.length) {
+      throw new BadRequestException(
+        'رمز عبور ضعیف است: ' + pwErrors.join('، '),
+      );
+    }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
@@ -81,6 +89,13 @@ export class UsersService {
 
     const data: any = { ...rest };
     if (password) {
+      const current = await this.prisma.user.findUnique({ where: { id }, select: { username: true } });
+      const pwErrors = validatePassword(password, current?.username);
+      if (pwErrors.length) {
+        throw new BadRequestException(
+          'رمز عبور ضعیف است: ' + pwErrors.join('، '),
+        );
+      }
       data.passwordHash = await bcrypt.hash(password, 10);
     }
 
