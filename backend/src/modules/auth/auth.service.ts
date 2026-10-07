@@ -14,6 +14,9 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
+    const MAX_ATTEMPTS = 5;
+    const LOCK_MINUTES = 5;
+
     const user = await this.prisma.user.findUnique({
       where: { username: dto.username },
       include: {
@@ -28,16 +31,64 @@ export class AuthService {
         },
       },
     });
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
+
+    // نکته امنیتی: پیام خطا یکسان برای «کاربر نیست» و «رمز غلط» (ضد user enumeration)
+    const GENERIC_ERROR = 'نام کاربری یا رمز عبور اشتباه است';
+
+    if (!user) {
+      throw new UnauthorizedException(GENERIC_ERROR);
+    }
+
+    // چک قفل بودن حساب
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const remainingMs = user.lockedUntil.getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60_000);
+      throw new UnauthorizedException(
+        `حساب به‌دلیل تلاش‌های ناموفق موقتاً قفل است. ${remainingMin} دقیقه دیگر تلاش کنید`,
+      );
+    }
+
+    // اگه قفل منقضی شده، پاکش کن (در ادامه هم reset می‌شه)
+    const shouldResetLock = user.lockedUntil && user.lockedUntil <= new Date();
+
+    if (!user.isActive) {
+      throw new UnauthorizedException(GENERIC_ERROR);
     }
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
 
+    if (!ok) {
+      const attempts = user.failedLoginAttempts + 1;
+      const shouldLock = attempts >= MAX_ATTEMPTS;
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: attempts,
+          lockedUntil: shouldLock
+            ? new Date(Date.now() + LOCK_MINUTES * 60_000)
+            : shouldResetLock
+              ? null
+              : user.lockedUntil,
+        },
+      });
+
+      if (shouldLock) {
+        throw new UnauthorizedException(
+          `حساب به‌دلیل ${MAX_ATTEMPTS} تلاش ناموفق، ${LOCK_MINUTES} دقیقه قفل شد`,
+        );
+      }
+      throw new UnauthorizedException(GENERIC_ERROR);
+    }
+
+    // رمز درست — reset شمارنده + آپدیت lastLoginAt
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
 
     const permissions = new Set<string>();
