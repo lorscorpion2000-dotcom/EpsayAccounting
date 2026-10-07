@@ -8,6 +8,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum FixedAssetStatus {
+  ACTIVE
+  FULLY_DEPRECIATED
+  DISPOSED
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+}
+
+enum PurchaseInvoiceStatus {
+  DRAFT
+  APPROVED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum SupplierPaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  OTHER
+}
+
+enum SalesInvoiceStatus {
+  DRAFT
+  APPROVED
+  PARTIALLY_RECEIVED
+  PAID
+  CANCELLED
+}
+
+enum SalesReceiptMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  OTHER
+}
+
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   username     String    @unique @db.VarChar(64)
@@ -17,8 +58,11 @@ model User {
   fullName     String    @map("full_name") @db.VarChar(128)
   nationalCode String?   @map("national_code") @db.VarChar(10)
   isActive     Boolean   @default(true) @map("is_active")
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  lastLoginAt         DateTime? @map("last_login_at")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   roles                       UserRole[]
@@ -31,12 +75,17 @@ model User {
   dailyReports                DailyReport[]
   payrollPeriodsCreated       PayrollPeriod[]
   approvedStatements          SubcontractorStatement[] @relation("StatementApprover")
+  journalEntriesCreated       JournalEntry[]           @relation("JournalEntryCreator")
+  journalEntriesReversed      JournalEntry[]           @relation("EntryReverser")
+  journalEntriesDeleted       JournalEntry[]           @relation("EntryDeleter")
+  auditLogs                   AuditLog[]               @relation("UserAuditLogs")
   themePreference             String?                  @map("theme_preference") @db.VarChar(64)
 
   attachmentsUploaded Attachment[] @relation("AttachmentUploader")
 
   purchasingOfficerFor   Project[]       @relation("ProjectPurchasingOfficer")
   purchaseOrdersAssigned PurchaseOrder[] @relation("POAssignedTo")
+  notifications          Notification[]
 
   @@index([isActive])
   @@map("users")
@@ -94,6 +143,7 @@ model RolePermission {
 model AuditLog {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String?  @map("user_id") @db.Uuid
+  user      User?    @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
   action    String   @db.VarChar(64)
   entity    String   @db.VarChar(64)
   entityId  String?  @map("entity_id") @db.VarChar(64)
@@ -127,8 +177,13 @@ model Partner {
   id                    String        @id @default(uuid()) @db.Uuid
   code                  String        @unique @db.VarChar(32)
   name                  String        @db.VarChar(200)
-  fatherName String?   @map("father_name") @db.VarChar(100)
-  postalCode String?   @map("postal_code") @db.VarChar(10)
+  fatherName            String?       @map("father_name") @db.VarChar(100)
+  postalCode            String?       @map("postal_code") @db.VarChar(10)
+  aliasName             String?       @map("alias_name") @db.VarChar(200)
+  jobDescription        String?       @map("job_description") @db.VarChar(500)
+  shabaNumber           String?       @map("shaba_number") @db.VarChar(26)
+  bankAccountNumber     String?       @map("bank_account_number") @db.VarChar(32)
+  bankCardNumber        String?       @map("bank_card_number") @db.VarChar(19)
   type                  PartnerType   @default(OTHER)
   nationalId            String?       @map("national_id") @db.VarChar(20)
   phone                 String?       @db.VarChar(20)
@@ -156,6 +211,14 @@ model Partner {
   capitalContributions             PartnerCapitalContribution[]
   capitalWithdrawals               PartnerCapitalWithdrawal[]
   pettyCashAccountsAsPartnerHolder PettyCashAccount[]           @relation("PCPartnerHolder")
+  cheques                          Cheque[]                     @relation("ChequePartner")
+  purchaseInvoices                 PurchaseInvoice[]            @relation("PurchaseInvoiceSupplier")
+  supplierPayments                 SupplierPayment[]            @relation("SupplierPaymentSupplier")
+  salesInvoicesAsPartner           SalesInvoice[]               @relation("SIPartner")
+  workerStatements                 WorkerStatement[]            @relation("WorkerStatementPartner")
+  // Equipment relations
+  equipmentAsOwner                 Equipment[]                  @relation("EquipmentOwner")
+  equipmentLogsAsOperator          EquipmentDailyLog[]          @relation("EquipmentLogOperator")
 
   @@index([type])
   @@map("partners")
@@ -245,6 +308,21 @@ model Project {
   legalContracts          LegalContract[]          @relation("ProjectLegalContracts")
   salesUnits              SalesUnit[]              @relation("ProjectSalesUnits")
   journalLinesAsProject   JournalLine[]            @relation("JournalLineProject")
+  costCenters             CostCenter[]             @relation("ProjectCostCenters")
+  cheques                 Cheque[]                 @relation("ChequeProject")
+  fixedAssets             FixedAsset[]             @relation("FixedAssetProject")
+  purchaseInvoices        PurchaseInvoice[]        @relation("PurchaseInvoiceProject")
+  salesInvoices           SalesInvoice[]           @relation("SIProject")
+  // Equipment relations
+  equipmentCurrent        Equipment[]              @relation("EquipmentCurrentProject")
+  equipmentDailyLogs      EquipmentDailyLog[]      @relation("EquipmentLogProject")
+  equipmentMaintenances   EquipmentMaintenance[]   @relation("EquipmentMaintenanceProject")
+  overheadAllocations     OverheadAllocationItem[] @relation("OverheadAllocationProject")
+  clientStatements        ClientStatement[]        @relation("ClientStatementProject")
+  workerStatements        WorkerStatement[]        @relation("WorkerStatementProject")
+  wbsProgressSnapshots    WbsProgressSnapshot[]    @relation("WbsProgressProject")
+  adjustmentCalculations  AdjustmentCalculation[]  @relation("AdjustmentProject")
+  materialPriceDiffs      MaterialPriceDiff[]      @relation("MPDProject")
 
   @@index([status])
   @@index([clientId])
@@ -314,15 +392,22 @@ model Contract {
 // WBS (4 Levels)
 // ============================================================
 
-enum WbsUnit {
-  SQUARE_METER
-  CUBIC_METER
-  LINEAR_METER
-  TON
-  KILOGRAM
-  NUMBER
-  SERVICE
-  LUMP
+// ============================================================
+// UNITS — واحدهای اندازهگیری قابل تعریف
+// ============================================================
+model Unit {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(32)
+  name      String   @db.VarChar(64)
+  symbol    String?  @db.VarChar(16)
+  isSystem  Boolean  @default(false) @map("is_system")
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("units")
 }
 
 enum WbsLevel {
@@ -345,7 +430,7 @@ model WbsItem {
   title String   @db.VarChar(200)
   level WbsLevel
 
-  unit       WbsUnit?
+  unit       String?  @db.VarChar(32)
   quantity   Decimal? @db.Decimal(20, 4)
   unitPrice  Decimal? @map("unit_price") @db.Decimal(20, 2)
   totalPrice Decimal? @map("total_price") @db.Decimal(24, 2)
@@ -358,10 +443,19 @@ model WbsItem {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  budgets          ProjectBudget[]
-  purchaseRequests PurchaseRequest[]
-  goodsIssues      GoodsIssue[]
-  statementItems   SubcontractorStatementItem[]
+  budgets              ProjectBudget[]
+  purchaseRequests     PurchaseRequest[]
+  goodsIssues          GoodsIssue[]
+  statementItems       SubcontractorStatementItem[]
+  purchaseInvoiceItems PurchaseInvoiceItem[]        @relation("PIItemWbs")
+  // Equipment relations
+  equipmentDailyLogs   EquipmentDailyLog[]          @relation("EquipmentLogWbs")
+
+  // Price List (BOQ)
+  priceListItemId      String?               @map("price_list_item_id") @db.Uuid
+  priceListItem        PriceListItem?        @relation("WbsPriceListItem", fields: [priceListItemId], references: [id], onDelete: SetNull)
+  clientStatementItems ClientStatementItem[] @relation("ClientStatementItemWbs")
+  progressSnapshots    WbsProgressSnapshot[] @relation("WbsProgressItem")
 
   @@index([projectId])
   @@index([parentId])
@@ -409,6 +503,13 @@ enum AccountDetailType {
   PARTNER // شخص (مشتری/تأمین‌کننده/پرسنل)
   ITEM // کالا
   PETTY_CASH // تنخواه‌گردان
+  BANK // بانک
+  CASH_REGISTER // صندوق
+  PROJECT // پروژه
+  EMPLOYEE // پرسنل
+  CONTRACTOR // پیمانکار
+  CUSTOMER // مشتری
+  SUPPLIER // تأمین‌کننده
 }
 
 enum AccountNature {
@@ -417,11 +518,12 @@ enum AccountNature {
 }
 
 model Account {
-  id     String        @id @default(uuid()) @db.Uuid
-  code   String        @unique @db.VarChar(32)
-  name   String        @db.VarChar(200)
-  level  AccountLevel
-  nature AccountNature
+  id      String          @id @default(uuid()) @db.Uuid
+  code    String          @unique @db.VarChar(32)
+  name    String          @db.VarChar(200)
+  level   AccountLevel
+  nature  AccountNature
+  subtype AccountSubtype?
 
   parentId String?   @map("parent_id") @db.Uuid
   parent   Account?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
@@ -432,13 +534,21 @@ model Account {
   description String? @db.VarChar(500)
 
   detailType AccountDetailType? // فقط برای TAFZIL
-  detailId   String?            @map("detail_id") @db.Uuid // UUID شخص/کالا/تنخواه
+  detailId   String?            @map("detail_id") @db.VarChar(64) // UUID شخص/کالا/تنخواه
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  journalLines            JournalLine[]
-  pettyCashLinkedAccounts PettyCashAccount[] @relation("PettyCashAccountLink")
+  journalLines                   JournalLine[]
+  pettyCashLinkedAccounts        PettyCashAccount[]    @relation("PettyCashAccountLink")
+  mappingDebits                  AccountMapping[]      @relation("MappingDebit")
+  mappingCredits                 AccountMapping[]      @relation("MappingCredit")
+  bankAccounts                   BankAccount[]         @relation("BankAccountGL")
+  fixedAssetsAsAsset             FixedAsset[]          @relation("FixedAssetGL")
+  fixedAssetsAsDepreciation      FixedAsset[]          @relation("FixedAssetDeprecGL")
+  fixedAssetsAsAccumulatedDeprec FixedAsset[]          @relation("FixedAssetAccumGL")
+  purchaseInvoiceItems           PurchaseInvoiceItem[] @relation("PIItemAccount")
+  salesInvoiceItems              SalesInvoiceItem[]    @relation("SIItemAccount")
 
   @@index([parentId])
   @@index([level])
@@ -451,18 +561,21 @@ enum FiscalYearStatus {
 }
 
 model FiscalYear {
-  id        String           @id @default(uuid()) @db.Uuid
-  code      String           @unique @db.VarChar(16)
-  name      String           @db.VarChar(100)
-  startDate DateTime         @map("start_date") @db.Date
-  endDate   DateTime         @map("end_date") @db.Date
-  status    FiscalYearStatus @default(OPEN)
-  isCurrent Boolean          @default(false) @map("is_current")
+  id              String           @id @default(uuid()) @db.Uuid
+  code            String           @unique @db.VarChar(16)
+  name            String           @db.VarChar(100)
+  startDate       DateTime         @map("start_date") @db.Date
+  endDate         DateTime         @map("end_date") @db.Date
+  status          FiscalYearStatus @default(OPEN)
+  isCurrent       Boolean          @default(false) @map("is_current")
+  nextEntryNumber Int              @default(1) @map("next_entry_number")
+  lockedMonths    Json?            @map("locked_months")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  journalEntries JournalEntry[]
+  journalEntries      JournalEntry[]
+  overheadAllocations OverheadAllocation[] @relation("OverheadFiscalYear")
 
   @@map("fiscal_years")
 }
@@ -486,13 +599,21 @@ model JournalEntry {
   status      JournalStatus @default(DRAFT)
 
   sourceType String? @map("source_type") @db.VarChar(64)
-  sourceId   String? @map("source_id") @db.Uuid
+  sourceId   String? @map("source_id") @db.VarChar(64)
 
   totalDebit  Decimal @default(0) @map("total_debit") @db.Decimal(20, 2)
   totalCredit Decimal @default(0) @map("total_credit") @db.Decimal(20, 2)
 
   createdById    String?                @map("created_by_id") @db.Uuid
+  createdBy      User?                  @relation("JournalEntryCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  reversedById   String?                @map("reversed_by_id") @db.Uuid
+  reversedBy     User?                  @relation("EntryReverser", fields: [reversedById], references: [id], onDelete: SetNull)
+  deletedAt      DateTime?              @map("deleted_at")
+  deletedById    String?                @map("deleted_by_id") @db.Uuid
+  deletedBy      User?                  @relation("EntryDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
   pettyCashTxes  PettyCashTransaction[] @relation("PettyCashTxJournal")
+  chequeIssued   Cheque[]               @relation("ChequeIssuedJE")
+  chequeSettled  Cheque[]               @relation("ChequeSettledJE")
   postedAt       DateTime?              @map("posted_at")
   reversedAt     DateTime?              @map("reversed_at")
   reversalReason String?                @map("reversal_reason") @db.VarChar(500)
@@ -500,12 +621,137 @@ model JournalEntry {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  lines JournalLine[]
+  lines                  JournalLine[]
+  fixedAssetsAcquisition FixedAsset[]           @relation("FixedAssetAcquisitionJE")
+  fixedAssetsDisposal    FixedAsset[]           @relation("FixedAssetDisposalJE")
+  depreciationEntries    DepreciationEntry[]    @relation("DepreciationEntryJE")
+  purchaseInvoices       PurchaseInvoice[]      @relation("PIJournal")
+  supplierPayments       SupplierPayment[]      @relation("SupplierPaymentJournal")
+  salesInvoices          SalesInvoice[]         @relation("SIJournal")
+  salesReceipts          SalesReceipt[]         @relation("SRJournal")
+  overheadAllocation     OverheadAllocation?    @relation("OverheadAllocationJE")
+  clientStatements       ClientStatement[]      @relation("ClientStatementJE")
+  adjustmentCalculation  AdjustmentCalculation? @relation("AdjustmentJE")
+  materialPriceDiff      MaterialPriceDiff?     @relation("MPDJE")
 
   @@unique([fiscalYearId, entryNumber])
   @@index([entryDate])
   @@index([status])
   @@map("journal_entries")
+}
+
+// ============================================================
+// COST CENTER (مرکز هزینه)
+// ============================================================
+// ============================================================
+// BANK (حساب بانکی + چک)
+// ============================================================
+enum ChequeDirection {
+  ISSUED // صادره (پرداختی)
+  RECEIVED // دریافتی
+}
+
+enum ChequeStatus {
+  PENDING // در جریان
+  PASSED // وصول شده
+  RETURNED // برگشتی
+  CANCELLED // ابطال شده
+}
+
+model BankAccount {
+  id            String  @id @default(uuid()) @db.Uuid
+  code          String  @unique @db.VarChar(32)
+  name          String  @db.VarChar(200)
+  bankName      String? @map("bank_name") @db.VarChar(200)
+  branchName    String? @map("branch_name") @db.VarChar(200)
+  accountNumber String? @map("account_number") @db.VarChar(64)
+  shabaNumber   String? @map("shaba_number") @db.VarChar(64)
+
+  glAccountId String?  @map("gl_account_id") @db.Uuid
+  glAccount   Account? @relation("BankAccountGL", fields: [glAccountId], references: [id])
+
+  isActive    Boolean @default(true) @map("is_active")
+  description String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cheques          Cheque[]
+  supplierPayments SupplierPayment[] @relation("SupplierPaymentBank")
+  salesReceipts    SalesReceipt[]    @relation("SRBank")
+
+  @@index([isActive])
+  @@map("bank_accounts")
+}
+
+model Cheque {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(32)
+
+  direction ChequeDirection
+  status    ChequeStatus    @default(PENDING)
+
+  serial      String   @db.VarChar(64)
+  amount      Decimal  @db.Decimal(20, 2)
+  issueDate   DateTime @map("issue_date") @db.Date
+  dueDate     DateTime @map("due_date") @db.Date
+  description String?  @db.VarChar(500)
+
+  bankAccountId String?      @map("bank_account_id") @db.Uuid
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+
+  partnerId String?  @map("partner_id") @db.Uuid
+  partner   Partner? @relation("ChequePartner", fields: [partnerId], references: [id])
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("ChequeProject", fields: [projectId], references: [id])
+
+  issuedJournalEntryId  String?       @map("issued_journal_entry_id") @db.Uuid
+  issuedJournalEntry    JournalEntry? @relation("ChequeIssuedJE", fields: [issuedJournalEntryId], references: [id])
+  settledJournalEntryId String?       @map("settled_journal_entry_id") @db.Uuid
+  settledJournalEntry   JournalEntry? @relation("ChequeSettledJE", fields: [settledJournalEntryId], references: [id])
+
+  passedAt    DateTime? @map("passed_at")
+  returnedAt  DateTime? @map("returned_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  note        String?   @db.VarChar(500)
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([direction])
+  @@index([status])
+  @@index([dueDate])
+  @@index([partnerId])
+  @@map("cheques")
+}
+
+model CostCenter {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(32)
+  name        String  @db.VarChar(200)
+  description String? @db.VarChar(500)
+
+  parentId String?      @map("parent_id") @db.Uuid
+  parent   CostCenter?  @relation("CCParent", fields: [parentId], references: [id])
+  children CostCenter[] @relation("CCParent")
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("ProjectCostCenters", fields: [projectId], references: [id])
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  journalLines JournalLine[]
+  fixedAssets  FixedAsset[]  @relation("FixedAssetCostCenter")
+
+  @@index([parentId])
+  @@index([projectId])
+  @@index([isActive])
+  @@map("cost_centers")
 }
 
 model JournalLine {
@@ -525,6 +771,9 @@ model JournalLine {
   partner   Partner? @relation("JournalLinePartner", fields: [partnerId], references: [id])
   project   Project? @relation("JournalLineProject", fields: [projectId], references: [id])
 
+  costCenterId String?     @map("cost_center_id") @db.Uuid
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
+
   sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -539,8 +788,10 @@ model AccountMapping {
   title       String  @db.VarChar(200)
   description String? @db.VarChar(500)
 
-  debitAccountId  String? @map("debit_account_id") @db.Uuid
-  creditAccountId String? @map("credit_account_id") @db.Uuid
+  debitAccountId  String?  @map("debit_account_id") @db.Uuid
+  creditAccountId String?  @map("credit_account_id") @db.Uuid
+  debitAccount    Account? @relation("MappingDebit", fields: [debitAccountId], references: [id], onDelete: Restrict)
+  creditAccount   Account? @relation("MappingCredit", fields: [creditAccountId], references: [id], onDelete: Restrict)
 
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
@@ -677,6 +928,9 @@ model PettyCashRequest {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([accountId])
   @@index([status])
   @@map("petty_cash_requests")
@@ -703,19 +957,6 @@ enum PRPriority {
   NORMAL
   HIGH
   URGENT
-}
-
-enum PRItemUnit {
-  NUMBER
-  KILOGRAM
-  TON
-  METER
-  SQUARE_METER
-  CUBIC_METER
-  LITER
-  PACKAGE
-  SERVICE
-  LUMP_SUM
 }
 
 enum POStatus {
@@ -762,6 +1003,9 @@ model PurchaseRequest {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([status])
   @@index([projectId])
   @@map("purchase_requests")
@@ -775,7 +1019,7 @@ model PurchaseRequestItem {
   rowNumber   Int        @map("row_number")
   description String     @db.VarChar(500)
   quantity    Decimal    @db.Decimal(20, 4)
-  unit        PRItemUnit
+  unit        String     @db.VarChar(32)
   priority    PRPriority @default(NORMAL)
   notes       String?    @db.VarChar(500)
 
@@ -805,6 +1049,9 @@ model RFQ {
   createdById String?  @map("created_by_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([prId])
   @@map("rfqs")
@@ -883,9 +1130,13 @@ model PurchaseOrder {
 
   items PurchaseOrderItem[]
 
-  createdById String?  @map("created_by_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdById String?           @map("created_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  invoices    PurchaseInvoice[] @relation("PIFromPO")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([projectId])
   @@index([supplierId])
@@ -897,13 +1148,13 @@ model PurchaseOrderItem {
   poId String        @map("po_id") @db.Uuid
   po   PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
 
-  rowNumber   Int        @map("row_number")
-  description String     @db.VarChar(500)
-  quantity    Decimal    @db.Decimal(20, 4)
-  unit        PRItemUnit
-  unitPrice   Decimal    @map("unit_price") @db.Decimal(20, 2)
-  totalPrice  Decimal    @map("total_price") @db.Decimal(20, 2)
-  notes       String?    @db.VarChar(500)
+  rowNumber   Int     @map("row_number")
+  description String  @db.VarChar(500)
+  quantity    Decimal @db.Decimal(20, 4)
+  unit        String  @db.VarChar(32)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
+  notes       String? @db.VarChar(500)
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -919,18 +1170,6 @@ enum ItemType {
   CONSUMABLE
   CAPITAL
   MATERIAL
-}
-
-enum ItemUnit {
-  NUMBER
-  KILOGRAM
-  TON
-  METER
-  SQUARE_METER
-  CUBIC_METER
-  LITER
-  PACKAGE
-  LUMP_SUM
 }
 
 enum MovementType {
@@ -977,10 +1216,13 @@ model Warehouse {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  stocks    Stock[]
-  movements StockMovement[]
-  receipts  GoodsReceipt[]
-  issues    GoodsIssue[]
+  stocks          Stock[]
+  movements       StockMovement[]
+  receipts        GoodsReceipt[]
+  issues          GoodsIssue[]
+  inventoryCounts InventoryCount[]    @relation("InvCountWarehouse")
+  transfersFrom   WarehouseTransfer[] @relation("TransferFrom")
+  transfersTo     WarehouseTransfer[] @relation("TransferTo")
 
   @@index([isActive])
   @@map("warehouses")
@@ -1008,7 +1250,7 @@ model Item {
   code         String        @unique @db.VarChar(32)
   name         String        @db.VarChar(300)
   type         ItemType      @default(MATERIAL)
-  unit         ItemUnit      @default(NUMBER)
+  unit         String        @default("NUMBER") @db.VarChar(32)
   categoryId   String?       @map("category_id") @db.Uuid
   category     ItemCategory? @relation(fields: [categoryId], references: [id])
   minStock     Decimal?      @map("min_stock") @db.Decimal(20, 4)
@@ -1019,10 +1261,12 @@ model Item {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  stocks       Stock[]
-  movements    StockMovement[]
-  receiptItems GoodsReceiptItem[]
-  issueItems   GoodsIssueItem[]
+  stocks              Stock[]
+  movements           StockMovement[]
+  receiptItems        GoodsReceiptItem[]
+  issueItems          GoodsIssueItem[]
+  inventoryCountItems InventoryCountItem[]    @relation("InvCountItem")
+  transferItems       WarehouseTransferItem[] @relation("TransferItem")
 
   @@index([type])
   @@index([categoryId])
@@ -1093,12 +1337,23 @@ model GoodsReceipt {
   status        ReceiptStatus @default(DRAFT)
   postedAt      DateTime?     @map("posted_at")
   totalValue    Decimal       @default(0) @map("total_value") @db.Decimal(24, 2)
-  createdById   String?       @map("created_by_id") @db.Uuid
-  createdBy     User?         @relation(fields: [createdById], references: [id])
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  items GoodsReceiptItem[]
+  subtotal       Decimal @default(0) @db.Decimal(24, 2)
+  totalDiscount  Decimal @default(0) @map("total_discount") @db.Decimal(24, 2)
+  totalAddition  Decimal @default(0) @map("total_addition") @db.Decimal(24, 2)
+  totalDeduction Decimal @default(0) @map("total_deduction") @db.Decimal(24, 2)
+  totalTax       Decimal @default(0) @map("total_tax") @db.Decimal(24, 2)
+  totalShipping  Decimal @default(0) @map("total_shipping") @db.Decimal(24, 2)
+  totalLoading   Decimal @default(0) @map("total_loading") @db.Decimal(24, 2)
+  grandTotal     Decimal @default(0) @map("grand_total") @db.Decimal(24, 2)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items            GoodsReceiptItem[]
+  purchaseInvoices PurchaseInvoice[]  @relation("PIFromGR")
 
   @@index([warehouseId])
   @@index([status])
@@ -1115,8 +1370,20 @@ model GoodsReceiptItem {
   quantity  Decimal      @db.Decimal(20, 4)
   unitCost  Decimal      @map("unit_cost") @db.Decimal(20, 2)
   totalCost Decimal      @map("total_cost") @db.Decimal(24, 2)
-  notes     String?      @db.VarChar(500)
-  createdAt DateTime     @default(now()) @map("created_at")
+
+  // مالی
+  discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  discountAmount  Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
+  additionAmount  Decimal @default(0) @map("addition_amount") @db.Decimal(20, 2)
+  deductionAmount Decimal @default(0) @map("deduction_amount") @db.Decimal(20, 2)
+  taxPercent      Decimal @default(0) @map("tax_percent") @db.Decimal(5, 2)
+  taxAmount       Decimal @default(0) @map("tax_amount") @db.Decimal(20, 2)
+  shippingCost    Decimal @default(0) @map("shipping_cost") @db.Decimal(20, 2)
+  loadingCost     Decimal @default(0) @map("loading_cost") @db.Decimal(20, 2)
+  lineTotal       Decimal @default(0) @map("line_total") @db.Decimal(24, 2)
+
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([receiptId])
   @@map("goods_receipt_items")
@@ -1205,6 +1472,7 @@ enum EquipmentStatus {
   IDLE
   BROKEN
   MAINTENANCE
+  RETIRED
 }
 
 model DailyReport {
@@ -1215,9 +1483,11 @@ model DailyReport {
 
   reportDate DateTime @map("report_date") @db.Date
 
-  weather WeatherCondition?
-  tempMin Int?              @map("temp_min")
-  tempMax Int?              @map("temp_max")
+  startTime String?           @map("start_time") @db.VarChar(10)
+  endTime   String?           @map("end_time") @db.VarChar(10)
+  weather   WeatherCondition?
+  tempMin   Int?              @map("temp_min")
+  tempMax   Int?              @map("temp_max")
 
   // عملیات روزانه
   operations String? @db.Text
@@ -1236,10 +1506,15 @@ model DailyReport {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  workers    DailyReportWorker[]
-  equipments DailyReportEquipment[]
-  materials  DailyReportMaterial[]
-  progresses DailyReportProgress[]
+  workers     DailyReportWorker[]
+  equipments  DailyReportEquipment[]
+  materials   DailyReportMaterial[]
+  progresses  DailyReportProgress[]
+  entryExits  DailyReportEntryExit[]
+  requests    DailyReportRequest[]
+  events      DailyReportEvent[]
+  sections    DailyReportSection[]
+  attachments DailyReportAttachment[]
 
   @@unique([projectId, reportDate])
   @@index([reportDate])
@@ -1247,13 +1522,134 @@ model DailyReport {
   @@map("daily_reports")
 }
 
+// ============================================================
+// DAILY REPORT SECTIONS — بخش‌های گزارش روزانه (تأیید بخشی)
+// ============================================================
+
+enum DailyReportSectionType {
+  HEADER
+  PROGRESS
+  WORKERS
+  EQUIPMENTS
+  MATERIALS
+  ENTRY_EXIT
+  REQUESTS
+  EVENTS
+  ATTACHMENTS
+}
+
+enum DailyReportSectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FORWARDED
+  FAILED
+}
+
+model DailyReportSection {
+  id       String      @id @default(uuid()) @db.Uuid
+  reportId String      @map("report_id") @db.Uuid
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  sectionType DailyReportSectionType   @map("section_type")
+  status      DailyReportSectionStatus @default(PENDING)
+
+  approvedById   String?   @map("approved_by_id") @db.Uuid
+  approvedAt     DateTime? @map("approved_at")
+  rejectedReason String?   @map("rejected_reason") @db.VarChar(500)
+
+  forwardedAt DateTime? @map("forwarded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  forwardings DailyReportForwarding[]
+
+  @@unique([reportId, sectionType])
+  @@index([reportId])
+  @@index([status])
+  @@map("daily_report_sections")
+}
+
+// ============================================================
+// DAILY REPORT FORWARDING — جلوگیری از ارسال دوباره
+// ============================================================
+
+enum ForwardingTarget {
+  WAREHOUSE_RECEIPT
+  WAREHOUSE_ISSUE
+  PROCUREMENT_PR
+  PETTY_CASH
+  PAYROLL_ATTENDANCE
+  EQUIPMENT_LOG
+  PROGRESS_RECORD
+  OTHER
+}
+
+model DailyReportForwarding {
+  id        String             @id @default(uuid()) @db.Uuid
+  sectionId String             @map("section_id") @db.Uuid
+  section   DailyReportSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  // کلید یکتا: reportId + sectionType + rowNumber + targetType
+  reportId    String                 @map("report_id") @db.Uuid
+  sectionType DailyReportSectionType @map("section_type")
+  rowNumber   Int                    @map("row_number")
+  targetType  ForwardingTarget       @map("target_type")
+
+  // سند ساخته‌شده
+  targetId    String? @map("target_id") @db.Uuid
+  targetCode  String? @map("target_code") @db.VarChar(64)
+  targetModel String? @map("target_model") @db.VarChar(64)
+
+  status       String  @default("PENDING") @db.VarChar(20) // PENDING | SUCCESS | FAILED
+  errorMessage String? @map("error_message") @db.VarChar(1000)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([reportId, sectionType, rowNumber, targetType])
+  @@index([reportId])
+  @@index([status])
+  @@map("daily_report_forwardings")
+}
+
+// ============================================================
+// DAILY REPORT ATTACHMENTS — پیوست‌های گزارش روزانه
+// ============================================================
+
+model DailyReportAttachment {
+  id       String      @id @default(uuid()) @db.Uuid
+  reportId String      @map("report_id") @db.Uuid
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  sectionType DailyReportSectionType? @map("section_type")
+  rowNumber   Int?                    @map("row_number")
+
+  filename    String  @db.VarChar(255)
+  url         String  @db.VarChar(500)
+  size        Int?
+  mimetype    String? @db.VarChar(100)
+  description String? @db.VarChar(500)
+
+  uploadedById String?  @map("uploaded_by_id") @db.Uuid
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  @@index([reportId])
+  @@index([reportId, sectionType])
+  @@map("daily_report_attachments")
+}
+
 model DailyReportWorker {
   id       String      @id @default(uuid()) @db.Uuid
   reportId String      @map("report_id") @db.Uuid
   report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
-  rowNumber   Int              @map("row_number")
-  teamName    String           @map("team_name") @db.VarChar(200)
+  rowNumber Int    @map("row_number")
+  teamName  String @map("team_name") @db.VarChar(200)
+
+  // اتصال به پرسنل (برای فوروارد به حضور و غیاب)
+  employeeId  String?          @map("employee_id") @db.Uuid
   foreman     String?          @db.VarChar(200)
   workerCount Int              @map("worker_count")
   workHours   Decimal          @default(8) @map("work_hours") @db.Decimal(5, 2)
@@ -1274,16 +1670,27 @@ model DailyReportEquipment {
   report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   rowNumber   Int             @map("row_number")
+  equipmentId String?         @map("equipment_id") @db.Uuid
+  equipment   Equipment?      @relation("DailyReportEquipmentLink", fields: [equipmentId], references: [id], onDelete: SetNull)
   name        String          @db.VarChar(200)
   plateNumber String?         @map("plate_number") @db.VarChar(32)
   operator    String?         @db.VarChar(200)
   hoursWorked Decimal         @default(0) @map("hours_worked") @db.Decimal(5, 2)
   status      EquipmentStatus @default(ACTIVE)
-  description String?         @db.VarChar(500)
+
+  // سوخت و توقف (طبق سند بخش ۱۵-۳ بند د)
+  fuelLiters Decimal @default(0) @map("fuel_liters") @db.Decimal(10, 2)
+  stopReason String? @map("stop_reason") @db.VarChar(500)
+
+  // محل کار (WBS)
+  wbsItemId String? @map("wbs_item_id") @db.Uuid
+
+  description String? @db.VarChar(500)
 
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([reportId])
+  @@index([wbsItemId])
   @@map("daily_report_equipments")
 }
 
@@ -1292,13 +1699,21 @@ model DailyReportMaterial {
   reportId String      @map("report_id") @db.Uuid
   report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
-  rowNumber    Int     @map("row_number")
-  itemName     String  @map("item_name") @db.VarChar(300)
+  rowNumber Int    @map("row_number")
+  itemName  String @map("item_name") @db.VarChar(300)
+
+  // اتصال به کالا و انبار (برای فوروارد خودکار)
+  itemId       String? @map("item_id") @db.Uuid
+  warehouseId  String? @map("warehouse_id") @db.Uuid
   unit         String? @db.VarChar(32)
   quantity     Decimal @db.Decimal(20, 4)
   supplier     String? @db.VarChar(200)
   vehiclePlate String? @map("vehicle_plate") @db.VarChar(32)
   billNumber   String? @map("bill_number") @db.VarChar(64)
+  movementType String? @map("movement_type") @db.VarChar(20)
+  qcResult     String? @map("qc_result") @db.VarChar(20)
+  exitType     String? @map("exit_type") @db.VarChar(30)
+  exitDest     String? @map("exit_dest") @db.VarChar(200)
   description  String? @db.VarChar(500)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1316,7 +1731,15 @@ model DailyReportProgress {
   wbsItemId   String? @map("wbs_item_id") @db.Uuid
   description String  @db.VarChar(500)
   progressPct Decimal @map("progress_pct") @db.Decimal(5, 2)
-  notes       String? @db.VarChar(500)
+
+  // مقدار انجام‌شده امروز (طبق سند بخش ۱۵-۳ بند ب)
+  quantity Decimal? @db.Decimal(20, 4)
+  unit     String?  @db.VarChar(32)
+
+  // محل کار دقیق (بلوک، طبقه)
+  location String? @db.VarChar(300)
+
+  notes String? @db.VarChar(500)
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1634,6 +2057,9 @@ model Attendance {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([employeeId, attendanceDate])
   @@index([attendanceDate])
   @@map("attendances")
@@ -1722,6 +2148,9 @@ model SubcontractorStatement {
 
   contractorId String  @map("contractor_id") @db.Uuid
   contractor   Partner @relation(fields: [contractorId], references: [id])
+
+  contractId String?        @map("contract_id")
+  contract   LegalContract? @relation("WorkerStatementContract", fields: [contractId], references: [id], onDelete: SetNull)
 
   projectId String  @map("project_id") @db.Uuid
   project   Project @relation(fields: [projectId], references: [id])
@@ -1862,6 +2291,9 @@ model PartnerCapitalAccount {
 
   contributions PartnerCapitalContribution[]
   withdrawals   PartnerCapitalWithdrawal[]
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([partnerId, projectId])
   @@index([partnerId])
@@ -2253,7 +2685,10 @@ model LegalContract {
   cancelledAt        DateTime?
   cancelledById      String?
 
-  attachments LegalContractAttachment[]
+  attachments          LegalContractAttachment[]
+  items                LegalContractItem[]
+  workerStatements     SubcontractorStatement[]  @relation("WorkerStatementContract")
+  workerStatementsLink WorkerStatement[]         @relation("WorkerStatementContractLink")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2274,6 +2709,24 @@ model LegalContractAttachment {
   fileSize   Int?
   mimeType   String?
   createdAt  DateTime      @default(now())
+
+  @@index([contractId])
+}
+
+model LegalContractItem {
+  id         String        @id @default(cuid())
+  contractId String
+  contract   LegalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int
+  description String
+  unit        String?
+  quantity    Decimal @db.Decimal(20, 4)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
+  notes       String?
+
+  createdAt DateTime @default(now())
 
   @@index([contractId])
 }
@@ -2344,11 +2797,14 @@ model SalesCustomer {
   postalCode    String?
   bankSheba     String?
   notes         String? @db.Text
+  isActive      Boolean @default(true)
 
   salesContracts SalesContract[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  salesInvoices SalesInvoice[] @relation("SIFromCustomer")
+  salesReceipts SalesReceipt[] @relation("SRFromCustomer")
 
   @@index([fullName])
 }
@@ -2359,7 +2815,7 @@ model SalesContract {
   status LegalContractStatus @default(DRAFT)
 
   unitId String
-  unit   SalesUnit @relation(fields: [unitId], references: [id])
+  unit   SalesUnit? @relation(fields: [unitId], references: [id])
 
   customerId String
   customer   SalesCustomer @relation(fields: [customerId], references: [id])
@@ -2381,8 +2837,9 @@ model SalesContract {
   installments SalesInstallment[]
   payments     SalesPayment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  salesInvoices SalesInvoice[] @relation("SIFromContract")
 
   @@index([code])
   @@index([status])
@@ -2448,7 +2905,1219 @@ model Attachment {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([entityType, entityId])
   @@index([uploadedById])
   @@map("attachments")
+}
+
+// ============================================================
+// ACCOUNT SUBTYPE (for AR/AP/Tax aging & reporting)
+// ============================================================
+enum AccountSubtype {
+  CASH
+  BANK
+  ACCOUNTS_RECEIVABLE
+  ACCOUNTS_PAYABLE
+  INVENTORY
+  PREPAID
+  FIXED_ASSET
+  ACCUMULATED_DEPRECIATION
+  TAX_PAYABLE
+  TAX_RECEIVABLE
+  SALARY_PAYABLE
+  INSURANCE_PAYABLE
+  RETAINED_EARNINGS
+  RETAINAGE_RECEIVABLE
+  RETAINAGE_PAYABLE
+  ADVANCE_TO_SUPPLIER
+  ADVANCE_FROM_CUSTOMER
+  OTHER
+}
+
+model FixedAsset {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(32)
+  name        String  @db.VarChar(200)
+  description String? @db.VarChar(500)
+
+  acquisitionDate  DateTime @map("acquisition_date") @db.Date
+  acquisitionCost  Decimal  @map("acquisition_cost") @db.Decimal(20, 2)
+  residualValue    Decimal  @default(0) @map("residual_value") @db.Decimal(20, 2)
+  usefulLifeMonths Int      @map("useful_life_months")
+
+  depreciationMethod  DepreciationMethod @default(STRAIGHT_LINE) @map("depreciation_method")
+  monthlyDepreciation Decimal            @map("monthly_depreciation") @db.Decimal(20, 2)
+
+  accumulatedDepreciation Decimal @default(0) @map("accumulated_depreciation") @db.Decimal(20, 2)
+  bookValue               Decimal @default(0) @map("book_value") @db.Decimal(20, 2)
+
+  status FixedAssetStatus @default(ACTIVE)
+
+  assetAccountId String  @map("asset_account_id") @db.Uuid
+  assetAccount   Account @relation("FixedAssetGL", fields: [assetAccountId], references: [id])
+
+  depreciationAccountId String  @map("depreciation_account_id") @db.Uuid
+  depreciationAccount   Account @relation("FixedAssetDeprecGL", fields: [depreciationAccountId], references: [id])
+
+  accumulatedDeprecAccountId String  @map("accumulated_deprec_account_id") @db.Uuid
+  accumulatedDeprecAccount   Account @relation("FixedAssetAccumGL", fields: [accumulatedDeprecAccountId], references: [id])
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("FixedAssetProject", fields: [projectId], references: [id])
+
+  costCenterId String?     @map("cost_center_id") @db.Uuid
+  costCenter   CostCenter? @relation("FixedAssetCostCenter", fields: [costCenterId], references: [id])
+
+  acquisitionJournalEntryId String?       @map("acquisition_journal_entry_id") @db.Uuid
+  acquisitionJournalEntry   JournalEntry? @relation("FixedAssetAcquisitionJE", fields: [acquisitionJournalEntryId], references: [id])
+
+  purchaseInvoiceItems PurchaseInvoiceItem[] @relation("PICapitalFixedAsset")
+
+  disposalDate           DateTime?     @map("disposal_date") @db.Date
+  disposalProceeds       Decimal?      @map("disposal_proceeds") @db.Decimal(20, 2)
+  disposalJournalEntryId String?       @map("disposal_journal_entry_id") @db.Uuid
+  disposalJournalEntry   JournalEntry? @relation("FixedAssetDisposalJE", fields: [disposalJournalEntryId], references: [id])
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  depreciationEntries DepreciationEntry[]
+
+  @@index([status])
+  @@index([projectId])
+  @@index([acquisitionDate])
+  @@map("fixed_assets")
+}
+
+model DepreciationEntry {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(32)
+
+  fixedAssetId String     @map("fixed_asset_id") @db.Uuid
+  fixedAsset   FixedAsset @relation(fields: [fixedAssetId], references: [id], onDelete: Cascade)
+
+  periodYear  Int      @map("period_year")
+  periodMonth Int      @map("period_month")
+  entryDate   DateTime @map("entry_date") @db.Date
+
+  amount            Decimal @db.Decimal(20, 2)
+  accumulatedBefore Decimal @map("accumulated_before") @db.Decimal(20, 2)
+  accumulatedAfter  Decimal @map("accumulated_after") @db.Decimal(20, 2)
+  bookValueAfter    Decimal @map("book_value_after") @db.Decimal(20, 2)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("DepreciationEntryJE", fields: [journalEntryId], references: [id])
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([fixedAssetId, periodYear, periodMonth])
+  @@index([periodYear, periodMonth])
+  @@map("depreciation_entries")
+}
+
+model PurchaseInvoice {
+  id            String    @id @default(uuid()) @db.Uuid
+  code          String    @unique @db.VarChar(32)
+  invoiceNumber String    @map("invoice_number") @db.VarChar(64)
+  invoiceDate   DateTime  @map("invoice_date") @db.Date
+  dueDate       DateTime? @map("due_date") @db.Date
+
+  supplierId String  @map("supplier_id") @db.Uuid
+  supplier   Partner @relation("PurchaseInvoiceSupplier", fields: [supplierId], references: [id])
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("PurchaseInvoiceProject", fields: [projectId], references: [id])
+
+  poId String?        @map("po_id") @db.Uuid
+  po   PurchaseOrder? @relation("PIFromPO", fields: [poId], references: [id])
+
+  grId String?       @map("gr_id") @db.Uuid
+  gr   GoodsReceipt? @relation("PIFromGR", fields: [grId], references: [id])
+
+  subtotal       Decimal @default(0) @db.Decimal(20, 2)
+  taxPercent     Decimal @default(9) @map("tax_percent") @db.Decimal(5, 2)
+  taxAmount      Decimal @default(0) @map("tax_amount") @db.Decimal(20, 2)
+  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
+  totalAmount    Decimal @default(0) @map("total_amount") @db.Decimal(20, 2)
+  paidAmount     Decimal @default(0) @map("paid_amount") @db.Decimal(20, 2)
+
+  totalDiscount  Decimal @default(0) @map("total_discount") @db.Decimal(20, 2)
+  totalAddition  Decimal @default(0) @map("total_addition") @db.Decimal(20, 2)
+  totalDeduction Decimal @default(0) @map("total_deduction") @db.Decimal(20, 2)
+  totalShipping  Decimal @default(0) @map("total_shipping") @db.Decimal(20, 2)
+  totalLoading   Decimal @default(0) @map("total_loading") @db.Decimal(20, 2)
+
+  status PurchaseInvoiceStatus @default(DRAFT)
+  notes  String?               @db.VarChar(500)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("PIJournal", fields: [journalEntryId], references: [id])
+
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String?   @map("approved_by") @db.Uuid
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  items    PurchaseInvoiceItem[]
+  payments SupplierPayment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([supplierId])
+  @@index([projectId])
+  @@index([status])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceItem {
+  id        String          @id @default(uuid()) @db.Uuid
+  invoiceId String          @map("invoice_id") @db.Uuid
+  invoice   PurchaseInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int     @map("row_number")
+  description String  @db.VarChar(500)
+  quantity    Decimal @db.Decimal(20, 4)
+  unit        String  @db.VarChar(32)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
+
+  accountId String?  @map("account_id") @db.Uuid
+  account   Account? @relation("PIItemAccount", fields: [accountId], references: [id])
+
+  wbsItemId String?  @map("wbs_item_id") @db.Uuid
+  wbsItem   WbsItem? @relation("PIItemWbs", fields: [wbsItemId], references: [id])
+
+  // مالی
+  discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  discountAmount  Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
+  additionAmount  Decimal @default(0) @map("addition_amount") @db.Decimal(20, 2)
+  deductionAmount Decimal @default(0) @map("deduction_amount") @db.Decimal(20, 2)
+  taxPercent      Decimal @default(0) @map("tax_percent") @db.Decimal(5, 2)
+  taxAmount       Decimal @default(0) @map("tax_amount") @db.Decimal(20, 2)
+  shippingCost    Decimal @default(0) @map("shipping_cost") @db.Decimal(20, 2)
+  loadingCost     Decimal @default(0) @map("loading_cost") @db.Decimal(20, 2)
+  lineTotal       Decimal @default(0) @map("line_total") @db.Decimal(24, 2)
+
+  // دارایی ثابت
+  isCapital        Boolean     @default(false) @map("is_capital")
+  fixedAssetId     String?     @unique @map("fixed_asset_id") @db.Uuid
+  fixedAsset       FixedAsset? @relation("PICapitalFixedAsset", fields: [fixedAssetId], references: [id], onDelete: SetNull)
+  usefulLifeMonths Int?        @map("useful_life_months")
+
+  notes String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([invoiceId])
+  @@map("purchase_invoice_items")
+}
+
+model SupplierPayment {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(32)
+
+  supplierId String  @map("supplier_id") @db.Uuid
+  supplier   Partner @relation("SupplierPaymentSupplier", fields: [supplierId], references: [id])
+
+  invoiceId String?          @map("invoice_id") @db.Uuid
+  invoice   PurchaseInvoice? @relation(fields: [invoiceId], references: [id])
+
+  method SupplierPaymentMethod
+
+  bankAccountId String?      @map("bank_account_id") @db.Uuid
+  bankAccount   BankAccount? @relation("SupplierPaymentBank", fields: [bankAccountId], references: [id])
+
+  amount      Decimal  @db.Decimal(20, 2)
+  paymentDate DateTime @map("payment_date") @db.Date
+  reference   String?  @db.VarChar(128)
+  notes       String?  @db.VarChar(500)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("SupplierPaymentJournal", fields: [journalEntryId], references: [id])
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([supplierId])
+  @@index([invoiceId])
+  @@map("supplier_payments")
+}
+
+model SalesInvoice {
+  id            String    @id @default(uuid()) @db.Uuid
+  code          String    @unique @db.VarChar(32)
+  invoiceNumber String    @map("invoice_number") @db.VarChar(64)
+  invoiceDate   DateTime  @map("invoice_date") @db.Date
+  dueDate       DateTime? @map("due_date") @db.Date
+
+  customerId String        @map("customer_id")
+  customer   SalesCustomer @relation("SIFromCustomer", fields: [customerId], references: [id])
+
+  contractId String?        @map("contract_id")
+  contract   SalesContract? @relation("SIFromContract", fields: [contractId], references: [id])
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("SIProject", fields: [projectId], references: [id])
+
+  partnerId String?  @map("partner_id") @db.Uuid
+  partner   Partner? @relation("SIPartner", fields: [partnerId], references: [id])
+
+  subtotal       Decimal @default(0) @db.Decimal(20, 2)
+  taxPercent     Decimal @default(9) @map("tax_percent") @db.Decimal(5, 2)
+  taxAmount      Decimal @default(0) @map("tax_amount") @db.Decimal(20, 2)
+  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
+  totalAmount    Decimal @default(0) @map("total_amount") @db.Decimal(20, 2)
+  receivedAmount Decimal @default(0) @map("received_amount") @db.Decimal(20, 2)
+
+  status SalesInvoiceStatus @default(DRAFT)
+  notes  String?            @db.VarChar(500)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("SIJournal", fields: [journalEntryId], references: [id])
+
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String?   @map("approved_by") @db.Uuid
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  items    SalesInvoiceItem[]
+  receipts SalesReceipt[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@index([contractId])
+  @@index([status])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceItem {
+  id        String       @id @default(uuid()) @db.Uuid
+  invoiceId String       @map("invoice_id") @db.Uuid
+  invoice   SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int     @map("row_number")
+  description String  @db.VarChar(500)
+  quantity    Decimal @db.Decimal(20, 4)
+  unit        String? @db.VarChar(32)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
+
+  accountId String?  @map("account_id") @db.Uuid
+  account   Account? @relation("SIItemAccount", fields: [accountId], references: [id])
+
+  notes String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([invoiceId])
+  @@map("sales_invoice_items")
+}
+
+model SalesReceipt {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(32)
+
+  customerId String        @map("customer_id")
+  customer   SalesCustomer @relation("SRFromCustomer", fields: [customerId], references: [id])
+
+  invoiceId String?       @map("invoice_id") @db.Uuid
+  invoice   SalesInvoice? @relation(fields: [invoiceId], references: [id])
+
+  method SalesReceiptMethod
+
+  bankAccountId String?      @map("bank_account_id") @db.Uuid
+  bankAccount   BankAccount? @relation("SRBank", fields: [bankAccountId], references: [id])
+
+  amount      Decimal  @db.Decimal(20, 2)
+  receiptDate DateTime @map("receipt_date") @db.Date
+  reference   String?  @db.VarChar(128)
+  notes       String?  @db.VarChar(500)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("SRJournal", fields: [journalEntryId], references: [id])
+
+  createdById String? @map("created_by_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([customerId])
+  @@index([invoiceId])
+  @@map("sales_receipts")
+}
+
+// ============================================================
+// EQUIPMENT & MACHINERY
+// ============================================================
+
+enum EquipmentOwnership {
+  OWNED
+  RENTED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  REPAIR
+  OVERHAUL
+  TIRE
+  OTHER
+}
+
+enum EquipmentLogStatus {
+  DRAFT
+  CONFIRMED
+  POSTED
+}
+
+model Equipment {
+  id           String             @id @default(uuid()) @db.Uuid
+  code         String             @unique @db.VarChar(32)
+  name         String             @db.VarChar(200)
+  ownership    EquipmentOwnership @default(OWNED)
+  category     String?            @db.VarChar(100)
+  brand        String?            @db.VarChar(100)
+  model        String?            @db.VarChar(100)
+  year         Int?
+  plateNumber  String?            @map("plate_number") @db.VarChar(32)
+  serialNumber String?            @map("serial_number") @db.VarChar(64)
+
+  hourlyRate  Decimal? @map("hourly_rate") @db.Decimal(20, 2)
+  dailyRate   Decimal? @map("daily_rate") @db.Decimal(20, 2)
+  monthlyRate Decimal? @map("monthly_rate") @db.Decimal(20, 2)
+
+  fuelType        String?  @map("fuel_type") @db.VarChar(32)
+  fuelNormPerHour Decimal? @map("fuel_norm_per_hour") @db.Decimal(10, 2)
+
+  ownerId String?  @map("owner_id") @db.Uuid
+  owner   Partner? @relation("EquipmentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  currentProjectId String?  @map("current_project_id") @db.Uuid
+  currentProject   Project? @relation("EquipmentCurrentProject", fields: [currentProjectId], references: [id], onDelete: SetNull)
+
+  status      EquipmentStatus @default(ACTIVE)
+  isActive    Boolean         @default(true) @map("is_active")
+  description String?         @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dailyLogs        EquipmentDailyLog[]
+  maintenances     EquipmentMaintenance[]
+  dailyReportLinks DailyReportEquipment[] @relation("DailyReportEquipmentLink")
+
+  @@index([ownership])
+  @@index([status])
+  @@index([currentProjectId])
+  @@map("equipment")
+}
+
+model EquipmentDailyLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(32)
+  equipmentId String    @map("equipment_id") @db.Uuid
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  projectId String   @map("project_id") @db.Uuid
+  project   Project  @relation("EquipmentLogProject", fields: [projectId], references: [id])
+  wbsItemId String?  @map("wbs_item_id") @db.Uuid
+  wbsItem   WbsItem? @relation("EquipmentLogWbs", fields: [wbsItemId], references: [id], onDelete: SetNull)
+
+  logDate DateTime @map("log_date") @db.Date
+  shift   String?  @db.VarChar(16)
+
+  startMeter Decimal? @map("start_meter") @db.Decimal(12, 2)
+  endMeter   Decimal? @map("end_meter") @db.Decimal(12, 2)
+
+  workHours      Decimal @default(0) @map("work_hours") @db.Decimal(6, 2)
+  idleHours      Decimal @default(0) @map("idle_hours") @db.Decimal(6, 2)
+  stopHours      Decimal @default(0) @map("stop_hours") @db.Decimal(6, 2)
+  breakdownHours Decimal @default(0) @map("breakdown_hours") @db.Decimal(6, 2)
+
+  fuelLiters Decimal @default(0) @map("fuel_liters") @db.Decimal(10, 2)
+  fuelCost   Decimal @default(0) @map("fuel_cost") @db.Decimal(20, 2)
+
+  operatorId   String?  @map("operator_id") @db.Uuid
+  operator     Partner? @relation("EquipmentLogOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+  workLocation String?  @map("work_location") @db.VarChar(300)
+
+  stopReason String? @map("stop_reason") @db.VarChar(500)
+  notes      String? @db.VarChar(500)
+
+  dailyReportId String? @map("daily_report_id") @db.Uuid
+
+  computedCost Decimal            @default(0) @map("computed_cost") @db.Decimal(20, 2)
+  status       EquipmentLogStatus @default(DRAFT)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([equipmentId, logDate, shift])
+  @@index([logDate])
+  @@index([projectId])
+  @@index([status])
+  @@map("equipment_daily_logs")
+}
+
+model EquipmentMaintenance {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(32)
+  equipmentId String    @map("equipment_id") @db.Uuid
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  type            MaintenanceType @default(PREVENTIVE)
+  maintenanceDate DateTime        @map("maintenance_date") @db.Date
+  description     String          @db.VarChar(500)
+
+  cost          Decimal @db.Decimal(20, 2)
+  parts         Json?
+  vendor        String? @db.VarChar(200)
+  invoiceNumber String? @map("invoice_number") @db.VarChar(64)
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("EquipmentMaintenanceProject", fields: [projectId], references: [id], onDelete: SetNull)
+
+  nextServiceDate  DateTime? @map("next_service_date") @db.Date
+  nextServiceHours Decimal?  @map("next_service_hours") @db.Decimal(12, 2)
+
+  notes String? @db.VarChar(500)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([equipmentId])
+  @@index([maintenanceDate])
+  @@map("equipment_maintenances")
+}
+
+// ============================================================
+// PRICE LIST (BOQ)
+// ============================================================
+
+enum PriceListStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model PriceList {
+  id            String          @id @default(uuid()) @db.Uuid
+  code          String          @unique @db.VarChar(32)
+  title         String          @db.VarChar(200)
+  year          Int
+  effectiveFrom DateTime        @map("effective_from") @db.Date
+  effectiveTo   DateTime?       @map("effective_to") @db.Date
+  status        PriceListStatus @default(DRAFT)
+  description   String?         @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items PriceListItem[]
+
+  @@index([year])
+  @@index([status])
+  @@map("price_lists")
+}
+
+model PriceListItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  priceListId String    @map("price_list_id") @db.Uuid
+  priceList   PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  code        String  @db.VarChar(64)
+  description String  @db.VarChar(500)
+  unit        String? @db.VarChar(32)
+  basePrice   Decimal @map("base_price") @db.Decimal(20, 2)
+  category    String? @db.VarChar(200)
+  chapter     String? @db.VarChar(200)
+  notes       String? @db.VarChar(500)
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  wbsItems  WbsItem[] @relation("WbsPriceListItem")
+
+  @@unique([priceListId, code])
+  @@index([priceListId])
+  @@index([code])
+  @@map("price_list_items")
+}
+
+// ============================================================
+// OVERHEAD ALLOCATION — تسهیم سربار ستاد
+// ============================================================
+
+enum OverheadAllocationMethod {
+  PERCENT_CONTRACT
+  PERCENT_REVENUE
+  MANUAL
+}
+
+enum OverheadAllocationStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model OverheadAllocation {
+  id              String                   @id @default(uuid()) @db.Uuid
+  code            String                   @unique @db.VarChar(32)
+  fiscalYearId    String                   @map("fiscal_year_id") @db.Uuid
+  fiscalYear      FiscalYear               @relation("OverheadFiscalYear", fields: [fiscalYearId], references: [id])
+  periodMonth     String                   @map("period_month") @db.VarChar(7)
+  method          OverheadAllocationMethod @default(MANUAL)
+  totalAmount     Decimal                  @map("total_amount") @db.Decimal(20, 2)
+  sourceAccountId String?                  @map("source_account_id") @db.Uuid
+  destAccountId   String?                  @map("dest_account_id") @db.Uuid
+  description     String?                  @db.VarChar(500)
+  status          OverheadAllocationStatus @default(DRAFT)
+  journalEntryId  String?                  @unique @map("journal_entry_id") @db.Uuid
+  journalEntry    JournalEntry?            @relation("OverheadAllocationJE", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  postedAt        DateTime?                @map("posted_at")
+  createdById     String?                  @map("created_by_id") @db.Uuid
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  items OverheadAllocationItem[]
+
+  @@unique([fiscalYearId, periodMonth])
+  @@index([status])
+  @@map("overhead_allocations")
+}
+
+model OverheadAllocationItem {
+  id           String             @id @default(uuid()) @db.Uuid
+  allocationId String             @map("allocation_id") @db.Uuid
+  allocation   OverheadAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  projectId    String             @map("project_id") @db.Uuid
+  project      Project            @relation("OverheadAllocationProject", fields: [projectId], references: [id])
+  percent      Decimal            @db.Decimal(7, 4)
+  amount       Decimal            @db.Decimal(20, 2)
+  notes        String?            @db.VarChar(500)
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@index([allocationId])
+  @@index([projectId])
+  @@map("overhead_allocation_items")
+}
+
+// ============================================================
+// CLIENT STATEMENT — صورت‌وضعیت کارفرما (۷ برگ)
+// ============================================================
+
+enum ClientStatementCategory {
+  MATERIAL // خرید مصالح
+  LABOR // اجرت و دستمزد
+  MISC // هزینه‌های متفرقه
+  TRANSPORT // کرایه حمل
+  EQUIPMENT // ماشین آلات
+}
+
+enum ClientStatementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+model ClientStatement {
+  id         String  @id @default(uuid()) @db.Uuid
+  code       String  @unique @db.VarChar(32)
+  projectId  String  @map("project_id") @db.Uuid
+  project    Project @relation("ClientStatementProject", fields: [projectId], references: [id])
+  contractId String? @map("contract_id") @db.Uuid
+
+  statementNumber Int      @map("statement_number")
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+
+  // ضرایب
+  coefficient                Decimal @default(1.07) @db.Decimal(7, 4)
+  contractorSharePercent     Decimal @default(7) @map("contractor_share_percent") @db.Decimal(5, 2)
+  prepaymentDeductionPercent Decimal @default(20) @map("prepayment_deduction_percent") @db.Decimal(5, 2)
+
+  // زیرجمع ۵ دسته
+  subtotalMaterial  Decimal @default(0) @map("subtotal_material") @db.Decimal(24, 2)
+  subtotalLabor     Decimal @default(0) @map("subtotal_labor") @db.Decimal(24, 2)
+  subtotalMisc      Decimal @default(0) @map("subtotal_misc") @db.Decimal(24, 2)
+  subtotalTransport Decimal @default(0) @map("subtotal_transport") @db.Decimal(24, 2)
+  subtotalEquipment Decimal @default(0) @map("subtotal_equipment") @db.Decimal(24, 2)
+
+  totalBeforeCoefficient    Decimal @default(0) @map("total_before_coefficient") @db.Decimal(24, 2)
+  totalAfterCoefficient     Decimal @default(0) @map("total_after_coefficient") @db.Decimal(24, 2)
+  contractorShareAmount     Decimal @default(0) @map("contractor_share_amount") @db.Decimal(24, 2)
+  prepaymentDeductionAmount Decimal @default(0) @map("prepayment_deduction_amount") @db.Decimal(24, 2)
+  netPayable                Decimal @default(0) @map("net_payable") @db.Decimal(24, 2)
+
+  status ClientStatementStatus @default(DRAFT)
+
+  approvedById   String?   @map("approved_by_id") @db.Uuid
+  approvedAt     DateTime? @map("approved_at")
+  paidAt         DateTime? @map("paid_at")
+  rejectedReason String?   @map("rejected_reason") @db.VarChar(500)
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("ClientStatementJE", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  description String? @db.VarChar(500)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items ClientStatementItem[]
+
+  @@unique([projectId, statementNumber])
+  @@index([projectId])
+  @@index([status])
+  @@map("client_statements")
+}
+
+model ClientStatementItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  statementId String          @map("statement_id") @db.Uuid
+  statement   ClientStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  category      ClientStatementCategory
+  rowNumber     Int                     @map("row_number")
+  priceListCode String?                 @map("price_list_code") @db.VarChar(64)
+  description   String                  @db.VarChar(500)
+  unit          String?                 @db.VarChar(32)
+  unitPrice     Decimal                 @map("unit_price") @db.Decimal(20, 2)
+  quantity      Decimal                 @default(1) @db.Decimal(20, 4)
+  totalPrice    Decimal                 @map("total_price") @db.Decimal(24, 2)
+  itemDate      DateTime?               @map("item_date") @db.Date
+
+  wbsItemId String?  @map("wbs_item_id") @db.Uuid
+  wbsItem   WbsItem? @relation("ClientStatementItemWbs", fields: [wbsItemId], references: [id], onDelete: SetNull)
+
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([statementId])
+  @@index([category])
+  @@map("client_statement_items")
+}
+
+// ============================================================
+// SITE OPERATIONS v2 — sections و، ز، ح، ط
+// ============================================================
+
+model DailyReportEntryExit {
+  id       String      @id @default(uuid()) @db.Uuid
+  reportId String      @map("report_id") @db.Uuid
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  rowNumber    Int     @map("row_number")
+  kind         String  @db.VarChar(20) // PERSON | VEHICLE
+  // Person fields
+  personName   String? @map("person_name") @db.VarChar(200)
+  organization String? @db.VarChar(200)
+  purpose      String? @db.VarChar(300)
+  // Vehicle fields
+  vehicleType  String? @map("vehicle_type") @db.VarChar(100)
+  plateNumber  String? @map("plate_number") @db.VarChar(32)
+  driverName   String? @map("driver_name") @db.VarChar(200)
+  cargo        String? @db.VarChar(300)
+  // Time
+  entryTime    String? @map("entry_time") @db.VarChar(10)
+  exitTime     String? @map("exit_time") @db.VarChar(10)
+  notes        String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([reportId])
+  @@map("daily_report_entry_exits")
+}
+
+model DailyReportRequest {
+  id       String      @id @default(uuid()) @db.Uuid
+  reportId String      @map("report_id") @db.Uuid
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int    @map("row_number")
+  requestType String @map("request_type") @db.VarChar(30) // PURCHASE | PETTY_CASH | MANPOWER | TECHNICAL | REPAIR
+
+  // اتصال به تنخواه (برای درخواست وجه)
+  pettyCashAccountId String?   @map("petty_cash_account_id") @db.Uuid
+  title              String    @db.VarChar(300)
+  description        String?   @db.VarChar(1000)
+  quantity           Decimal?  @db.Decimal(20, 4)
+  unit               String?   @db.VarChar(32)
+  priority           String?   @db.VarChar(20) // LOW | NORMAL | HIGH | URGENT
+  requiredDate       DateTime? @map("required_date") @db.Date
+  wbsItemId          String?   @map("wbs_item_id") @db.Uuid
+  amount             Decimal?  @db.Decimal(20, 2)
+  status             String    @default("PENDING") @db.VarChar(20) // PENDING | APPROVED | REJECTED | DONE
+  managerNote        String?   @map("manager_note") @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([reportId])
+  @@index([requestType])
+  @@map("daily_report_requests")
+}
+
+model DailyReportEvent {
+  id       String      @id @default(uuid()) @db.Uuid
+  reportId String      @map("report_id") @db.Uuid
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int      @map("row_number")
+  eventType   String   @map("event_type") @db.VarChar(30) // STOP | INCIDENT | VISIT | INSTRUCTION | OTHER
+  title       String   @db.VarChar(300)
+  description String?  @db.VarChar(2000)
+  startTime   String?  @map("start_time") @db.VarChar(10)
+  endTime     String?  @map("end_time") @db.VarChar(10)
+  durationHrs Decimal? @map("duration_hrs") @db.Decimal(6, 2)
+  severity    String?  @db.VarChar(20) // LOW | MEDIUM | HIGH
+  actorName   String?  @map("actor_name") @db.VarChar(200)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([reportId])
+  @@index([eventType])
+  @@map("daily_report_events")
+}
+
+// ============================================================
+// WBS PROGRESS SNAPSHOT — پیشرفت روزانه‌ی WBS
+// ============================================================
+
+model WbsProgressSnapshot {
+  id        String  @id @default(uuid()) @db.Uuid
+  projectId String  @map("project_id") @db.Uuid
+  project   Project @relation("WbsProgressProject", fields: [projectId], references: [id], onDelete: Cascade)
+
+  wbsItemId String  @map("wbs_item_id") @db.Uuid
+  wbsItem   WbsItem @relation("WbsProgressItem", fields: [wbsItemId], references: [id], onDelete: Cascade)
+
+  reportId String? @map("report_id") @db.Uuid
+
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+  quantity     Decimal  @default(0) @db.Decimal(20, 4)
+  unit         String?  @db.VarChar(32)
+  progressPct  Decimal? @map("progress_pct") @db.Decimal(5, 2)
+
+  description String? @db.VarChar(500)
+  location    String? @db.VarChar(300)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([reportId, wbsItemId])
+  @@index([projectId])
+  @@index([wbsItemId])
+  @@index([snapshotDate])
+  @@map("wbs_progress_snapshots")
+}
+
+// ============================================================
+// INVENTORY COUNT & WAREHOUSE TRANSFER
+// ============================================================
+
+enum InventoryCountStatus {
+  DRAFT
+  CONFIRMED
+  POSTED
+  CANCELLED
+}
+
+enum WarehouseTransferStatus {
+  DRAFT
+  IN_TRANSIT
+  RECEIVED
+  CANCELLED
+}
+
+model InventoryCount {
+  id           String               @id @default(uuid()) @db.Uuid
+  code         String               @unique @db.VarChar(32)
+  warehouseId  String               @map("warehouse_id") @db.Uuid
+  warehouse    Warehouse            @relation("InvCountWarehouse", fields: [warehouseId], references: [id])
+  countDate    DateTime             @map("count_date") @db.Date
+  status       InventoryCountStatus @default(DRAFT)
+  approvedById String?              @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime?            @map("approved_at")
+  postedAt     DateTime?            @map("posted_at")
+  notes        String?              @db.VarChar(1000)
+  createdById  String?              @map("created_by_id") @db.Uuid
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  items InventoryCountItem[]
+
+  @@index([warehouseId])
+  @@index([status])
+  @@map("inventory_counts")
+}
+
+model InventoryCountItem {
+  id             String         @id @default(uuid()) @db.Uuid
+  countId        String         @map("count_id") @db.Uuid
+  count          InventoryCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+  itemId         String         @map("item_id") @db.Uuid
+  item           Item           @relation("InvCountItem", fields: [itemId], references: [id])
+  rowNumber      Int            @map("row_number")
+  systemQty      Decimal        @map("system_qty") @db.Decimal(20, 4)
+  physicalQty    Decimal        @map("physical_qty") @db.Decimal(20, 4)
+  difference     Decimal        @db.Decimal(20, 4)
+  unitCost       Decimal        @map("unit_cost") @db.Decimal(20, 2)
+  differenceCost Decimal        @map("difference_cost") @db.Decimal(24, 2)
+  notes          String?        @db.VarChar(500)
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  @@index([countId])
+  @@map("inventory_count_items")
+}
+
+model WarehouseTransfer {
+  id              String                  @id @default(uuid()) @db.Uuid
+  code            String                  @unique @db.VarChar(32)
+  fromWarehouseId String                  @map("from_warehouse_id") @db.Uuid
+  fromWarehouse   Warehouse               @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouseId   String                  @map("to_warehouse_id") @db.Uuid
+  toWarehouse     Warehouse               @relation("TransferTo", fields: [toWarehouseId], references: [id])
+  projectId       String?                 @map("project_id") @db.Uuid
+  transferDate    DateTime                @map("transfer_date") @db.Date
+  status          WarehouseTransferStatus @default(DRAFT)
+  driverName      String?                 @map("driver_name") @db.VarChar(200)
+  vehiclePlate    String?                 @map("vehicle_plate") @db.VarChar(32)
+  notes           String?                 @db.VarChar(1000)
+  sentAt          DateTime?               @map("sent_at")
+  receivedAt      DateTime?               @map("received_at")
+  receivedById    String?                 @map("received_by_id") @db.Uuid
+  totalValue      Decimal                 @default(0) @map("total_value") @db.Decimal(24, 2)
+  createdById     String?                 @map("created_by_id") @db.Uuid
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  items WarehouseTransferItem[]
+
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([status])
+  @@map("warehouse_transfers")
+}
+
+model WarehouseTransferItem {
+  id         String            @id @default(uuid()) @db.Uuid
+  transferId String            @map("transfer_id") @db.Uuid
+  transfer   WarehouseTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  itemId     String            @map("item_id") @db.Uuid
+  item       Item              @relation("TransferItem", fields: [itemId], references: [id])
+  rowNumber  Int               @map("row_number")
+  quantity   Decimal           @db.Decimal(20, 4)
+  unitCost   Decimal           @map("unit_cost") @db.Decimal(20, 2)
+  totalCost  Decimal           @map("total_cost") @db.Decimal(24, 2)
+  notes      String?           @db.VarChar(500)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@index([transferId])
+  @@map("warehouse_transfer_items")
+}
+
+// ============================================================
+// ADJUSTMENT & MATERIAL PRICE DIFFERENCE (تعدیل و مابه‌التفاوت)
+// ============================================================
+
+enum AdjustmentStatus {
+  DRAFT
+  CONFIRMED
+  POSTED
+  CANCELLED
+}
+
+model AdjustmentIndex {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(32)
+  year        Int
+  month       Int
+  category    String   @db.VarChar(100)
+  indexValue  Decimal  @map("index_value") @db.Decimal(20, 4)
+  baseYear    Int      @map("base_year")
+  description String?  @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, month, category])
+  @@index([category])
+  @@map("adjustment_indices")
+}
+
+model AdjustmentCalculation {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(32)
+  projectId   String  @map("project_id") @db.Uuid
+  project     Project @relation("AdjustmentProject", fields: [projectId], references: [id])
+  contractId  String? @map("contract_id") @db.Uuid
+  statementId String? @map("statement_id") @db.Uuid
+
+  periodFrom DateTime @map("period_from") @db.Date
+  periodTo   DateTime @map("period_to") @db.Date
+  category   String   @db.VarChar(100)
+
+  baseAmount     Decimal @map("base_amount") @db.Decimal(24, 2)
+  baseIndex      Decimal @map("base_index") @db.Decimal(20, 4)
+  currentIndex   Decimal @map("current_index") @db.Decimal(20, 4)
+  coefficient    Decimal @db.Decimal(10, 4)
+  adjustedAmount Decimal @map("adjusted_amount") @db.Decimal(24, 2)
+
+  status         AdjustmentStatus @default(DRAFT)
+  journalEntryId String?          @unique @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry?    @relation("AdjustmentJE", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  notes       String?  @db.VarChar(500)
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([projectId])
+  @@index([status])
+  @@map("adjustment_calculations")
+}
+
+model MaterialPriceDiff {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(32)
+  projectId   String  @map("project_id") @db.Uuid
+  project     Project @relation("MPDProject", fields: [projectId], references: [id])
+  contractId  String? @map("contract_id") @db.Uuid
+  statementId String? @map("statement_id") @db.Uuid
+
+  materialType String  @map("material_type") @db.VarChar(100)
+  unit         String? @db.VarChar(32)
+  quantity     Decimal @db.Decimal(20, 4)
+  basePrice    Decimal @map("base_price") @db.Decimal(20, 2)
+  actualPrice  Decimal @map("actual_price") @db.Decimal(20, 2)
+  diffAmount   Decimal @map("diff_amount") @db.Decimal(24, 2)
+
+  periodFrom DateTime @map("period_from") @db.Date
+  periodTo   DateTime @map("period_to") @db.Date
+
+  status         AdjustmentStatus @default(DRAFT)
+  journalEntryId String?          @unique @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry?    @relation("MPDJE", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  notes       String?  @db.VarChar(500)
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([projectId])
+  @@index([materialType])
+  @@index([status])
+  @@map("material_price_diffs")
+}
+
+// ============================================================
+// WORKER STATEMENT — صورت‌وضعیت پرسنل (حقوق و دستمزد)
+// ============================================================
+
+enum WorkerStatementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+model WorkerStatement {
+  id     String                @id @default(uuid()) @db.Uuid
+  code   String                @unique @db.VarChar(32)
+  status WorkerStatementStatus @default(DRAFT)
+
+  // پرسنل و قرارداد
+  partnerId String  @map("partner_id") @db.Uuid
+  partner   Partner @relation("WorkerStatementPartner", fields: [partnerId], references: [id])
+
+  contractId String?        @map("contract_id")
+  contract   LegalContract? @relation("WorkerStatementContractLink", fields: [contractId], references: [id], onDelete: SetNull)
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("WorkerStatementProject", fields: [projectId], references: [id])
+
+  // دوره
+  statementNumber Int      @map("statement_number")
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+
+  // مبالغ دریافتی
+  totalEarnings   Decimal @default(0) @map("total_earnings") @db.Decimal(24, 2)
+  totalInsurance  Decimal @default(0) @map("total_insurance") @db.Decimal(24, 2)
+  totalTax        Decimal @default(0) @map("total_tax") @db.Decimal(24, 2)
+  totalDeductions Decimal @default(0) @map("total_deductions") @db.Decimal(24, 2)
+  netPayable      Decimal @default(0) @map("net_payable") @db.Decimal(24, 2)
+
+  // ضرایب
+  insurancePercent Decimal @default(7) @map("insurance_percent") @db.Decimal(5, 2)
+
+  // جمع کارکرد (خلاصه)
+  workDays      Decimal @default(0) @map("work_days") @db.Decimal(6, 2)
+  overtimeHours Decimal @default(0) @map("overtime_hours") @db.Decimal(7, 2)
+  holidayHours  Decimal @default(0) @map("holiday_hours") @db.Decimal(7, 2)
+  absentDays    Decimal @default(0) @map("absent_days") @db.Decimal(6, 2)
+  leaveDays     Decimal @default(0) @map("leave_days") @db.Decimal(6, 2)
+
+  description String? @db.VarChar(500)
+
+  // workflow
+  approvedById   String?   @map("approved_by_id") @db.Uuid
+  approvedAt     DateTime? @map("approved_at")
+  paidAt         DateTime? @map("paid_at")
+  rejectedReason String?   @map("rejected_reason") @db.VarChar(500)
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items WorkerStatementItem[]
+
+  @@unique([partnerId, periodStart, periodEnd])
+  @@index([status])
+  @@index([partnerId])
+  @@map("worker_statements")
+}
+
+model WorkerStatementItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  statementId String          @map("statement_id") @db.Uuid
+  statement   WorkerStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  rowNumber   Int
+  description String  @db.VarChar(500)
+  unit        String? @db.VarChar(32)
+  quantity    Decimal @db.Decimal(20, 4)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
+
+  // برای اتصال به قرارداد
+  contractItemId String? @map("contract_item_id")
+  notes          String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([statementId])
+  @@map("worker_statement_items")
+}
+
+// ============================================================
+// PAYROLL TAX — جدول مالیات پله‌ای
+// ============================================================
+
+model PayrollTaxSetting {
+  id    String @id @default(uuid()) @db.Uuid
+  year  Int    @unique
+  title String @default("") @db.VarChar(128)
+
+  monthlyExemption         Decimal @default(0) @map("monthly_exemption") @db.Decimal(24, 2)
+  insuranceEmployeePercent Decimal @default(7) @map("insurance_employee_percent") @db.Decimal(5, 2)
+  insuranceEmployerPercent Decimal @default(23) @map("insurance_employer_percent") @db.Decimal(5, 2)
+
+  isActive  Boolean  @default(true) @map("is_active")
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  brackets TaxBracket[]
+
+  @@map("payroll_tax_settings")
+}
+
+model TaxBracket {
+  id        String            @id @default(uuid()) @db.Uuid
+  settingId String            @map("setting_id") @db.Uuid
+  setting   PayrollTaxSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
+
+  order       Int      @default(0)
+  fromAmount  Decimal  @map("from_amount") @db.Decimal(24, 2)
+  toAmount    Decimal? @map("to_amount") @db.Decimal(24, 2)
+  ratePercent Decimal  @map("rate_percent") @db.Decimal(5, 2)
+
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([settingId, order])
+  @@index([settingId])
+  @@map("tax_brackets")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String
+  severity  String    @default("INFO")
+  title     String
+  message   String
+  entity    String
+  entityId  String    @map("entity_id")
+  link      String?
+  dueDate   DateTime? @map("due_date") @db.Date
+  daysLeft  Int?      @map("days_left")
+  isRead    Boolean   @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  userId    String?   @map("user_id") @db.Uuid
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([type, entity, entityId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model JournalDeletionLog {
+  id              String    @id @default(cuid())
+  journalId       String    @map("journal_id")
+  journalNo       String?   @map("journal_no")
+  journalDate     DateTime? @map("journal_date") @db.Date
+  fiscalYearId    String?   @map("fiscal_year_id")
+  status          String?
+  description     String?
+  totalDebit      Decimal?  @map("total_debit") @db.Decimal(18, 2)
+  totalCredit     Decimal?  @map("total_credit") @db.Decimal(18, 2)
+  linesSnapshot   Json?     @map("lines_snapshot")
+  journalSnapshot Json?     @map("journal_snapshot")
+  reason          String?
+  deletedBy       String?   @map("deleted_by")
+  deletedAt       DateTime  @default(now()) @map("deleted_at")
+  ipAddress       String?   @map("ip_address")
+  userAgent       String?   @map("user_agent")
+
+  @@index([journalId])
+  @@index([deletedAt])
+  @@index([deletedBy])
+  @@map("journal_deletion_logs")
 }
