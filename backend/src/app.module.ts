@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { UnitsModule } from './modules/units/units.module';
+import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
 import { PrismaModule } from './shared/prisma/prisma.module';
@@ -21,9 +25,37 @@ import { PartnerCapitalModule } from './modules/partner-capital/partner-capital.
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { SalesModule } from './modules/sales/sales.module';
+import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
+import { BankModule } from './modules/bank/bank.module';
+import { FixedAssetsModule } from './modules/fixed-assets/fixed-assets.module';
+import { PurchaseInvoicesModule } from './modules/purchase-invoices/purchase-invoices.module';
+import { SalesInvoicesModule } from './modules/sales-invoices/sales-invoices.module';
+import { EquipmentModule } from './modules/equipment/equipment.module';
+import { PriceListModule } from './modules/price-list/price-list.module';
+import { OverheadModule } from './modules/overhead/overhead.module';
+import { ClientStatementModule } from './modules/client-statement/client-statement.module';
+import { WipModule } from './modules/wip/wip.module';
+import { DataIoModule } from './modules/data-io/data-io.module';
+import { MaterialReportModule } from './modules/material-report/material-report.module';
+import { InventoryCountModule } from './modules/inventory-count/inventory-count.module';
+import { AdjustmentModule } from './modules/adjustment/adjustment.module';
+import { TaxReportsModule } from './modules/tax-reports/tax-reports.module';
+import { OperationalReportsModule } from './modules/operational-reports/operational-reports.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { BackupModule } from './modules/backup/backup.module';
+import { NotificationModule } from './modules/notifications/notification.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      { name: 'global', ttl: 60_000, limit: 200 },
+      { name: 'login', ttl: 15 * 60_000, limit: 5 },
+    ]),
+    UnitsModule,
+    RecycleBinModule,
+    NotificationModule,
+    BackupModule,
+    AuditModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -49,6 +81,25 @@ import { SalesModule } from './modules/sales/sales.module';
     TimelineModule,
     ContractsModule,
     SalesModule,
+    CostCentersModule,
+    BankModule,
+    FixedAssetsModule,
+    PurchaseInvoicesModule,
+    SalesInvoicesModule,
+    EquipmentModule,
+    PriceListModule,
+    OverheadModule,
+    ClientStatementModule,
+    WipModule,
+    DataIoModule,
+    MaterialReportModule,
+    InventoryCountModule,
+    AdjustmentModule,
+    TaxReportsModule,
+    OperationalReportsModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}
