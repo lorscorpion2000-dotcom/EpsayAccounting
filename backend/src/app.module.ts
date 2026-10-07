@@ -44,6 +44,7 @@ import { OperationalReportsModule } from './modules/operational-reports/operatio
 import { AuditModule } from './modules/audit/audit.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { HealthController } from './common/health/health.controller';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
     TaxReportsModule,
     OperationalReportsModule,
   ],
+  controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
