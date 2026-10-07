@@ -29,11 +29,11 @@ export class AuthService {
       },
     });
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('Ù†Ø§Ù… Ú©Ø§Ø±Ø¨Ø±ÛŒ ÛŒا Ø±Ù…ز Ø¹Ø¨Ùˆر Ø§Ø´ØªØ¨Ø§Ù‡ است');
+      throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
     }
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('Ù†Ø§Ù… Ú©Ø§Ø±Ø¨Ø±ÛŒ ÛŒا Ø±Ù…ز Ø¹Ø¨Ùˆر Ø§Ø´ØªØ¨Ø§Ù‡ است');
+    if (!ok) throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -49,7 +49,7 @@ export class AuthService {
       { sub: user.id, username: user.username },
       {
         secret: this.config.get<string>('jwt.secret'),
-        expiresIn: this.config.get<string>('jwt.expiresIn') || '8h',
+        expiresIn: this.config.get<string>('jwt.expiresIn'),
       },
     );
 

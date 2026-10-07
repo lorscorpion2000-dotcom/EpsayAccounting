@@ -118,3 +118,21 @@ backend/uploads/
 /scripts/audit-*.mjs
 /scripts/bundle-*.mjs
 scripts/corrupted-files.txt
+
+# ─── Security additions (1.1) ───
+# ─── Env files comprehensive (security) ───
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+# ─── Backups ───
+*.archived-*
+*.broken-*
+# ─── Runtime logs/data ───
+logs/
+backup/
+backend/*.json
+!backend/package.json
+!backend/tsconfig.json
+!backend/package-lock.json
