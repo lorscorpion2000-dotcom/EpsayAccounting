@@ -9,6 +9,7 @@ export interface AuthUser {
   mobile?: string | null;
   roles: string[];
   permissions: string[];
+  mustChangePassword?: boolean;
 }
 
 interface AuthState {

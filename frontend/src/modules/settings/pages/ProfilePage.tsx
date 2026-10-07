@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, User as UserIcon, Save, KeyRound, Mail, Phone, Shield } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -7,6 +8,9 @@ import { profileApi } from '@/modules/auth/services/auth.api';
 
 export default function ProfilePage() {
   const { user, setAuth, token } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const forceChange = searchParams.get('force') === '1';
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
@@ -48,8 +52,8 @@ export default function ProfilePage() {
 
   const onChangePassword = async (data: any) => {
     if (!data.oldPassword) { toast.error('رمز فعلی الزامی است'); return; }
-    if (!data.newPassword || data.newPassword.length < 6) {
-      toast.error('رمز جدید باید حداقل ۶ کاراکتر باشد'); return;
+    if (!data.newPassword || data.newPassword.length < 10) {
+      toast.error('رمز جدید باید حداقل ۱۰ کاراکتر باشد'); return;
     }
     if (data.newPassword !== data.confirmPassword) {
       toast.error('تکرار رمز جدید مطابقت ندارد'); return;
@@ -59,6 +63,12 @@ export default function ProfilePage() {
       await profileApi.changePassword(data.oldPassword, data.newPassword);
       toast.success('رمز عبور تغییر کرد');
       passwordForm.reset({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      if (token && user) {
+        setAuth(token, { ...user, mustChangePassword: false });
+      }
+      if (forceChange) {
+        setTimeout(() => navigate('/dashboard', { replace: true }), 800);
+      }
     } catch (e: any) {
       const m = e?.response?.data?.message;
       toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
@@ -69,6 +79,19 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-3xl">
+      {forceChange && (
+        <div className="card p-4 border-r-4 border-amber-500 bg-amber-50">
+          <div className="flex items-center gap-3">
+            <KeyRound className="w-6 h-6 text-amber-600 shrink-0" />
+            <div>
+              <div className="font-bold text-amber-800">تغییر رمز پیش‌فرض الزامی است</div>
+              <div className="text-sm text-amber-700 mt-0.5">
+                برای استفاده از سیستم، ابتدا رمز عبور خود را تغییر دهید.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <UserIcon className="w-6 h-6 text-brand-600" />

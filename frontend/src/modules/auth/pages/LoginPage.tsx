@@ -31,6 +31,11 @@ export default function LoginPage() {
       if (savedTheme) {
         useThemeStore.getState().setTheme(savedTheme, false);
       }
+      if ((res.user as any).mustChangePassword) {
+        toast.warning('لطفاً رمز عبور پیش‌فرض خود را تغییر دهید');
+        navigate('/settings/profile?force=1', { replace: true });
+        return;
+      }
       toast.success(`خوش آمدید، ${res.user.fullName}`);
       navigate('/dashboard', { replace: true });
     } catch (e: any) {

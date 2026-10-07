@@ -45,6 +45,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       fullName: user.fullName,
       roles: user.roles.map((r) => r.role.code),
       permissions: Array.from(permissions),
+      mustChangePassword: user.mustChangePassword,
     };
   }
 }

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { MustChangePasswordGuard } from './common/guards/must-change-password.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TelegramService } from './common/services/telegram.service';
 import { validateEnv } from './config/env.validation';
@@ -43,6 +44,7 @@ async function bootstrap() {
   app.useGlobalGuards(
     new JwtAuthGuard(reflector),
     new PermissionsGuard(reflector),
+    new MustChangePasswordGuard(reflector),
   );
 
   // Exception filter سراسری + هشدار تلگرام

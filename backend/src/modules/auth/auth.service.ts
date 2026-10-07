@@ -115,6 +115,7 @@ export class AuthService {
         mobile: user.mobile,
         roles: user.roles.map((r) => r.role.code),
         permissions: Array.from(permissions),
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -183,7 +184,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: { passwordHash, mustChangePassword: false },
     });
 
     return { success: true, message: 'رمز عبور تغییر کرد' };

@@ -39,5 +39,6 @@ export interface LoginResponse {
     mobile?: string | null;
     roles: string[];
     permissions: string[];
+    mustChangePassword?: boolean;
   };
 }
