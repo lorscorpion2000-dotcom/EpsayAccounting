@@ -4,11 +4,11 @@ param([switch]$Verbose)
 $ErrorActionPreference = 'Continue'
 
 $ServicesToWatch = @(
-    @{ Name = 'Epsay-Backend';  Url = 'http://localhost:3000/api/health'; RetrySeconds = 20 },
-    @{ Name = 'Epsay-Frontend'; Url = 'http://localhost:5173'; RetrySeconds = 10 }
+    @{ Name = 'Epsay-Backend';  Url = 'http://localhost:3000/api/health'; RetrySeconds = 30 },
+    @{ Name = 'Epsay-Frontend'; Url = 'http://localhost:5173';            RetrySeconds = 20 }
 )
-$LogDir  = 'E:\EpsayAccounting\logs\monitor'
-$LogFile = Join-Path $LogDir ('monitor-' + (Get-Date -Format 'yyyy-MM') + '.log')
+$LogDir      = 'E:\EpsayAccounting\logs\monitor'
+$LogFile     = Join-Path $LogDir ('monitor-' + (Get-Date -Format 'yyyy-MM') + '.log')
 $MaxLogLines = 5000
 
 if (-not (Test-Path $LogDir)) {
@@ -19,116 +19,148 @@ function Write-Log {
     param([string]$Message, [string]$Level = 'INFO')
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Message"
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
-    if ($Verbose) { Write-Host $line }
+    if ($Verbose) {
+        $color = switch ($Level) {
+            'ERROR'   { 'Red' }
+            'WARN'    { 'Yellow' }
+            'RESTART' { 'Magenta' }
+            default   { 'Gray' }
+        }
+        Write-Host $line -ForegroundColor $color
+    }
 }
 
+# HTTP test via curl.exe (Invoke-WebRequest times out in PS 5.1)
 function Test-HttpEndpoint {
-    param([string]$Url, [int]$TimeoutSec = 5)
+    param([string]$Url, [int]$TimeoutSec = 8)
     try {
-        $resp = Invoke-WebRequest -Uri $Url -TimeoutSec $TimeoutSec -UseBasicParsing -ErrorAction Stop
-        return @{ Ok = $true; Status = $resp.StatusCode }
+        $output = & curl.exe -s -o NUL -w "%{http_code}" --max-time $TimeoutSec $Url 2>$null
+        $code = [int]$output
+        if ($code -ge 200 -and $code -lt 400) {
+            return @{ Ok = $true; Status = $code }
+        }
+        return @{ Ok = $false; Status = "HTTP $code" }
     } catch {
-        return @{ Ok = $false; Status = $_.Exception.Message }
+        return @{ Ok = $false; Status = "err: $($_.Exception.Message)" }
     }
+}
+
+function Reset-Service {
+    param([string]$Name)
+    Write-Log "RESET $Name starting" 'RESTART'
+
+    Get-Process nssm -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep 3
+
+    sc.exe delete $Name 2>&1 | Out-Null
+    Start-Sleep 3
+
+    $NSSM = "C:\ProgramData\chocolatey\bin\nssm.exe"
+    if (-not (Test-Path $NSSM)) {
+        $NSSM = "C:\ProgramData\chocolatey\lib\NSSM\tools\nssm.exe"
+    }
+
+    if ($Name -eq 'Epsay-Backend') {
+        & $NSSM install $Name "node.exe" "E:\EpsayAccounting\backend\dist\src\main.js" 2>&1 | Out-Null
+        & $NSSM set $Name AppDirectory "E:\EpsayAccounting\backend" 2>&1 | Out-Null
+        & $NSSM set $Name AppEnvironmentExtra "NODE_ENV=production" "PORT=3000" 2>&1 | Out-Null
+        & $NSSM set $Name AppStdout "E:\EpsayAccounting\logs\backend-out.log" 2>&1 | Out-Null
+        & $NSSM set $Name AppStderr "E:\EpsayAccounting\logs\backend-err.log" 2>&1 | Out-Null
+    } elseif ($Name -eq 'Epsay-Frontend') {
+        $serveCmd = "C:\Users\M.Amini\AppData\Roaming\npm\serve.cmd"
+        & $NSSM install $Name $serveCmd "-s dist -l 5173 --config serve.json" 2>&1 | Out-Null
+        & $NSSM set $Name AppDirectory "E:\EpsayAccounting\frontend" 2>&1 | Out-Null
+        & $NSSM set $Name AppStdout "E:\EpsayAccounting\logs\frontend-out.log" 2>&1 | Out-Null
+        & $NSSM set $Name AppStderr "E:\EpsayAccounting\logs\frontend-err.log" 2>&1 | Out-Null
+    }
+
+    & $NSSM set $Name AppRotateFiles 1 2>&1 | Out-Null
+    & $NSSM set $Name AppRotateBytes 10485760 2>&1 | Out-Null
+    & $NSSM set $Name Start SERVICE_AUTO_START 2>&1 | Out-Null
+    & $NSSM set $Name AppExit Default Restart 2>&1 | Out-Null
+    & $NSSM set $Name AppRestartDelay 5000 2>&1 | Out-Null
+    & $NSSM set $Name AppThrottle 10000 2>&1 | Out-Null
+
+    & $NSSM start $Name 2>&1 | Out-Null
+    Start-Sleep 20
+
+    $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if ($svc -and $svc.Status -eq 'Running') {
+        Write-Log "RESET $Name OK" 'RESTART'
+        return $true
+    }
+    Write-Log "RESET $Name failed - status: $($svc.Status)" 'ERROR'
+    return $false
 }
 
 Write-Log '=== Monitoring started ==='
 $restartCount = 0
 
-foreach ($svc in $ServicesToWatch) {
-    $name = $svc.Name
-    $url  = $svc.Url
+foreach ($svcConfig in $ServicesToWatch) {
+    $name = $svcConfig.Name
+    $url  = $svcConfig.Url
 
-    try {
-        $service = Get-Service -Name $name -ErrorAction Stop
-    } catch {
-        Write-Log "Service $name not found" 'ERROR'
+    $service = Get-Service -Name $name -ErrorAction SilentlyContinue
+    if (-not $service) {
+        Write-Log "Service $name not found - RESET" 'WARN'
+        if (Reset-Service -Name $name) { $restartCount++ }
         continue
     }
 
     if ($service.Status -eq 'Paused') {
-        Write-Log "Service $name is Paused - full cleanup + restart" 'WARN'
-        Get-Process nssm -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep 2
-        sc.exe delete $name 2>&1 | Out-Null
-        Start-Sleep 3
+        Write-Log "Service $name Paused - RESET" 'WARN'
+        if (Reset-Service -Name $name) { $restartCount++ }
+        continue
+    }
 
-        $NSSM = "C:\ProgramData\chocolatey\bin\nssm.exe"
-        if (-not (Test-Path $NSSM)) {
-            $NSSM = "C:\ProgramData\chocolatey\lib\NSSM\tools\nssm.exe"
-        }
-
-        if ($name -eq 'Epsay-Backend') {
-            & $NSSM install $name "node.exe" "E:\EpsayAccounting\backend\dist\src\main.js"
-            & $NSSM set $name AppDirectory "E:\EpsayAccounting\backend"
-            & $NSSM set $name AppEnvironmentExtra "NODE_ENV=production" "PORT=3000"
-            & $NSSM set $name AppStdout "E:\EpsayAccounting\logs\backend-out.log"
-            & $NSSM set $name AppStderr "E:\EpsayAccounting\logs\backend-err.log"
-        } elseif ($name -eq 'Epsay-Frontend') {
-            $serveCmd = "C:\Users\M.Amini\AppData\Roaming\npm\serve.cmd"
-            & $NSSM install $name $serveCmd "-s dist -l 5173"
-            & $NSSM set $name AppDirectory "E:\EpsayAccounting\frontend"
-            & $NSSM set $name AppStdout "E:\EpsayAccounting\logs\frontend-out.log"
-            & $NSSM set $name AppStderr "E:\EpsayAccounting\logs\frontend-err.log"
-        }
-
-        & $NSSM set $name AppRotateFiles 1
-        & $NSSM set $name AppRotateBytes 10485760
-        & $NSSM set $name Start SERVICE_AUTO_START
-        & $NSSM set $name AppExit Default Restart
-        & $NSSM set $name AppRestartDelay 5000
-        & $NSSM set $name AppThrottle 10000
-
-        & $NSSM start $name
-        Start-Sleep 15
-        $service.Refresh()
-        if ($service.Status -eq 'Running') {
-            Write-Log "Service $name reset+restarted successfully" 'RESTART'
-            $restartCount++
-        } else {
-            Write-Log "Service $name still not running after reset" 'ERROR'
-        }
-    } elseif ($service.Status -ne 'Running') {
-        Write-Log "Service $name status=$($service.Status) - attempting restart" 'WARN'
+    if ($service.Status -ne 'Running') {
+        Write-Log "Service $name status=$($service.Status) - trying start" 'WARN'
         try {
-            Stop-Service -Name $name -Force -ErrorAction SilentlyContinue
-            Start-Sleep 2
             Start-Service -Name $name -ErrorAction Stop
-            Start-Sleep 3
+            Start-Sleep 8
             $service.Refresh()
             if ($service.Status -eq 'Running') {
-                Write-Log "Service $name restarted successfully" 'RESTART'
+                Write-Log "Service $name started OK" 'RESTART'
                 $restartCount++
             } else {
-                Write-Log "Service $name still not running" 'ERROR'
+                Write-Log "Service $name still not running - RESET" 'ERROR'
+                if (Reset-Service -Name $name) { $restartCount++ }
             }
         } catch {
-            Write-Log "Failed to restart $name : $($_.Exception.Message)" 'ERROR'
-            continue
+            Write-Log "Start-Service $name failed: $($_.Exception.Message) - RESET" 'ERROR'
+            if (Reset-Service -Name $name) { $restartCount++ }
         }
+        continue
     }
 
     if ($url) {
-        $check = Test-HttpEndpoint -Url $url -TimeoutSec 5
+        $check = Test-HttpEndpoint -Url $url -TimeoutSec 8
         if ($check.Ok) {
             Write-Log "$name HTTP OK ($($check.Status))"
-        } else {
-            Write-Log "$name HTTP FAIL - $($check.Status)" 'WARN'
-            Start-Sleep -Seconds $svc.RetrySeconds
-            $check2 = Test-HttpEndpoint -Url $url -TimeoutSec 5
-            if ($check2.Ok) {
-                Write-Log "$name HTTP recovered" 'RESTART'
-            } else {
-                Write-Log "$name HTTP still failing - restarting service" 'WARN'
-                try {
-                    Restart-Service -Name $name -Force -ErrorAction Stop
-                    Write-Log "$name restarted" 'RESTART'
-                    $restartCount++
-                } catch {
-                    Write-Log "Failed to restart $name : $($_.Exception.Message)" 'ERROR'
-                }
-            }
+            continue
         }
+
+        Write-Log "$name HTTP FAIL - $($check.Status) - retry in $($svcConfig.RetrySeconds)s" 'WARN'
+        Start-Sleep -Seconds $svcConfig.RetrySeconds
+
+        $check2 = Test-HttpEndpoint -Url $url -TimeoutSec 8
+        if ($check2.Ok) {
+            Write-Log "$name HTTP recovered after retry" 'RESTART'
+            continue
+        }
+
+        Write-Log "$name HTTP still failing - RESET" 'ERROR'
+        if (Reset-Service -Name $name) { $restartCount++ }
+    }
+}
+
+if (Test-Path $LogFile) {
+    $lineCount = (Get-Content $LogFile -ErrorAction SilentlyContinue).Count
+    if ($lineCount -gt $MaxLogLines) {
+        $keep = $lineCount - $MaxLogLines
+        $content = Get-Content $LogFile -ErrorAction SilentlyContinue
+        $content | Select-Object -Skip $keep | Set-Content -Path $LogFile -Encoding UTF8
+        Write-Log "Log trimmed (removed $keep old lines)" 'INFO'
     }
 }
 
