@@ -5,6 +5,7 @@ import { Loader2, User as UserIcon, Save, KeyRound, Mail, Phone, Shield } from '
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth.store';
 import { profileApi } from '@/modules/auth/services/auth.api';
+import TwoFactorSection from '../components/TwoFactorSection';
 
 export default function ProfilePage() {
   const { user, setAuth, token } = useAuthStore();
@@ -168,6 +169,8 @@ export default function ProfilePage() {
         </form>
       </div>
 
+      {/* 2FA */}
+      <TwoFactorSection />
       {/* فرم تغییر رمز */}
       <div className="card p-6">
         <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
