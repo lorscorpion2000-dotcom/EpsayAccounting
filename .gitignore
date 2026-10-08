@@ -153,3 +153,6 @@ tools/*.UNUSED
 tools/telegram.config.json.bak-*
 
 backups/
+
+tools/_archive/
+scripts/_archive/
