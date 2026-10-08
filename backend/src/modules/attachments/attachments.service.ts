@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -46,8 +48,17 @@ export class AttachmentsService {
   async remove(id: string) {
     const a = await this.prisma.attachment.findUnique({ where: { id } });
     if (!a) throw new NotFoundException('پیوست پیدا نشد');
-    await this.prisma.attachment.delete({ where: { id } });
-    return { success: true };
+    if ((a as any).deletedAt) {
+      throw new BadRequestException('پیوست قبلاً حذف شده است');
+    }
+    await this.prisma.attachment.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: null,
+      } as any,
+    });
+    return { success: true, softDeleted: true };
   }
 
 
@@ -86,9 +97,23 @@ export class AttachmentsService {
   }
 
   async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    // For hard delete by admin — soft delete first then optionally purge
-    // For safety we only do soft delete by default; uncomment hard delete below if needed
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+    const a = await this.prisma.attachment.findUnique({ where: { id } });
+    if (!a) throw new NotFoundException('پیوست پیدا نشد');
+
+    try {
+      const urlPath = (a.url || '').replace(/^\/api\/uploads/, '');
+      if (urlPath) {
+        const fullPath = path.join(process.cwd(), 'uploads', urlPath);
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      }
+    } catch (e) {
+      // silent
+    }
+
+    await this.prisma.attachment.delete({ where: { id } });
+    return { success: true, hardDeleted: true, id, by: userId || null, reason: reason || null };
   }
 
 }

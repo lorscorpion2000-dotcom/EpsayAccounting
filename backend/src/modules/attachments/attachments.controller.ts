@@ -25,6 +25,7 @@ export class AttachmentsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('attachment.delete')
   remove(@Param('id') id: string) {
     return this.svc.remove(id);
   }
