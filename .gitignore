@@ -136,3 +136,4 @@ backend/*.json
 !backend/package.json
 !backend/tsconfig.json
 !backend/package-lock.json
+tools/telegram.config.json
