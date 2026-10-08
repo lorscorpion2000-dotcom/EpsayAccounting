@@ -65,13 +65,47 @@ export class WarehousesService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, options?: { force?: boolean }) {
     await this.findOne(id);
+    const force = options?.force === true;
+
     const stockCount = await this.prisma.stock.count({
       where: { warehouseId: id, quantity: { gt: 0 } },
     });
-    if (stockCount > 0) throw new BadRequestException('انبار دارای موجودی است و قابل حذف نیست');
-    await this.prisma.warehouse.update({ where: { id }, data: { isActive: false } });
-    return { success: true };
+
+    if (!force) {
+      if (stockCount > 0) {
+        throw new BadRequestException('انبار دارای موجودی است و قابل حذف نیست — از حالت مدیر برای حذف کامل استفاده کنید');
+      }
+      await this.prisma.warehouse.update({ where: { id }, data: { isActive: false } });
+      return { success: true, softDeleted: true };
+    }
+
+    // force (admin)
+    const refs = await this.countReferences(id);
+    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+
+    // force بدون تأیید اضافه: چون admin خودش انتخاب کرده
+    await this.prisma.$transaction(async (tx) => {
+      await tx.stock.deleteMany({ where: { warehouseId: id } });
+      await tx.stockMovement.deleteMany({ where: { warehouseId: id } });
+      await tx.warehouse.delete({ where: { id } });
+    });
+
+    return { success: true, hardDeleted: true, refs, total };
+  }
+
+  private async countReferences(id: string) {
+    const p = this.prisma;
+    const [stocks, movements, receipts, issues, inventoryCounts, transfersFrom, transfersTo] = await Promise.all([
+      p.stock.count({ where: { warehouseId: id } }),
+      p.stockMovement.count({ where: { warehouseId: id } }),
+      p.goodsReceipt.count({ where: { warehouseId: id } }),
+      p.goodsIssue.count({ where: { warehouseId: id } }),
+      p.inventoryCount.count({ where: { warehouseId: id } }).catch(() => 0),
+      p.warehouseTransfer.count({ where: { fromWarehouseId: id } }).catch(() => 0),
+      p.warehouseTransfer.count({ where: { toWarehouseId: id } }).catch(() => 0),
+    ]);
+    return { stocks, movements, receipts, issues, inventoryCounts, transfersFrom, transfersTo };
   }
 }

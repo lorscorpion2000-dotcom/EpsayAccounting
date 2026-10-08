@@ -48,6 +48,62 @@ export class ContractsService {
     });
   }
 
+  /**
+   * لیست قراردادهای یک طرف قرارداد (پرسنل/پیمانکار)
+   * برای استفاده در فرم صورت‌وضعیت
+   */
+  async listByParty(partyIdOrPartnerId: string, kind?: string) {
+    // حل‌کردن: آیا LegalContractParty است یا Partner؟
+    let resolvedPartyId = partyIdOrPartnerId;
+
+    const asLegalParty = await this.prisma.legalContractParty.findUnique({
+      where: { id: partyIdOrPartnerId },
+      select: { id: true },
+    });
+
+    if (!asLegalParty) {
+      // احتمالاً Partner id داده شده — از nationalId یا fullName تبدیل کن
+      const partner = await this.prisma.partner.findUnique({
+        where: { id: partyIdOrPartnerId },
+        select: { id: true, name: true, nationalId: true },
+      });
+
+      if (!partner) return [];
+
+      let linkedParty = null;
+      if (partner.nationalId) {
+        linkedParty = await this.prisma.legalContractParty.findFirst({
+          where: { nationalId: partner.nationalId },
+          select: { id: true },
+        });
+      }
+      if (!linkedParty) {
+        linkedParty = await this.prisma.legalContractParty.findFirst({
+          where: { fullName: partner.name },
+          select: { id: true },
+        });
+      }
+
+      if (!linkedParty) return [];
+      resolvedPartyId = linkedParty.id;
+    }
+
+    const where: any = {
+      partyId: resolvedPartyId,
+      status: { in: ['DRAFT', 'ACTIVE', 'SUSPENDED'] },
+    };
+    if (kind) where.kind = kind;
+
+    return this.prisma.legalContract.findMany({
+      where,
+      include: {
+        items: { orderBy: { rowNumber: 'asc' } },
+        project: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async get(id: string) {
     const item = await this.prisma.legalContract.findUnique({
       where: { id },
@@ -55,44 +111,79 @@ export class ContractsService {
         party: true,
         project: { select: { id: true, name: true, code: true } },
         attachments: true,
+        items: { orderBy: { rowNumber: 'asc' } },
       },
     });
     if (!item) throw new NotFoundException('قرارداد پیدا نشد');
     return item;
   }
 
+  /**
+   * محاسبه‌ی جمع یک ردیف
+   */
+  private calcItemTotal(it: any) {
+    const q = Number(it.quantity) || 0;
+    const p = Number(it.unitPrice) || 0;
+    return q * p;
+  }
+
   async create(dto: CreateLegalContractDto) {
     const code = await this.nextCode();
-    return this.prisma.legalContract.create({
-      data: {
-        code,
-        kind: dto.kind as any,
-        status: 'DRAFT',
-        title: dto.title,
-        partyId: dto.partyId,
-        projectId: dto.projectId,
-        registrationNumber: dto.registrationNumber,
-        registrationDate: dto.registrationDate ? new Date(dto.registrationDate) : undefined,
-        subject: dto.subject,
-        bodyHtml: dto.bodyHtml,
-        totalAmount: dto.totalAmount,
-        salaryMonthly: dto.salaryMonthly,
-        salaryDaily: dto.salaryDaily,
-        salaryHourly: dto.salaryHourly,
-        workHoursPerWeek: dto.workHoursPerWeek,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        durationText: dto.durationText,
-        workLocation: dto.workLocation,
-        guaranteeType: dto.guaranteeType,
-        guaranteeNumber: dto.guaranteeNumber,
-        guaranteeAmount: dto.guaranteeAmount,
-        guaranteeBank: dto.guaranteeBank,
-        supervisorName: dto.supervisorName,
-        companySignerName: dto.companySignerName,
-        workerSignerName: dto.workerSignerName,
-        notes: dto.notes,
-      },
+
+    // اگر اجزا داده شده، جمع را از Σ محاسبه کن
+    const items = dto.items || [];
+    const itemsTotal = items.reduce((s, it) => s + this.calcItemTotal(it), 0);
+    const finalTotal = items.length > 0 ? itemsTotal : dto.totalAmount;
+
+    return this.prisma.$transaction(async (tx) => {
+      const contract = await tx.legalContract.create({
+        data: {
+          code,
+          kind: dto.kind as any,
+          status: 'DRAFT',
+          title: dto.title,
+          partyId: dto.partyId,
+          projectId: dto.projectId,
+          registrationNumber: dto.registrationNumber,
+          registrationDate: dto.registrationDate ? new Date(dto.registrationDate) : undefined,
+          subject: dto.subject,
+          bodyHtml: dto.bodyHtml,
+          totalAmount: finalTotal,
+          salaryMonthly: dto.salaryMonthly,
+          salaryDaily: dto.salaryDaily,
+          salaryHourly: dto.salaryHourly,
+          workHoursPerWeek: dto.workHoursPerWeek,
+          startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+          endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+          durationText: dto.durationText,
+          workLocation: dto.workLocation,
+          guaranteeType: dto.guaranteeType,
+          guaranteeNumber: dto.guaranteeNumber,
+          guaranteeAmount: dto.guaranteeAmount,
+          guaranteeBank: dto.guaranteeBank,
+          supervisorName: dto.supervisorName,
+          companySignerName: dto.companySignerName,
+          workerSignerName: dto.workerSignerName,
+          notes: dto.notes,
+        },
+      });
+
+      if (items.length > 0) {
+        await tx.legalContractItem.createMany({
+          data: items.map((it, idx) => ({
+            contractId: contract.id,
+            rowNumber: it.rowNumber ?? idx + 1,
+            description: it.description,
+            unit: it.unit,
+            quantity: Number(it.quantity) || 0,
+            unitPrice: Number(it.unitPrice) || 0,
+            totalPrice: this.calcItemTotal(it),
+            notes: it.notes,
+          })),
+        });
+      }
+
+      return contract;
     });
   }
 
@@ -102,7 +193,35 @@ export class ContractsService {
     if (dto.registrationDate) data.registrationDate = new Date(dto.registrationDate);
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
-    return this.prisma.legalContract.update({ where: { id }, data });
+    delete data.items; // items جدا مدیریت می‌شود
+
+    return this.prisma.$transaction(async (tx) => {
+      // اگر items داده شده، جایگزین کن و totalAmount را از Σ حساب کن
+      if (dto.items !== undefined) {
+        await tx.legalContractItem.deleteMany({ where: { contractId: id } });
+
+        const items = dto.items || [];
+        if (items.length > 0) {
+          await tx.legalContractItem.createMany({
+            data: items.map((it, idx) => ({
+              contractId: id,
+              rowNumber: it.rowNumber ?? idx + 1,
+              description: it.description,
+              unit: it.unit,
+              quantity: Number(it.quantity) || 0,
+              unitPrice: Number(it.unitPrice) || 0,
+              totalPrice: this.calcItemTotal(it),
+              notes: it.notes,
+            })),
+          });
+          data.totalAmount = items.reduce((s, it) => s + this.calcItemTotal(it), 0);
+        } else if (dto.totalAmount !== undefined) {
+          data.totalAmount = dto.totalAmount;
+        }
+      }
+
+      return tx.legalContract.update({ where: { id }, data });
+    });
   }
 
   async cancel(id: string, reason: string, userId?: string) {
@@ -126,6 +245,17 @@ export class ContractsService {
     return this.prisma.legalContract.update({
       where: { id },
       data: { status: 'ACTIVE' },
+    });
+  }
+
+  async reactivate(id: string) {
+    const c = await this.get(id);
+    if (!['SUSPENDED', 'COMPLETED', 'CANCELLED', 'TERMINATED'].includes(c.status)) {
+      throw new BadRequestException('قرارداد در وضعیت پایانی نیست');
+    }
+    return this.prisma.legalContract.update({
+      where: { id },
+      data: { status: 'ACTIVE', cancelledAt: null, cancellationReason: null },
     });
   }
 
@@ -276,12 +406,96 @@ export class ContractsService {
     return this.prisma.legalContractParty.create({ data: partyData });
   }
 
-  async remove(id: string) {
-    const existing = await this.get(id);
-    if (existing.status !== 'DRAFT' && existing.status !== 'CANCELLED') {
-      throw new BadRequestException('فقط قراردادهای پیش‌نویس یا ابطال‌شده قابل حذف هستند');
+  /**
+   * ساخت/بازیابی LegalContractParty از Partner (پیمانکار، تأمین‌کننده، ...)
+   */
+  async findOrCreatePartyFromPartner(partnerId: string) {
+    const p = await this.prisma.partner.findUnique({ where: { id: partnerId } });
+    if (!p) throw new NotFoundException('شخص پیدا نشد');
+
+    const nationalId = p.nationalId || null;
+
+    // اگر از قبل party با این کد ملی هست
+    let existing = null;
+    if (nationalId) {
+      existing = await this.prisma.legalContractParty.findFirst({ where: { nationalId } });
     }
-    await this.prisma.legalContract.delete({ where: { id } });
-    return { ok: true };
+
+    const partyData: any = {
+      kind: 'COMPANY' as any, // پیش‌فرض: حقوقی — کاربر می‌تواند ویرایش کند
+      fullName: p.name,
+      fatherName: (p as any).fatherName || null,
+      nationalId,
+      postalCode: p.postalCode || null,
+      mobilePhone: p.phone || null,
+      email: p.email || null,
+      address: p.address || null,
+      job: (p as any).jobDescription || null,
+      bankName: null,
+      bankAccount: (p as any).bankAccountNumber || null,
+      bankSheba: (p as any).shabaNumber || null,
+      notes: (p as any).aliasName ? 'نام مستعار: ' + (p as any).aliasName : null,
+    };
+
+    if (existing) {
+      return this.prisma.legalContractParty.update({ where: { id: existing.id }, data: partyData });
+    }
+    return this.prisma.legalContractParty.create({ data: partyData });
+  }
+
+  async remove(id: string, options?: { force?: boolean }) {
+    const existing = await this.get(id);
+    const force = options?.force === true;
+
+    if (!force) {
+      if (existing.status !== 'DRAFT' && existing.status !== 'CANCELLED') {
+        throw new BadRequestException('فقط قراردادهای پیشنویس یا ابطالشده قابل حذف هستند. برای حذف کامل از حالت مدیر استفاده کنید.');
+      }
+      // فقط اجزا و قرارداد
+      await this.prisma.$transaction(async (tx) => {
+        await tx.legalContractItem.deleteMany({ where: { contractId: id } });
+        await tx.legalContract.delete({ where: { id } });
+      });
+      return { ok: true, hardDeleted: true };
+    }
+
+    // force: چک ارجاعها
+    const refs = await this.countReferences(id);
+    const total = Object.values(refs).reduce((sum: number, n: any) => sum + Number(n || 0), 0);
+
+    if (total > 0) {
+      const details = Object.entries(refs)
+        .filter(([, v]: any) => Number(v) > 0)
+        .map(([k, v]) => '  - ' + k + ': ' + v)
+        .join('\n');
+      throw new BadRequestException({
+        code: 'CONTRACT_HAS_REFS',
+        message: '\u0642\u0631\u0627\u0631\u062f\u0627\u062f \u062f\u0631 ' + total + ' \u0645\u0648\u0631\u062f \u062f\u06cc\u06af\u0631 \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0634\u062f\u0647 \u0627\u0633\u062a. \u0627\u0628\u062a\u062f\u0627 \u0622\u0646\u200c\u0647\u0627 \u0631\u0627 \u067e\u0627\u06a9 \u06a9\u0646\u06cc\u062f:\n' + details,
+        refs, total,
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // حذف پیوستها
+      await tx.legalContractAttachment.deleteMany({ where: { contractId: id } }).catch(() => {});
+      // حذف اجزا
+      await tx.legalContractItem.deleteMany({ where: { contractId: id } });
+      // حذف قرارداد
+      await tx.legalContract.delete({ where: { id } });
+    });
+
+    return { ok: true, hardDeleted: true };
+  }
+
+  private async countReferences(id: string) {
+    const p = this.prisma;
+    const r = await Promise.all([
+      p.subcontractorStatement.count({ where: { contractId: id } }).catch(() => 0),
+      (p as any).workerStatement?.count({ where: { contractId: id } }).catch(() => 0) || Promise.resolve(0),
+    ]);
+    return {
+      subcontractorStatements: Number(r[0] || 0),
+      workerStatements: Number(r[1] || 0),
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PettyCashAccountsService } from './accounts.service';
 import { CreatePettyCashAccountDto } from './dto/create-account.dto';
@@ -44,4 +44,27 @@ export class PettyCashAccountsController {
   @Delete(':id')
   @RequirePermissions('petty-cash.delete')
   remove(@Param('id') id: string) { return this.service.remove(id); }
+
+
+  @Delete(':id/admin')
+  @RequirePermissions('capitalaccount.delete')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.service.adminDelete(id, user.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('capitalaccount.delete')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.service.restore(id, user.id);
+  }
+
 }

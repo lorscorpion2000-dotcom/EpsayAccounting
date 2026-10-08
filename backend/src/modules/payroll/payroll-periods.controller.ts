@@ -53,7 +53,9 @@ export class PayrollPeriodsController {
 
   @Patch(':id/approve')
   @RequirePermissions('approvals.update')
-  approve(@Param('id') id: string) { return this.s.approve(id); }
+  approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.s.approve(id, userId);
+  }
 
   @Patch(':id/pay')
   @RequirePermissions('payroll.update')

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { X, Save, Loader2, Plus, FileText } from 'lucide-react';
-import { contractsApi, LegalContract, LegalContractKind, LegalContractParty } from '../services/contracts.api';
+import { X, Save, Loader2, Plus, FileText, Trash2, Calculator } from 'lucide-react';
+import { contractsApi, LegalContract, LegalContractKind, LegalContractParty, LegalContractItem } from '../services/contracts.api';
 import { projectsApi } from '@/modules/projects/services/projects.api';
+import { partnersApi } from '@/modules/partners/services/partners.api';
 import { payrollApi } from '@/modules/payroll/services/payroll.api';
+import { formatNumber } from '@/utils/format';
 import AttachmentsManager from '@/components/AttachmentsManager';
 import { attachmentsApi, AttachmentInput } from '@/services/attachments.api';
 import PartyFormModal from './PartyFormModal';
@@ -17,6 +19,17 @@ const KIND_LABELS: Record<LegalContractKind, string> = {
 };
 
 const isEmployeeKind = (kind: string) => kind === 'WORKER_EMPLOYMENT';
+
+const isContractorKind = (kind: string) =>
+  kind === 'CONTRACTOR_AGREEMENT' || kind === 'SUBCONTRACTOR' || kind === 'CLIENT_CONTRACT';
+
+// ردیف‌های پیش‌فرض برای قرارداد کارگری
+const defaultWorkerItems = (): LegalContractItem[] => [
+  { rowNumber: 1, description: 'حقوق پایه', unit: 'روز', quantity: 30, unitPrice: 0 },
+  { rowNumber: 2, description: 'بن کارگری', unit: 'روز', quantity: 30, unitPrice: 0 },
+  { rowNumber: 3, description: 'حق مسکن', unit: 'روز', quantity: 30, unitPrice: 0 },
+  { rowNumber: 4, description: 'حق اولاد', unit: 'روز', quantity: 30, unitPrice: 0 },
+];
 
 interface Props {
   isOpen: boolean;
@@ -35,6 +48,10 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [loadingEmployeeData, setLoadingEmployeeData] = useState(false);
+  const [contractors, setContractors] = useState<any[]>([]);
+  const [selectedContractorId, setSelectedContractorId] = useState('');
+  const [loadingContractorData, setLoadingContractorData] = useState(false);
+  const [items, setItems] = useState<LegalContractItem[]>([]);
 
   const [form, setForm] = useState<any>({
     kind: 'WORKER_EMPLOYMENT',
@@ -72,10 +89,12 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
       contractsApi.listParties(),
       projectsApi.list().catch(() => []),
       payrollApi.employees.list({ active: true }).catch(() => []),
-    ]).then(([p, pr, emps]) => {
+      partnersApi.list({ type: 'CONTRACTOR' }).catch(() => []),
+    ]).then(([p, pr, emps, contrs]) => {
       setParties(p);
       setProjects(pr as any[]);
       setEmployees(Array.isArray(emps) ? emps : []);
+      setContractors(Array.isArray(contrs) ? contrs : []);
     });
     if (editing) {
       setForm({
@@ -105,6 +124,14 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
         workerSignerName: editing.workerSignerName || '',
         notes: editing.notes || '',
       });
+      setItems((editing.items || []).map((it: any, idx: number) => ({
+        rowNumber: it.rowNumber ?? idx + 1,
+        description: it.description,
+        unit: it.unit || '',
+        quantity: Number(it.quantity) || 0,
+        unitPrice: Number(it.unitPrice) || 0,
+        notes: it.notes || '',
+      })));
     } else {
       setForm({
         kind: 'WORKER_EMPLOYMENT', title: '', partyId: '', projectId: '',
@@ -115,6 +142,7 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
         guaranteeBank: '', supervisorName: '', companySignerName: '',
         workerSignerName: '', notes: '',
       });
+      setItems(defaultWorkerItems());
     }
   }, [isOpen, editing]);
 
@@ -175,6 +203,45 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
     }
   };
 
+  const handleContractorPick = async (partnerId: string) => {
+    setSelectedContractorId(partnerId);
+    if (!partnerId) {
+      set('partyId', '');
+      return;
+    }
+    setLoadingContractorData(true);
+    try {
+      const party = await contractsApi.findOrCreatePartyFromPartner(partnerId);
+      setForm((f: any) => ({ ...f, partyId: party.id }));
+      await reloadParties();
+      toast.success('اطلاعات پیمانکار بارگذاری شد');
+    } catch (e: any) {
+      const m = e?.response?.data?.message;
+      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در بارگذاری اطلاعات پیمانکار');
+      setSelectedContractorId('');
+    } finally {
+      setLoadingContractorData(false);
+    }
+  };
+
+  // ─── helpers برای جدول اجزا ───
+  const addItem = () => {
+    setItems((prev) => [
+      ...prev,
+      { rowNumber: prev.length + 1, description: '', unit: '', quantity: 1, unitPrice: 0 },
+    ]);
+  };
+
+  const updateItem = (idx: number, patch: Partial<LegalContractItem>) => {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+
+  const removeItem = (idx: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const itemsTotal = items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
+
   const handleSubmit = async () => {
     if (!form.title.trim()) { toast.error('عنوان الزامی است'); return; }
     if (!form.partyId) {
@@ -191,6 +258,26 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
       Object.keys(payload).forEach((k) => {
         if (payload[k] === '') delete payload[k];
       });
+
+      // اجزای اجرای قرارداد
+      payload.items = items
+        .filter((it) => it.description && it.description.trim())
+        .map((it, idx) => ({
+          rowNumber: idx + 1,
+          description: it.description.trim(),
+          unit: it.unit || undefined,
+          quantity: Number(it.quantity) || 0,
+          unitPrice: Number(it.unitPrice) || 0,
+          notes: it.notes || undefined,
+        }));
+
+      // اگر اجزا داریم، totalAmount را از Σ بگذار
+      if (payload.items.length > 0) {
+        payload.totalAmount = payload.items.reduce(
+          (s: number, it: any) => s + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
+          0,
+        );
+      }
       if (editing) {
         await contractsApi.update(editing.id, payload);
       } else {
@@ -250,9 +337,17 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
                 <select
                   value={form.kind}
                   onChange={(e) => {
-                    set('kind', e.target.value);
+                    const newKind = e.target.value;
+                    set('kind', newKind);
                     set('partyId', '');
                     setSelectedEmployeeId('');
+                    setSelectedContractorId('');
+                    // برای کارگری: اجزای پیش‌فرض
+                    if (newKind === 'WORKER_EMPLOYMENT') {
+                      setItems(defaultWorkerItems());
+                    } else if (items.length > 0 && items.every((it) => ['حقوق پایه','بن کارگری','حق مسکن','حق اولاد'].includes(it.description))) {
+                      setItems([]);
+                    }
                   }}
                   className="input w-full"
                 >
@@ -265,7 +360,59 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
               </div>
 
               {/* ─── Picker: Employee vs Party ─────────────────── */}
-              {isEmployeeKind(form.kind) ? (
+              {isContractorKind(form.kind) ? (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">پیمانکار *</label>
+                  <select
+                    value={selectedContractorId}
+                    onChange={(e) => handleContractorPick(e.target.value)}
+                    className="input w-full"
+                    disabled={loadingContractorData}
+                  >
+                    <option value="">— انتخاب پیمانکار از دایرکتوری اشخاص —</option>
+                    {contractors.length === 0 ? (
+                      <option value="" disabled>
+                        (هیچ پیمانکاری در دایرکتوری ثبت نشده — ابتدا از «اشخاص» یک شخص با نوع پیمانکار بسازید)
+                      </option>
+                    ) : (
+                      contractors.map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} {p.code ? '(' + p.code + ')' : ''}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {loadingContractorData && (
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                      <Loader2 className="w-3 h-3 animate-spin" /> در حال بارگذاری اطلاعات پیمانکار...
+                    </p>
+                  )}
+                  {form.partyId && !loadingContractorData && (
+                    <p className="text-xs text-emerald-600 mt-1">
+                      ✓ طرف قرارداد از دایرکتوری اشخاص بارگذاری شد — می‌توانید در فهرست زیر تغییر دهید
+                    </p>
+                  )}
+                  {parties.length > 0 && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-slate-500 cursor-pointer">
+                        یا انتخاب از لیست طرف‌های قرارداد قبلی
+                      </summary>
+                      <select
+                        value={form.partyId}
+                        onChange={(e) => set('partyId', e.target.value)}
+                        className="input w-full mt-2"
+                      >
+                        <option value="">انتخاب کنید...</option>
+                        {parties.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.fullName} {p.nationalId ? '(' + p.nationalId + ')' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </details>
+                  )}
+                </div>
+              ) : isEmployeeKind(form.kind) ? (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">پرسنل *</label>
                   <select
@@ -414,6 +561,119 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">موضوع قرارداد</label>
                 <textarea value={form.subject} onChange={(e) => set('subject', e.target.value)} rows={3} className="input w-full resize-none" />
+              </div>
+
+              {/* ─── اجزای اجرای قرارداد ─── */}
+              <div className="md:col-span-2 border-t pt-5 mt-3">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <Calculator className="w-4 h-4 text-brand-600" />
+                      اجزای اجرای قرارداد
+                    </label>
+                    <p className="text-xs text-slate-500 mt-1">
+                      مثال: «اجرای ... به ازای هر متر مربع ... ریال» — جمع کل به‌طور خودکار محاسبه می‌شود
+                    </p>
+                  </div>
+                  <button type="button" onClick={addItem} className="btn-secondary text-sm">
+                    <Plus className="w-4 h-4" /> افزودن ردیف
+                  </button>
+                </div>
+
+                {items.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center bg-slate-50 rounded-lg">
+                    هنوز ردیفی اضافه نشده — برای قرارداد پیمانکاری حداقل یک ردیف لازم است
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b">
+                        <tr>
+                          <th className="text-center px-2 py-2 w-10">#</th>
+                          <th className="text-right px-2 py-2">شرح</th>
+                          <th className="text-right px-2 py-2 w-24">واحد</th>
+                          <th className="text-right px-2 py-2 w-24">تعداد</th>
+                          <th className="text-right px-2 py-2 w-32">مبلغ واحد (ریال)</th>
+                          <th className="text-left px-2 py-2 w-32 bg-emerald-50">جمع</th>
+                          <th className="text-center px-2 py-2 w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {items.map((it, idx) => {
+                          const lineTotal = (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0);
+                          return (
+                            <tr key={idx}>
+                              <td className="px-2 py-2 text-center text-slate-500 num">{idx + 1}</td>
+                              <td className="px-2 py-2">
+                                <input
+                                  type="text"
+                                  value={it.description || ''}
+                                  onChange={(e) => updateItem(idx, { description: e.target.value })}
+                                  className="input text-xs py-1.5"
+                                  placeholder="مثال: اجرای سقف تیرچه بلوک"
+                                />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input
+                                  type="text"
+                                  value={it.unit || ''}
+                                  onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                                  className="input text-xs py-1.5"
+                                  placeholder="متر مربع"
+                                />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={it.quantity ?? 0}
+                                  onChange={(e) => updateItem(idx, { quantity: Number(e.target.value) })}
+                                  className="input num text-xs py-1.5 text-left"
+                                  dir="ltr"
+                                />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  value={it.unitPrice ?? 0}
+                                  onChange={(e) => updateItem(idx, { unitPrice: Number(e.target.value) })}
+                                  className="input num text-xs py-1.5 text-left"
+                                  dir="ltr"
+                                />
+                              </td>
+                              <td className="px-2 py-2 text-left bg-emerald-50/50">
+                                <span className="num text-xs font-bold text-emerald-700" dir="ltr">
+                                  {formatNumber(lineTotal)}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(idx)}
+                                  className="p-1.5 rounded hover:bg-red-50 text-red-600"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-slate-100 font-bold">
+                          <td colSpan={5} className="px-2 py-2 text-left text-sm">
+                            جمع کل اجزا:
+                          </td>
+                          <td className="px-2 py-2 text-left bg-emerald-100">
+                            <span className="num text-sm text-emerald-800" dir="ltr">
+                              {formatNumber(itemsTotal)}
+                            </span>
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-2">

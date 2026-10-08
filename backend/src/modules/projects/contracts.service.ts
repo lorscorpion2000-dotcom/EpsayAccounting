@@ -79,4 +79,26 @@ export class ContractsService {
     await this.prisma.contract.delete({ where: { id } });
     return { success: true };
   }
+  async complete(id: string) {
+    await this.findOne(id);
+    return this.prisma.contract.update({ where: { id }, data: { status: 'COMPLETED' } });
+  }
+
+  async suspend(id: string) {
+    await this.findOne(id);
+    return this.prisma.contract.update({ where: { id }, data: { status: 'SUSPENDED' } });
+  }
+
+  async terminate(id: string) {
+    await this.findOne(id);
+    return this.prisma.contract.update({ where: { id }, data: { status: 'TERMINATED' } });
+  }
+
+  async reactivate(id: string) {
+    const c = await this.findOne(id);
+    if (!['SUSPENDED', 'COMPLETED', 'TERMINATED'].includes(c.status)) {
+      throw new Error('قرارداد در وضعیت پایانی نیست');
+    }
+    return this.prisma.contract.update({ where: { id }, data: { status: 'ACTIVE' } });
+  }
 }

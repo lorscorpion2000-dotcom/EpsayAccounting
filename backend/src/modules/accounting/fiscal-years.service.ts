@@ -228,12 +228,12 @@ export class FiscalYearsService {
     }
 
     // شماره سند
-    const lastEntry = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: id },
-      orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
+    const fyCounter = await this.prisma.fiscalYear.update({
+      where: { id },
+      data: { nextEntryNumber: { increment: 1 } },
+      select: { nextEntryNumber: true },
     });
-    const entryNumber = (lastEntry?.entryNumber || 0) + 1;
+    const entryNumber = fyCounter.nextEntryNumber - 1;
     const code = 'JE-CL-' + fy.code + '-' + String(entryNumber).padStart(4, '0');
 
     return this.prisma.journalEntry.create({
@@ -321,12 +321,12 @@ export class FiscalYearsService {
       throw new BadRequestException('عدم توازن افتتاحیه: بدهکار ' + totalDebit + ' ≠ بستانکار ' + totalCredit);
     }
 
-    const lastEntry = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: id },
-      orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
+    const fyCounter = await this.prisma.fiscalYear.update({
+      where: { id },
+      data: { nextEntryNumber: { increment: 1 } },
+      select: { nextEntryNumber: true },
     });
-    const entryNumber = (lastEntry?.entryNumber || 0) + 1;
+    const entryNumber = fyCounter.nextEntryNumber - 1;
     const code = 'JE-OP-' + currentFy.code + '-' + String(entryNumber).padStart(4, '0');
 
     return this.prisma.journalEntry.create({
@@ -348,4 +348,38 @@ export class FiscalYearsService {
       include: { lines: { include: { account: { select: { code: true, name: true } } } } },
     });
   }
+
+  async getLockedMonths(id: string): Promise<string[]> {
+    const fy = await this.findOne(id);
+    return (fy.lockedMonths as string[]) || [];
+  }
+
+  async lockMonth(id: string, monthKey: string) {
+    const fy = await this.findOne(id);
+    const locked: string[] = (fy.lockedMonths as string[]) || [];
+    if (locked.includes(monthKey)) {
+      throw new BadRequestException("PERIOD_ALREADY_LOCKED");
+    }
+    locked.push(monthKey);
+    locked.sort();
+    return this.prisma.fiscalYear.update({
+      where: { id },
+      data: { lockedMonths: locked },
+    });
+  }
+
+  async unlockMonth(id: string, monthKey: string) {
+    const fy = await this.findOne(id);
+    const locked: string[] = (fy.lockedMonths as string[]) || [];
+    const idx = locked.indexOf(monthKey);
+    if (idx < 0) {
+      throw new BadRequestException("PERIOD_NOT_LOCKED");
+    }
+    locked.splice(idx, 1);
+    return this.prisma.fiscalYear.update({
+      where: { id },
+      data: { lockedMonths: locked },
+    });
+  }
+
 }

@@ -16,6 +16,9 @@ export class StatementItemDto {
 export class CreateSubcontractorStatementDto {
   @ApiProperty() @IsUUID() contractorId!: string;
   @ApiProperty() @IsUUID() projectId!: string;
+
+  @ApiPropertyOptional({ description: 'شناسه قرارداد حقوقی (پرسنل/پیمانکار)' })
+  @IsOptional() @IsUUID() contractId?: string;
   @ApiProperty() @IsInt() @Min(1) statementNumber!: number;
   @ApiProperty() @IsDateString() periodStart!: string;
   @ApiProperty() @IsDateString() periodEnd!: string;

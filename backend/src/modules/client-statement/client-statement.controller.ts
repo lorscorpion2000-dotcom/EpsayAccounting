@@ -1,0 +1,91 @@
+import {
+  Body, Controller, Delete, Get, Param, Patch, Post, Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ClientStatementService } from './client-statement.service';
+import {
+  CreateCSDto, UpdateCSDto, ImportCSItemsDto, RejectCSDto,
+} from './dto/client-statement.dto';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+@ApiTags('Client Statement')
+@ApiBearerAuth()
+@Controller('client-statements')
+export class ClientStatementController {
+  constructor(private service: ClientStatementService) {}
+
+  @Get()
+  @RequirePermissions('client-statement.read')
+  list(
+    @Query('projectId') projectId?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) { return this.service.list({ projectId, status, search }); }
+
+  @Get('stats')
+  @RequirePermissions('client-statement.read')
+  stats(@Query('projectId') projectId?: string) {
+    return this.service.stats(projectId);
+  }
+
+  @Get('next-number/:projectId')
+  @RequirePermissions('client-statement.read')
+  nextNumber(@Param('projectId') projectId: string) {
+    return this.service.nextStatementNumber(projectId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('client-statement.read')
+  get(@Param('id') id: string) { return this.service.get(id); }
+
+  @Post()
+  @RequirePermissions('client-statement.manage')
+  create(@Body() dto: CreateCSDto) { return this.service.create(dto); }
+
+  @Patch(':id')
+  @RequirePermissions('client-statement.manage')
+  update(@Param('id') id: string, @Body() dto: UpdateCSDto) {
+    return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('client-statement.manage')
+  remove(@Param('id') id: string) { return this.service.remove(id); }
+
+  @Post(':id/items/import')
+  @RequirePermissions('client-statement.manage')
+  importItems(@Param('id') id: string, @Body() dto: ImportCSItemsDto) {
+    return this.service.importItems(id, dto);
+  }
+
+  @Delete('items/:itemId')
+  @RequirePermissions('client-statement.manage')
+  deleteItem(@Param('itemId') itemId: string) { return this.service.deleteItem(itemId); }
+
+  @Post(':id/submit')
+  @RequirePermissions('client-statement.manage')
+  submit(@Param('id') id: string) { return this.service.submit(id); }
+
+  @Post(':id/approve')
+  @RequirePermissions('approvals.approve')
+  approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.approve(id, userId);
+  }
+
+  @Post(':id/reject')
+  @RequirePermissions('approvals.approve')
+  reject(@Param('id') id: string, @Body() dto: RejectCSDto) {
+    return this.service.reject(id, dto.reason);
+  }
+
+  @Post(':id/post')
+  @RequirePermissions('client-statement.manage')
+  post(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.post(id, userId);
+  }
+
+  @Post(':id/cancel')
+  @RequirePermissions('client-statement.manage')
+  cancel(@Param('id') id: string) { return this.service.cancel(id); }
+}

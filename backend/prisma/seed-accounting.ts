@@ -1,5 +1,27 @@
 // E:\EpsayAccounting\backend\prisma\seed-accounting.ts
-import { PrismaClient, AccountLevel, AccountNature } from '@prisma/client';
+import { PrismaClient, AccountLevel, AccountNature, AccountSubtype } from '@prisma/client';
+
+// ============================================================
+// Map account code -> subtype for aging/reporting
+// ============================================================
+function detectSubtype(code: string): AccountSubtype | null {
+  const map: Record<string, AccountSubtype> = {
+    '1.1.1': 'CASH',
+    '1.1.2': 'ACCOUNTS_RECEIVABLE',
+    '1.1.3': 'INVENTORY',
+    '1.1.4': 'PREPAID',
+    '1.1.5': 'CASH',
+    '1.2.1': 'FIXED_ASSET',
+    '1.2.2': 'ACCUMULATED_DEPRECIATION',
+    '2.1.1': 'ACCOUNTS_PAYABLE',
+    '2.1.2': 'SALARY_PAYABLE',
+    '2.1.3': 'TAX_PAYABLE',
+    '2.1.4': 'INSURANCE_PAYABLE',
+    '2.1.5': 'ACCOUNTS_PAYABLE',
+    '3.3':   'RETAINED_EARNINGS',
+  };
+  return map[code] ?? null;
+}
 const prisma = new PrismaClient();
 
 async function main() {
@@ -106,6 +128,7 @@ async function main() {
         parentId,
         isActive: true,
         isPostable: !!node.postable,
+        subtype: detectSubtype(code),
       },
     });
 

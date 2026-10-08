@@ -34,11 +34,43 @@ export class AccountsService {
     });
   }
 
+  /**
+   * حساب‌های قابل استفاده در سند:
+   * - تمام تفضیل‌های فعال و postable
+   * - معین‌هایی که postable هستن ولی فرزند postable ندارن
+   * - معین‌هایی که فرزند postable دارن → حذف می‌شن (کاربر باید از تفضیل استفاده کنه)
+   * - گروه و کل هرگز نمایش داده نمی‌شن
+   */
   async findPostable() {
-    return this.prisma.account.findMany({
+    const accounts = await this.prisma.account.findMany({
       where: { isActive: true, isPostable: true },
+      include: {
+        children: {
+          where: { isActive: true, isPostable: true },
+          select: { id: true, level: true, code: true, name: true, nature: true, parentId: true, isActive: true, isPostable: true, description: true, detailType: true, detailId: true },
+        },
+      },
       orderBy: { code: 'asc' },
     });
+
+    // ─── فیلتر ───
+    const result = accounts.filter((a) => {
+      // تفضیل‌ها: همیشه نشون بده
+      if (a.level === 'DETAIL' || (a.level as any) === 'TAFZIL') return true;
+
+      // معین‌ها: اگه فرزند postable داره، حذف کن
+      if (a.level === 'SUBSIDIARY') {
+        const hasPostableChildren = a.children.length > 0;
+        return !hasPostableChildren;
+      }
+
+      // گروه و کل هرگز (حتی اگه isPostable=true باشه، اشتباه تنظیمه)
+      return false;
+    });
+
+    // ─── مرتب‌سازی نهایی: تفضیل‌ها زیر معین والد ───
+    // (چون در DB ترتیب کد رعایت شده، همین کافیه)
+    return result;
   }
 
   async findOne(id: string) {
@@ -135,4 +167,19 @@ export class AccountsService {
     const idx = order.indexOf(current as any);
     return order[Math.min(idx + 1, order.length - 1)];
   }
+  /**
+   * همه حساب‌های فعال (گروه، کل، معین، تفصیلی) برای فیلترها
+   */
+  async findAllForFilter() {
+    const accounts = await this.prisma.account.findMany({
+      where: { isActive: true },
+      orderBy: { code: 'asc' },
+      select: {
+        id: true, code: true, name: true, level: true, nature: true,
+        parentId: true, isPostable: true, subtype: true,
+      },
+    });
+    return accounts;
+  }
+
 }

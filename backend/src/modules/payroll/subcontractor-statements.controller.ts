@@ -41,13 +41,30 @@ export class SubcontractorStatementsController {
 
   @Patch(':id')
   @RequirePermissions('payroll.update')
-  update(@Param('id') id: string, @Body() dto: Partial<CreateSubcontractorStatementDto>) {
-    return this.s.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateSubcontractorStatementDto>,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.s.update(id, dto, { force: wantForce && isAdmin });
   }
 
   @Delete(':id')
   @RequirePermissions('payroll.delete')
-  remove(@Param('id') id: string) { return this.s.remove(id); }
+  remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.s.remove(id, { force: wantForce && isAdmin });
+  }
 
   @Patch(':id/submit')
   @RequirePermissions('payroll.update')

@@ -1,0 +1,221 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import {
+  Plus, Loader2, Calculator, Eye, Trash2, RefreshCw,
+  CheckCircle2, Send, XCircle, FileSpreadsheet,
+} from 'lucide-react';
+import clsx from 'clsx';
+import { adjustmentApi } from '../services/adjustment.api';
+import { api } from '@/services/api';
+import type { AdjustmentCalculation } from '@/types/adjustment';
+import { ADJ_STATUS_LABELS, ADJ_STATUS_COLORS } from '@/types/adjustment';
+import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+
+export default function AdjustmentsListPage() {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<AdjustmentCalculation[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [projectFilter, setProjectFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [actionItem, setActionItem] = useState<AdjustmentCalculation | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [data, prj] = await Promise.all([
+        adjustmentApi.calculations.list({
+          projectId: projectFilter || undefined,
+          status: statusFilter || undefined,
+        }),
+        api.get('/projects').then((r) => r.data).catch(() => []),
+      ]);
+      setItems(data);
+      setProjects(prj);
+    } catch { toast.error('خطا در بارگذاری'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [projectFilter, statusFilter]);
+
+  const handleDelete = async () => {
+    if (!actionItem) return;
+    setActionLoading(true);
+    try {
+      await adjustmentApi.calculations.remove(actionItem.id);
+      toast.success('حذف شد');
+      setActionItem(null);
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا');
+    } finally { setActionLoading(false); }
+  };
+
+  const doAction = async (item: AdjustmentCalculation, action: string) => {
+    if (action === 'confirm' && !confirm('تأیید شود؟')) return;
+    if (action === 'post' && !confirm('سند حسابداری ثبت شود؟')) return;
+    if (action === 'cancel' && !confirm('لغو شود؟')) return;
+    try {
+      if (action === 'confirm') await adjustmentApi.calculations.confirm(item.id);
+      else if (action === 'post') await adjustmentApi.calculations.post(item.id);
+      else if (action === 'cancel') await adjustmentApi.calculations.cancel(item.id);
+      toast.success('انجام شد');
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا');
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Calculator className="w-6 h-6 text-brand-600" />
+            تعدیل صورت‌وضعیت‌ها
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            محاسبه تعدیل بر اساس شاخص‌های ماهانه
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="btn-secondary" onClick={() => navigate('/adjustment-indices')}>
+            <FileSpreadsheet className="w-4 h-4" /> شاخص‌ها
+          </button>
+          <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
+          <button className="btn-primary" onClick={() => navigate('/adjustments/new')}>
+            <Plus className="w-4 h-4" /> تعدیل جدید
+          </button>
+        </div>
+      </div>
+
+      <div className="card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input">
+            <option value="">همه پروژه‌ها</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input">
+            <option value="">همه وضعیت‌ها</option>
+            {Object.entries(ADJ_STATUS_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        {loading ? (
+          <div className="p-12 flex items-center justify-center text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-12 text-center">
+            <Calculator className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 mb-4">هیچ تعدیلی ثبت نشده است</p>
+            <button className="btn-primary" onClick={() => navigate('/adjustments/new')}>
+              <Plus className="w-4 h-4" /> اولین تعدیل
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[1100px]">
+              <thead className="bg-slate-50 border-b">
+                <tr>
+                  <th className="text-right px-3 py-3 font-medium text-slate-600 w-32">کد</th>
+                  <th className="text-right px-3 py-3 font-medium text-slate-600">پروژه</th>
+                  <th className="text-center px-3 py-3 font-medium text-slate-600 w-32">دوره</th>
+                  <th className="text-right px-3 py-3 font-medium text-slate-600 w-28">گروه</th>
+                  <th className="text-left px-3 py-3 font-medium text-slate-600 w-32">مبلغ پایه</th>
+                  <th className="text-center px-3 py-3 font-medium text-slate-600 w-24">ضریب</th>
+                  <th className="text-left px-3 py-3 font-medium text-slate-600 w-32">مبلغ تعدیل</th>
+                  <th className="text-center px-3 py-3 font-medium text-slate-600 w-24">وضعیت</th>
+                  <th className="text-center px-3 py-3 font-medium text-slate-600 w-44">عملیات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.map((it) => (
+                  <tr key={it.id} className="hover:bg-slate-50/50">
+                    <td className="px-3 py-3">
+                      <span className="num text-xs font-mono text-brand-700 font-bold" dir="ltr">{it.code}</span>
+                    </td>
+                    <td className="px-3 py-3 text-slate-800 text-xs">{it.project?.name}</td>
+                    <td className="px-3 py-3 text-center num text-xs">
+                      {formatJalaliDate(it.periodFrom)} تا {formatJalaliDate(it.periodTo)}
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600">{it.category}</td>
+                    <td className="px-3 py-3 text-left num text-xs">
+                      {toPersianDigits(Math.round(Number(it.baseAmount)).toLocaleString())}
+                    </td>
+                    <td className="px-3 py-3 text-center num text-xs font-bold text-brand-700">
+                      {Number(it.coefficient).toFixed(4)}
+                    </td>
+                    <td className="px-3 py-3 text-left num text-xs font-bold">
+                      {toPersianDigits(Math.round(Number(it.adjustedAmount)).toLocaleString())}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className={clsx('text-xs px-2 py-0.5 rounded-md', ADJ_STATUS_COLORS[it.status])}>
+                        {ADJ_STATUS_LABELS[it.status]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => navigate('/adjustments/' + it.id)}
+                          className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <AdminDeleteButton endpoint="/adjustments" id={it.id} itemLabel={it.code || it.id} onSuccess={load} />
+                        {it.status === 'DRAFT' && (
+                          <>
+                            <button onClick={() => doAction(it, 'confirm')}
+                              className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="تأیید">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setActionItem(it)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {it.status === 'CONFIRMED' && (
+                          <button onClick={() => doAction(it, 'post')}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="ثبت سند">
+                            <Send className="w-4 h-4" />
+                          </button>
+                        )}
+                        {['DRAFT', 'CONFIRMED'].includes(it.status) && (
+                          <button onClick={() => doAction(it, 'cancel')}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600" title="لغو">
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        {it.journalEntry && (
+                          <span className="text-[10px] num text-emerald-600" dir="ltr">{it.journalEntry.code}</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <ConfirmDialog
+        isOpen={!!actionItem}
+        title="حذف تعدیل"
+        message={actionItem ? `«${actionItem.code}» حذف شود؟` : ''}
+        confirmLabel="بله"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={handleDelete}
+        onCancel={() => setActionItem(null)}
+      />
+    </div>
+  );
+}

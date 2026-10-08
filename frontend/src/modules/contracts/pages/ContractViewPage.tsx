@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ArrowRight, Loader2, Printer, Play, CheckCircle2, Ban, FileText } from 'lucide-react';
 import { contractsApi, LegalContract, LegalContractKind, LegalContractStatus } from '../services/contracts.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
+import { numberToWords as formatNumberToWords } from '@/utils/number-to-words';
 import PrintButton from '@/components/PrintButton';
 import PrintHeader from '@/components/PrintHeader';
 import { exportHtmlToWord } from '@/utils/word-export';
@@ -75,10 +76,14 @@ export default function ContractViewPage() {
 
   const handleWordExport = () => {
     if (!data) return;
-    const innerHtml = printRef.current
-      ? (printRef.current.querySelector('.contract-body')?.innerHTML ||
-         printRef.current.innerHTML || '')
-      : '';
+    // کل محتوای چاپ‌شدنی (شامل جدول اجزا) را بگیر، عناصر no-print را حذف کن
+    const root = printRef.current;
+    let innerHtml = '';
+    if (root) {
+      const clone = root.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('.no-print').forEach((el) => el.remove());
+      innerHtml = clone.innerHTML;
+    }
     exportHtmlToWord({
       filename: 'قرارداد-' + (data.code || data.title),
       title: data.title,
@@ -239,6 +244,51 @@ export default function ContractViewPage() {
               {data.guaranteeNumber && <div><div className="text-slate-500 text-xs">شماره</div><div className="num" dir="ltr">{data.guaranteeNumber}</div></div>}
               {data.guaranteeAmount && <div><div className="text-slate-500 text-xs">مبلغ</div><div className="num" dir="ltr">{formatNumber(Number(data.guaranteeAmount))}</div></div>}
               {data.guaranteeBank && <div><div className="text-slate-500 text-xs">بانک</div><div>{data.guaranteeBank}</div></div>}
+            </div>
+          </div>
+        )}
+
+        {data.items && data.items.length > 0 && (
+          <div className="mt-6">
+            <div className="font-bold mb-3 pb-2 border-b">اجزای اجرای قرارداد</div>
+            <table className="w-full text-sm border">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="border p-2 text-center w-12">#</th>
+                  <th className="border p-2 text-right">شرح</th>
+                  <th className="border p-2 text-center w-24">واحد</th>
+                  <th className="border p-2 text-center w-24">تعداد</th>
+                  <th className="border p-2 text-left w-32">مبلغ واحد (ریال)</th>
+                  <th className="border p-2 text-left w-32">جمع (ریال)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((it: any, i: number) => (
+                  <tr key={it.id || i}>
+                    <td className="border p-2 text-center num">{i + 1}</td>
+                    <td className="border p-2">{it.description}{it.notes ? ' — ' + it.notes : ''}</td>
+                    <td className="border p-2 text-center">{it.unit || '—'}</td>
+                    <td className="border p-2 text-center num" dir="ltr">{formatNumber(Number(it.quantity || 0))}</td>
+                    <td className="border p-2 text-left num" dir="ltr">{formatNumber(Number(it.unitPrice || 0))}</td>
+                    <td className="border p-2 text-left num font-bold bg-emerald-50" dir="ltr">{formatNumber(Number(it.totalPrice || 0))}</td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-100 font-bold">
+                  <td colSpan={5} className="border p-2 text-left">جمع کل اجزا</td>
+                  <td className="border p-2 text-left num bg-emerald-100" dir="ltr">
+                    {formatNumber(data.items.reduce((s: number, it: any) => s + Number(it.totalPrice || 0), 0))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="mt-3 text-sm p-3 bg-emerald-50 border border-emerald-200 rounded">
+              <span className="text-slate-600">جمع کل به حروف: </span>
+              <span className="font-bold text-emerald-800">
+                {formatNumberToWords(
+                  data.items.reduce((s: number, it: any) => s + Number(it.totalPrice || 0), 0)
+                )}{' '}
+                ریال
+              </span>
             </div>
           </div>
         )}

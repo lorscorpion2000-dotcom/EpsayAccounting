@@ -5,8 +5,11 @@ import { PettyCashRequestsService } from './requests.service';
 import { PettyCashAccountsController } from './accounts.controller';
 import { PettyCashTransactionsController } from './transactions.controller';
 import { PettyCashRequestsController } from './requests.controller';
+import { PrismaModule } from '../../shared/prisma/prisma.module';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
+  imports: [PrismaModule, AccountingModule],
   controllers: [
     PettyCashAccountsController,
     PettyCashTransactionsController,

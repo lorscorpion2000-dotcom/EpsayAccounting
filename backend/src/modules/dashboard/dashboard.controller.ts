@@ -1,13 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
+import { DashboardExecutiveService } from './dashboard-executive.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Dashboard - داشبورد')
 @ApiBearerAuth()
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private s: DashboardService) {}
+  constructor(private s: DashboardService, private execService: DashboardExecutiveService) {}
 
   @Get('kpis')
   @RequirePermissions('dashboard.read')
@@ -28,4 +29,9 @@ export class DashboardController {
   @Get('profit-loss')
   @RequirePermissions('dashboard.read')
   getProfitLoss() { return this.s.getProfitLoss(); }
+
+  @Get('executive')
+  executive() {
+    return this.execService.executive();
+  }
 }

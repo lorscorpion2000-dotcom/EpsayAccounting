@@ -7,7 +7,7 @@ import { forwardRef } from 'react';
 
 interface Props {
   value?: string | null;
-  onChange: (value: string | null) => void;
+  onChange: (value: any) => void;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;

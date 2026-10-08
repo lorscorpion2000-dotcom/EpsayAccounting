@@ -32,6 +32,8 @@ export default function EmployeesListPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState<Employee | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -55,19 +57,23 @@ export default function EmployeesListPage() {
 
   useEffect(() => { load(); }, [typeFilter]);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
-    setActionLoading(true);
+    setForceError(null);
     try {
-      await payrollApi.employees.remove(deleting.id);
-      toast.success('پرسنل حذف شد');
+      await payrollApi.employees.remove(deleting.id, force);
+      toast.success(force ? 'پرسنل بهطور کامل حذف شد' : 'پرسنل غیرفعال شد');
       setDeleting(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
-    } finally {
-      setActionLoading(false);
+      const err = e?.response?.data;
+      if (err?.code === 'EMPLOYEE_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      }
     }
   };
 
@@ -292,15 +298,32 @@ export default function EmployeesListPage() {
       />
 
       <ConfirmDialog
-        isOpen={!!deleting}
-        title="حذف پرسنل"
-        message={`آیا از حذف «${deleting?.partner?.name}» اطمینان دارید؟ فقط پرسنل بدون سابقه حقوق قابل حذف است.`}
-        confirmLabel="بله، حذف شود"
+        isOpen={!!deleting && !forceConfirm}
+        title="غیرفعالسازی پرسنل"
+        message={deleting ? "پرسنل «" + (deleting.partner?.name || "") + "» غیرفعال شود این عمل قابل بازگشت است." : ""}
+        confirmLabel="بله غیرفعال شود"
         variant="danger"
-        loading={actionLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
       />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل پرسنل (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
+              <p className="text-xs text-slate-500">با حذف کامل تمام سوابق مرتبط (حضور کارکرد مرخصی مساعده) پاک میشود.</p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">انصراف</button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">حذف کامل (خطرناک)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

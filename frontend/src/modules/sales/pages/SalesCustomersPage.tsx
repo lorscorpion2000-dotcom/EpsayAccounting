@@ -13,6 +13,8 @@ export default function SalesCustomersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<SalesCustomer | null>(null);
   const [deleting, setDeleting] = useState<SalesCustomer | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -24,19 +26,24 @@ export default function SalesCustomersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
-    setActionLoading(true);
+    setForceError(null);
     try {
-      // حذف مشتری معمولاً فقط غیرفعال کردن است — ولی اینجا حذف می‌کنیم
-      // اگر قرارداد داشته باشد، بک‌اند خطا می‌دهد
-      await (salesApi.customers as any).remove?.(deleting.id) || toast.info('حذف مشتری فعلاً از API پشتیبانی نمی‌شود');
+      const res = await salesApi.customers.remove(deleting.id, force);
+      toast.success(force ? 'مشتری به‌طور کامل حذف شد' : 'مشتری غیرفعال شد');
       setDeleting(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const m = e?.response?.data?.message;
-      toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
-    } finally { setActionLoading(false); }
+      const err = e?.response?.data;
+      if (err?.code === 'CUSTOMER_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      }
+    }
   };
 
   const handleExportExcel = () => {
@@ -57,7 +64,7 @@ export default function SalesCustomersPage() {
         rows,
       }],
     });
-    toast.success('Excel دانلود شد');
+    toast.success('مشتری حذف شد');
   };
 
   return (
@@ -131,6 +138,13 @@ export default function SalesCustomersPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => setDeleting(c)}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -147,6 +161,34 @@ export default function SalesCustomersPage() {
         onClose={() => { setShowModal(false); setEditing(null); }}
         onSaved={load}
       />
+
+      <ConfirmDialog
+        isOpen={!!deleting && !forceConfirm}
+        title="حذف مشتری"
+        message={deleting ? "مشتری «" + deleting.fullName + "» غیرفعال شود؟" : ""}
+        confirmLabel="بله، غیرفعال شود"
+        variant="danger"
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
+      />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل مشتری (مدیر)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
+              <p className="text-xs text-slate-500">با حذف کامل، تمام ارجاع‌های این مشتری پاک می‌شود.</p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">انصراف</button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">حذف کامل (خطرناک)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

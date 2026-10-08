@@ -101,14 +101,43 @@ export class ItemsService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    const moves = await this.prisma.stockMovement.count({ where: { itemId: id } });
-    if (moves > 0) {
-      await this.prisma.item.update({ where: { id }, data: { isActive: false } });
-      return { success: true, message: 'کالا غیرفعال شد (دارای گردش)' };
+  async remove(id: string, options?: { force?: boolean }) {
+    const item = await this.findOne(id);
+    const force = options?.force === true;
+
+    const [moves, receipts, issues, stocks, invCounts, transfers] = await Promise.all([
+      this.prisma.stockMovement.count({ where: { itemId: id } }),
+      this.prisma.goodsReceiptItem.count({ where: { itemId: id } }),
+      this.prisma.goodsIssueItem.count({ where: { itemId: id } }),
+      this.prisma.stock.count({ where: { itemId: id } }),
+      this.prisma.inventoryCountItem.count({ where: { itemId: id } }),
+      this.prisma.warehouseTransferItem.count({ where: { itemId: id } }),
+    ]);
+    const totalRefs = moves + receipts + issues + stocks + invCounts + transfers;
+
+    if (totalRefs === 0) {
+      await this.prisma.item.delete({ where: { id } });
+      return { success: true, hardDeleted: true };
     }
-    await this.prisma.item.delete({ where: { id } });
-    return { success: true };
+
+    if (force) {
+      await this.prisma.$transaction([
+        this.prisma.stock.deleteMany({ where: { itemId: id } }),
+        this.prisma.inventoryCountItem.deleteMany({ where: { itemId: id } }),
+        this.prisma.warehouseTransferItem.deleteMany({ where: { itemId: id } }),
+        this.prisma.goodsReceiptItem.deleteMany({ where: { itemId: id } }),
+        this.prisma.goodsIssueItem.deleteMany({ where: { itemId: id } }),
+        this.prisma.stockMovement.deleteMany({ where: { itemId: id } }),
+        this.prisma.item.delete({ where: { id } }),
+      ]);
+      return { success: true, hardDeleted: true, refs: totalRefs };
+    }
+
+    await this.prisma.item.update({ where: { id }, data: { isActive: false } });
+    return {
+      success: true,
+      message: 'کالا غیرفعال شد (دارای وابستگی: ' + totalRefs + ' مورد)',
+      refs: { moves, receipts, issues, stocks, invCounts, transfers },
+    };
   }
 }

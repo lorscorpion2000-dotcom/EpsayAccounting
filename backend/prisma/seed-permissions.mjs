@@ -113,6 +113,75 @@ const PERMS = [
 
   // داشبورد
   ['dashboard.read', 'مشاهده داشبورد'],
+  // لاگ تغییرات
+  // پشتیبان‌گیری
+  ['backup.read',   'مشاهده پشتیبان‌ها'],
+  ['backup.manage', 'اجرای پشتیبان‌گیری و حذف'],
+
+  ['audit.read', 'مشاهده لاگ تغییرات'],
+
+  // اعلان‌ها
+  ['notification.read',   'مشاهده اعلان‌ها'],
+  ['notification.manage', 'مدیریت و پاک‌سازی اعلان‌ها'],
+
+  // اسناد حسابداری — حذف ویژه
+  ['journal.delete', 'حذف سند حسابداری (فقط مدیر ارشد)'],
+  ['journal.force-delete', 'حذف سند Posted (فقط مدیر ارشد)'],
+  ['journal.view-deletions', 'مشاهده لاگ حذف اسناد'],
+
+  // CRUD delete perms — wave 7
+  ['adjustment.delete', 'حذف تعدیل'],
+  ['materialpricediff.delete', 'حذف اختلاف قیمت'],
+  ['attachment.delete', 'حذف پیوست'],
+  ['capitalaccount.delete', 'حذف حساب سرمایه'],
+  ['attendance.delete', 'حذف حضور و غیاب'],
+  ['pettycashrequest.delete', 'حذف درخواست تنخواه'],
+  ['rfq.delete', 'حذف استعلام'],
+  ['supplierpayment.delete', 'حذف پرداخت تأمین‌کننده'],
+  ['salesreceipt.delete', 'حذف رسید فروش'],
+  ['audit.manage', 'مدیریت و پاک‌سازی لاگ'],
+
+  // ماشین‌آلات
+  ['equipment.read',               'مشاهده ماشین‌آلات'],
+  ['equipment.create',             'ایجاد ماشین'],
+  ['equipment.update',             'ویرایش ماشین'],
+  ['equipment.delete',             'حذف ماشین'],
+  ['equipment.logs.manage',        'مدیریت کارکرد روزانه'],
+  ['equipment.maintenance.manage', 'مدیریت تعمیرات'],
+  ['price-list.read',   'مشاهده فهرست بها'],
+  ['price-list.manage', 'مدیریت فهرست بها'],
+
+  // تسهیم سربار
+  ['overhead.read',   'مشاهده تسهیم سربار'],
+  ['overhead.manage', 'مدیریت تسهیم سربار'],
+  ['client-statement.read',   'مشاهده صورت‌وضعیت کارفرما'],
+  ['client-statement.manage', 'مدیریت صورت‌وضعیت کارفرما'],
+
+  // WIP
+  ['wip.read', 'مشاهده کار در جریان ساخت'],
+
+  // Data I/O
+  ['data-io.read',   'خروج داده‌ها'],
+  ['data-io.manage', 'ورود داده‌ها'],
+
+  // گزارش مصرف مصالح
+  ['material-report.read', 'گزارش مصرف مصالح و بهای واحد'],
+
+  // انبارگردانی و انتقال
+  ['inventory-count.read',      'مشاهده انبارگردانی'],
+  ['inventory-count.manage',    'مدیریت انبارگردانی'],
+  ['warehouse-transfer.read',   'مشاهده انتقال بین انبارها'],
+  ['warehouse-transfer.manage', 'مدیریت انتقال بین انبارها'],
+
+  // تعدیل و مابه‌التفاوت
+  ['adjustment.read',   'مشاهده تعدیل و مابه‌التفاوت'],
+  ['adjustment.manage', 'مدیریت تعدیل و مابه‌التفاوت'],
+
+  // گزارش‌های مالیاتی
+  ['tax-reports.read', 'مشاهده گزارش‌های مالیاتی'],
+
+  // گزارش‌های عملیاتی
+  ['operational-reports.read', 'مشاهده گزارش‌های عملیاتی'],
 ];
 
 async function main() {

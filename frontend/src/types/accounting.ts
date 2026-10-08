@@ -3,11 +3,29 @@ export type AccountNature = 'DEBIT' | 'CREDIT';
 export type FiscalYearStatus = 'OPEN' | 'CLOSED';
 export type JournalStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
 
+export type AccountDetailType =
+  | 'PARTNER' | 'ITEM' | 'PETTY_CASH'
+  | 'BANK' | 'CASH_REGISTER' | 'PROJECT'
+  | 'EMPLOYEE' | 'CONTRACTOR' | 'CUSTOMER' | 'SUPPLIER';
+
 export const ACCOUNT_LEVEL_LABELS: Record<AccountLevel, string> = {
   GROUP: 'گروه',
   GENERAL: 'کل',
   SUBSIDIARY: 'معین',
-  DETAIL: 'تفصیلی',
+  DETAIL: 'تفضیلی',
+};
+
+export const ACCOUNT_DETAIL_TYPE_LABELS: Record<AccountDetailType, string> = {
+  PARTNER: 'شخص (مشتری/تأمین‌کننده/پرسنل)',
+  ITEM: 'کالا',
+  PETTY_CASH: 'تنخواه‌گردان',
+  BANK: 'بانک',
+  CASH_REGISTER: 'صندوق',
+  PROJECT: 'پروژه',
+  EMPLOYEE: 'پرسنل',
+  CONTRACTOR: 'پیمانکار',
+  CUSTOMER: 'مشتری',
+  SUPPLIER: 'تأمین‌کننده',
 };
 
 export const ACCOUNT_NATURE_LABELS: Record<AccountNature, string> = {
@@ -43,6 +61,8 @@ export interface Account {
   parentId?: string | null;
   isActive: boolean;
   isPostable: boolean;
+  detailType?: AccountDetailType | null;
+  detailId?: string | null;
   description?: string | null;
   children?: Account[];
 }
@@ -103,11 +123,7 @@ export interface TrialBalanceRow {
 
 export interface TrialBalanceResult {
   rows: TrialBalanceRow[];
-  totals: {
-    debit: number;
-    credit: number;
-    difference: number;
-  };
+  totals: { debit: number; credit: number; difference: number };
 }
 
 export interface LedgerResult {
@@ -122,9 +138,5 @@ export interface LedgerResult {
     credit: number;
     balance: number;
   }>;
-  totals: {
-    debit: number;
-    credit: number;
-    balance: number;
-  } | null;
+  totals: { debit: number; credit: number; balance: number } | null;
 }

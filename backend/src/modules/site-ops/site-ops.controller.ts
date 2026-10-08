@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SiteOpsService } from './site-ops.service';
+import { DailyReportForwarderService } from './daily-report-forwarder.service';
 import { CreateDailyReportDto } from './dto/create-report.dto';
-import { UpdateDailyReportDto } from './dto/update-report.dto';
+import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -11,7 +12,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @ApiBearerAuth()
 @Controller('site-ops/daily-reports')
 export class SiteOpsController {
-  constructor(private s: SiteOpsService) {}
+  constructor(
+    private s: SiteOpsService,
+    private forwarder: DailyReportForwarderService,
+  ) {}
 
   @Get()
   @RequirePermissions('site-ops.read')
@@ -27,9 +31,50 @@ export class SiteOpsController {
   @ApiQuery({ name: 'projectId', required: false })
   stats(@Query('projectId') projectId?: string) { return this.s.stats(projectId); }
 
+  @Get(':id/sections')
+  @RequirePermissions('site-ops.read')
+  listSections(@Param('id') id: string) { return this.s.listSections(id); }
+
+  @Get(':id/sections/summary')
+  @RequirePermissions('site-ops.read')
+  sectionsSummary(@Param('id') id: string) { return this.s.sectionsSummary(id); }
+
+  @Patch(':id/sections/:type/approve')
+  @RequirePermissions('approvals.update')
+  approveSection(
+    @Param('id') id: string,
+    @Param('type') type: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.s.approveSection(id, type, userId);
+  }
+
+  @Patch(':id/sections/:type/reject')
+  @RequirePermissions('approvals.update')
+  rejectSection(
+    @Param('id') id: string,
+    @Param('type') type: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.s.rejectSection(id, type, body?.reason || '');
+  }
+
+  @Get('forwardings/failed')
+  @RequirePermissions('approvals.read')
+  listFailedForwardings(@Query('limit') limit?: string) {
+    return this.forwarder.getFailedForwardings(limit ? Number(limit) : 100);
+  }
+
+  @Post('forwardings/:id/retry')
+  @RequirePermissions('approvals.update')
+  retryForwarding(@Param('id') id: string) {
+    return this.forwarder.retryForwarding(id);
+  }
+
   @Get(':id')
   @RequirePermissions('site-ops.read')
   findOne(@Param('id') id: string) { return this.s.findOne(id); }
+
 
   @Post()
   @RequirePermissions('site-ops.create')

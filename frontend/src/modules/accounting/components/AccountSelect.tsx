@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronDown, X, Loader2, AlertCircle, Star, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import type { Account } from '@/types/accounting';
@@ -17,13 +18,15 @@ const LEVEL_LABELS: Record<string, string> = {
   GROUP: 'گروه',
   GENERAL: 'کل',
   SUBSIDIARY: 'معین',
-  TAFZIL: 'تفصیلی',
+  DETAIL: 'تفضیلی',
+  TAFZIL: 'تفضیلی',
 };
 
 const LEVEL_COLORS: Record<string, string> = {
   GROUP: 'bg-slate-100 text-slate-700',
   GENERAL: 'bg-blue-100 text-blue-700',
   SUBSIDIARY: 'bg-emerald-100 text-emerald-700',
+  DETAIL: 'bg-violet-100 text-violet-700',
   TAFZIL: 'bg-violet-100 text-violet-700',
 };
 
@@ -38,20 +41,18 @@ function saveList(key: string, list: string[]) {
 }
 
 export default function AccountSelect({
-  accounts,
-  value,
-  onChange,
-  placeholder = 'جستجوی حساب...',
-  disabled = false,
-  hasError = false,
-  loading = false,
+  accounts, value, onChange, placeholder = 'جستجوی حساب...',
+  disabled = false, hasError = false, loading = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [favIds, setFavIds] = useState<string[]>([]);
-  const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -75,13 +76,11 @@ export default function AccountSelect({
     saveList(RECENT_KEY, next);
   };
 
-  // حساب‌های مورد علاقه
   const favAccounts = useMemo(
     () => favIds.map((id) => accounts.find((a) => a.id === id)).filter(Boolean) as Account[],
     [favIds, accounts],
   );
 
-  // حساب‌های اخیر (بدون تکرار با مورد علاقه)
   const recentAccounts = useMemo(
     () => recentIds.map((id) => accounts.find((a) => a.id === id))
       .filter(Boolean)
@@ -101,11 +100,37 @@ export default function AccountSelect({
 
   const isSearching = search.trim().length > 0;
 
-  // بستن با کلیک بیرون
+  // Compute dropdown position when open
+  useEffect(() => {
+    if (!open) { setCoords(null); return; }
+    const update = () => {
+      if (!triggerRef.current) return;
+      const r = triggerRef.current.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const spaceBelow = vh - r.bottom;
+      const estimatedHeight = Math.min(360, 40 + filtered.length * 36);
+      const top = spaceBelow < estimatedHeight + 8 && r.top > estimatedHeight
+        ? r.top - estimatedHeight - 4
+        : r.bottom + 4;
+      setCoords({ top, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open, filtered.length]);
+
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -156,8 +181,9 @@ export default function AccountSelect({
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <div
+        ref={triggerRef}
         onClick={() => !disabled && setOpen((v) => !v)}
         onKeyDown={handleKey}
         tabIndex={disabled ? -1 : 0}
@@ -193,8 +219,18 @@ export default function AccountSelect({
         </div>
       </div>
 
-      {open && (
-        <div className="absolute top-full mt-1 start-0 end-0 z-50 bg-white rounded-lg shadow-2xl border border-slate-200 overflow-hidden">
+      {open && coords && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            width: coords.width,
+            zIndex: 9999,
+          }}
+          className="bg-white rounded-lg shadow-2xl border border-slate-200 overflow-hidden"
+        >
           <div className="relative border-b">
             <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -214,7 +250,6 @@ export default function AccountSelect({
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
             ) : isSearching ? (
-              // حالت جستجو
               filtered.length === 0 ? (
                 <div className="p-6 text-center text-slate-400 text-sm">
                   <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -235,54 +270,29 @@ export default function AccountSelect({
                 ))
               )
             ) : (
-              // حالت نمایش گروه‌بندی
               <>
                 {favAccounts.length > 0 && (
                   <>
                     <SectionHeader icon={<Star className="w-3 h-3 text-amber-500" />} label="مورد علاقه" count={favAccounts.length} />
-                    {favAccounts.map((a, idx) => (
-                      <AccountRow
-                        key={a.id}
-                        account={a}
-                        isSelected={a.id === value}
-                        isHighlighted={false}
-                        isFav
-                        onToggleFav={() => toggleFavorite(a.id)}
-                        onPick={() => pickAccount(a)}
-                        idx={-1}
-                      />
+                    {favAccounts.map((a) => (
+                      <AccountRow key={a.id} account={a} isSelected={a.id === value} isHighlighted={false} isFav
+                        onToggleFav={() => toggleFavorite(a.id)} onPick={() => pickAccount(a)} idx={-1} />
                     ))}
                   </>
                 )}
                 {recentAccounts.length > 0 && (
                   <>
                     <SectionHeader icon={<Clock className="w-3 h-3 text-slate-400" />} label="اخیر" count={recentAccounts.length} />
-                    {recentAccounts.map((a, idx) => (
-                      <AccountRow
-                        key={a.id}
-                        account={a}
-                        isSelected={a.id === value}
-                        isHighlighted={false}
-                        isFav={false}
-                        onToggleFav={() => toggleFavorite(a.id)}
-                        onPick={() => pickAccount(a)}
-                        idx={-1}
-                      />
+                    {recentAccounts.map((a) => (
+                      <AccountRow key={a.id} account={a} isSelected={a.id === value} isHighlighted={false} isFav={false}
+                        onToggleFav={() => toggleFavorite(a.id)} onPick={() => pickAccount(a)} idx={-1} />
                     ))}
                   </>
                 )}
                 <SectionHeader icon={null} label="همه حساب‌ها" count={filtered.length} />
                 {filtered.map((a, idx) => (
-                  <AccountRow
-                    key={a.id}
-                    account={a}
-                    isSelected={a.id === value}
-                    isHighlighted={idx === highlightIdx}
-                    isFav={isFavorite(a.id)}
-                    onToggleFav={() => toggleFavorite(a.id)}
-                    onPick={() => pickAccount(a)}
-                    idx={idx}
-                  />
+                  <AccountRow key={a.id} account={a} isSelected={a.id === value} isHighlighted={idx === highlightIdx}
+                    isFav={isFavorite(a.id)} onToggleFav={() => toggleFavorite(a.id)} onPick={() => pickAccount(a)} idx={idx} />
                 ))}
                 {filtered.length === 100 && (
                   <div className="px-3 py-2 text-xs text-slate-400 text-center border-t bg-slate-50">
@@ -292,9 +302,10 @@ export default function AccountSelect({
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -317,19 +328,17 @@ function AccountRow({ account, isSelected, isHighlighted, isFav, onToggleFav, on
         isHighlighted ? 'bg-brand-50' : 'hover:bg-slate-50',
         isSelected && 'font-bold',
       )}
-      onMouseEnter={() => {}}
       onClick={onPick}
     >
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
         className="p-0.5 rounded hover:bg-amber-100 shrink-0"
-        title={isFav ? 'حذف از مورد علاقه' : 'افزودن به مورد علاقه'}
       >
         <Star className={clsx('w-3.5 h-3.5', isFav ? 'fill-amber-500 text-amber-500' : 'text-slate-300 group-hover:text-amber-300')} />
       </button>
       <span className="num font-mono text-xs text-slate-500 w-24 shrink-0 text-left" dir="ltr">{account.code}</span>
-      <span className="flex-1 truncate">{account.name}</span>
+      <span className="flex-1 min-w-0 truncate">{account.name}</span>
       <span className={clsx('text-[10px] px-1.5 py-0.5 rounded shrink-0', LEVEL_COLORS[account.level] || 'bg-slate-100')}>
         {LEVEL_LABELS[account.level] || account.level}
       </span>

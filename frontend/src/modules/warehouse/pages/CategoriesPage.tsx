@@ -15,6 +15,8 @@ export default function CategoriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ItemCategory | null>(null);
   const [deleting, setDeleting] = useState<ItemCategory | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -31,19 +33,23 @@ export default function CategoriesPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
-    setActionLoading(true);
+    setForceError(null);
     try {
-      await warehouseApi.categories.remove(deleting.id);
+      await warehouseApi.categories.remove(deleting.id, force);
       toast.success('دسته حذف شد');
       setDeleting(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
-    } finally {
-      setActionLoading(false);
+      const err = e?.response?.data;
+      if (err?.code === 'CATEGORY_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+      }
     }
   };
 
@@ -138,15 +144,30 @@ export default function CategoriesPage() {
       />
 
       <ConfirmDialog
-        isOpen={!!deleting}
+        isOpen={!!deleting && !forceConfirm}
         title="حذف دسته"
-        message={`آیا از حذف «${deleting?.name}» اطمینان دارید؟`}
+        message={deleting ? "دسته «" + deleting.name + "» حذف شود؟" : ""}
         confirmLabel="بله، حذف شود"
         variant="danger"
-        loading={actionLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
       />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">دسته قابل حذف نیست</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceError(null); setDeleting(null); }} className="btn-secondary">بستن</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -94,17 +94,23 @@ export const accountingApi = {
   },
 
   // ===== Journals =====
-  journals: {
-    list: async (params?: {
-      fiscalYearId?: string;
-      status?: string;
-      fromDate?: string;
-      toDate?: string;
-      search?: string;
-    }) => {
-      const { data } = await api.get<JournalEntry[]>('/journals', { params });
-      return data;
-    },
+journals: {
+  list: async (params?: {
+    fiscalYearId?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+    search?: string;
+  }) => {
+    const { data } = await api.get<any>('/journals', { params });
+    // Normalize: backend may return array OR paginated { data, total, page }
+    if (Array.isArray(data)) return data as JournalEntry[];
+    if (data && Array.isArray(data.data)) return data.data as JournalEntry[];
+    if (data && Array.isArray(data.items)) return data.items as JournalEntry[];
+    if (data && Array.isArray(data.rows)) return data.rows as JournalEntry[];
+    console.warn('[journals.list] Unexpected response shape:', data);
+    return [] as JournalEntry[];
+  },
     get: async (id: string) => {
       const { data } = await api.get<JournalEntry>('/journals/' + id);
       return data;
@@ -123,6 +129,18 @@ export const accountingApi = {
     },
     post: async (id: string) => {
       const { data } = await api.patch('/journals/' + id + '/post');
+      return data;
+    },
+    removeAdmin: async (id: string, reason: string, force?: boolean) => {
+      const { data } = await api.delete('/journals/' + id + '/admin', { data: { reason, force: !!force } });
+      return data;
+    },
+    hardDelete: async (id: string, reason: string) => {
+      const { data } = await api.delete('/journals/' + id + '/hard-delete', { data: { reason } });
+      return data;
+    },
+    restore: async (id: string) => {
+      const { data } = await api.patch('/journals/' + id + '/restore');
       return data;
     },
     reverse: async (id: string, reason: string) => {

@@ -3,13 +3,14 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Save, X, Loader2, Plus, Trash2, FileText, Calculator, AlertCircle,
+  Save, X, Loader2, Plus, Trash2, FileText, Calculator, RefreshCw,
 } from 'lucide-react';
 import { payrollApi } from '../services/payroll.api';
+import { contractsApi, LegalContract } from '@/modules/contracts/services/contracts.api';
 import { api } from '@/services/api';
 import { partnersApi } from '@/modules/partners/services/partners.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import type { Project, Partner, WbsItem } from '@/types/project';
+import type { Project, Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
 
 interface ItemForm {
@@ -23,6 +24,7 @@ interface ItemForm {
 
 interface FormData {
   contractorId: string;
+  contractId?: string;
   projectId: string;
   statementNumber: number;
   periodStart?: string;
@@ -37,14 +39,19 @@ interface FormData {
   items: ItemForm[];
 }
 
+const CONTRACTOR_KINDS = ['CONTRACTOR_AGREEMENT', 'SUBCONTRACTOR'];
+
 export default function StatementFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
 
   const [contractors, setContractors] = useState<Partner[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [wbsItems, setWbsItems] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<LegalContract[]>([]);
+  const [loadingContract, setLoadingContract] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -63,9 +70,11 @@ export default function StatementFormPage() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'items' });
   const items = watch('items') || [];
   const projectId = watch('projectId');
+  const contractorId = watch('contractorId');
+  const contractId = watch('contractId');
   const insurancePercent = watch('insurancePercent') || 0;
   const taxPercent = watch('taxPercent') || 0;
   const retentionPercent = watch('retentionPercent') || 0;
@@ -82,6 +91,7 @@ export default function StatementFormPage() {
     return { totalAmount, insuranceAmount, taxAmount, retentionAmount, totalDeduction, netPayable };
   }, [items, insurancePercent, taxPercent, retentionPercent, prepaymentDepreciation, otherDeduction]);
 
+  // بارگذاری اولیه
   useEffect(() => {
     setLoadingData(true);
     Promise.all([
@@ -92,9 +102,11 @@ export default function StatementFormPage() {
       setProjects(prj);
 
       if (isEdit && id) {
-        const s = await payrollApi.statements.get(id);
+        const s: any = await payrollApi.statements.get(id);
+        setCurrentStatus(s.status);
         reset({
           contractorId: s.contractorId,
+          contractId: s.contractId || undefined,
           projectId: s.projectId,
           statementNumber: s.statementNumber,
           periodStart: s.periodStart?.slice(0, 10),
@@ -106,7 +118,7 @@ export default function StatementFormPage() {
           retentionPercent: Number(s.retentionPercent),
           otherDeduction: Number(s.otherDeduction),
           description: s.description || undefined,
-          items: (s.items || []).map((it) => ({
+          items: (s.items || []).map((it: any) => ({
             wbsItemId: it.wbsItemId || undefined,
             description: it.description,
             unit: it.unit || undefined,
@@ -120,6 +132,40 @@ export default function StatementFormPage() {
       .finally(() => setLoadingData(false));
   }, [id, isEdit, reset]);
 
+  // وقتی پیمانکار عوض می‌شود → قراردادهای پیمانکاری او
+  useEffect(() => {
+    if (!contractorId) { setContracts([]); return; }
+    setLoadingContract(true);
+    contractsApi.listByParty(contractorId)
+      .then((all: LegalContract[]) => {
+        const filtered = all.filter((c: LegalContract) =>
+          CONTRACTOR_KINDS.includes(c.kind)
+        );
+        setContracts(filtered);
+      })
+      .catch(() => setContracts([]))
+      .finally(() => setLoadingContract(false));
+  }, [contractorId]);
+
+  // وقتی قرارداد انتخاب می‌شود → اقلام
+  useEffect(() => {
+    if (!contractId) return;
+    const c = contracts.find((x) => x.id === contractId);
+    if (!c) return;
+    const cItems = (c as any).items || [];
+    if (cItems.length === 0) return;
+    replace(cItems.map((it: any) => ({
+      description: it.description,
+      unit: it.unit || undefined,
+      quantity: Number(it.quantity) || 1,
+      unitPrice: Number(it.unitPrice) || 0,
+      notes: it.notes || undefined,
+    })));
+    toast.success('اقلام قرارداد بارگذاری شد');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractId]);
+
+  // WBS
   useEffect(() => {
     if (!projectId) { setWbsItems([]); return; }
     api.get('/wbs', { params: { projectId } }).then((r) => {
@@ -140,6 +186,7 @@ export default function StatementFormPage() {
     try {
       const payload: any = {
         contractorId: data.contractorId,
+        contractId: data.contractId || undefined,
         projectId: data.projectId,
         statementNumber: Number(data.statementNumber),
         periodStart: data.periodStart,
@@ -162,7 +209,8 @@ export default function StatementFormPage() {
       };
 
       if (isEdit && id) {
-        await payrollApi.statements.update(id, payload);
+        const needsForce = !!currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'SUBMITTED';
+        await payrollApi.statements.update(id, payload, needsForce);
         toast.success('ویرایش شد');
       } else {
         await payrollApi.statements.create(payload);
@@ -173,6 +221,21 @@ export default function StatementFormPage() {
       const msg = e?.response?.data?.message;
       toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
     } finally { setLoading(false); }
+  };
+
+  const reloadItems = () => {
+    if (!contractId) { toast.error('ابتدا قرارداد را انتخاب کنید'); return; }
+    const c = contracts.find((x) => x.id === contractId);
+    if (!c) return;
+    const cItems = (c as any).items || [];
+    replace(cItems.map((it: any) => ({
+      description: it.description,
+      unit: it.unit || undefined,
+      quantity: Number(it.quantity) || 1,
+      unitPrice: Number(it.unitPrice) || 0,
+      notes: it.notes || undefined,
+    })));
+    toast.success('اقلام قرارداد بارگذاری شد');
   };
 
   if (loadingData) return <div className="card p-12 flex items-center justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>;
@@ -190,7 +253,6 @@ export default function StatementFormPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Header */}
         <div className="card p-6">
           <h2 className="font-bold text-slate-800 mb-4 pb-2 border-b">مشخصات صورت‌وضعیت</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -200,6 +262,30 @@ export default function StatementFormPage() {
                 <option value="">— انتخاب کنید —</option>
                 {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">قرارداد پیمانکاری</label>
+              {loadingContract ? (
+                <div className="input flex items-center gap-2 text-slate-400">
+                  <Loader2 className="w-4 h-4 animate-spin" /> در حال بارگذاری قراردادها...
+                </div>
+              ) : (
+                <select {...register('contractId')} className="input" disabled={!contractorId || contracts.length === 0}>
+                  <option value="">
+                    {!contractorId ? '— ابتدا پیمانکار را انتخاب کنید —' :
+                     contracts.length === 0 ? '— قراردادی برای این پیمانکار یافت نشد —' :
+                     '— انتخاب کنید —'}
+                  </option>
+                  {contracts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} — {c.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className="text-xs text-slate-500 mt-1">
+                اقلام صورت‌وضعیت از این قرارداد بارگذاری می‌شوند (قابل ویرایش)
+              </p>
             </div>
             <div>
               <label className="label">پروژه *</label>
@@ -222,21 +308,28 @@ export default function StatementFormPage() {
               <Controller name="periodEnd" control={control}
                 render={({ field }) => <PersianDatePicker value={field.value} onChange={field.onChange} />} />
             </div>
-            <div>
+            <div className="md:col-span-3">
               <label className="label">توضیحات</label>
               <input type="text" {...register('description')} className="input" />
             </div>
           </div>
         </div>
 
-        {/* Items */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-slate-800">اقلام صورت‌وضعیت</h2>
-            <button type="button" onClick={() => append({ description: '', quantity: 1, unitPrice: 0 })}
-              className="btn-secondary text-sm">
-              <Plus className="w-4 h-4" /> افزودن قلم
-            </button>
+            <div className="flex items-center gap-2">
+              {contractId && (
+                <button type="button" onClick={reloadItems}
+                  className="btn-secondary text-sm" title="بارگذاری مجدد اقلام از قرارداد">
+                  <RefreshCw className="w-4 h-4" /> بارگذاری از قرارداد
+                </button>
+              )}
+              <button type="button" onClick={() => append({ description: '', quantity: 1, unitPrice: 0 })}
+                className="btn-secondary text-sm">
+                <Plus className="w-4 h-4" /> افزودن قلم
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
@@ -297,7 +390,6 @@ export default function StatementFormPage() {
           </div>
         </div>
 
-        {/* Deductions */}
         <div className="card p-6">
           <h2 className="font-bold text-slate-800 mb-4 pb-2 border-b">کسورات و ضرایب</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -328,7 +420,6 @@ export default function StatementFormPage() {
           </div>
         </div>
 
-        {/* Totals */}
         <div className="card p-6 bg-gradient-to-bl from-brand-50 to-white border-brand-200">
           <div className="flex items-center gap-2 mb-4">
             <Calculator className="w-5 h-5 text-brand-600" />
@@ -336,9 +427,9 @@ export default function StatementFormPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <TotalBox label="جمع اقلام" value={totals.totalAmount} />
-            <TotalBox label={`بیمه (${insurancePercent}٪)`} value={totals.insuranceAmount} danger />
-            <TotalBox label={`مالیات (${taxPercent}٪)`} value={totals.taxAmount} danger />
-            <TotalBox label={`حسن انجام (${retentionPercent}٪)`} value={totals.retentionAmount} danger />
+            <TotalBox label={'بیمه (' + insurancePercent + '٪)'} value={totals.insuranceAmount} danger />
+            <TotalBox label={'مالیات (' + taxPercent + '٪)'} value={totals.taxAmount} danger />
+            <TotalBox label={'حسن انجام (' + retentionPercent + '٪)'} value={totals.retentionAmount} danger />
             <TotalBox label="استهلاک پیش‌پرداخت" value={Number(prepaymentDepreciation)} danger />
             <TotalBox label="سایر کسورات" value={Number(otherDeduction)} danger />
           </div>
@@ -356,7 +447,6 @@ export default function StatementFormPage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center justify-end gap-3 sticky bottom-4">
           <div className="flex items-center gap-3 bg-white rounded-xl shadow-lg p-3 border">
             <button type="button" onClick={() => navigate('/payroll/subcontractor-statements')} className="btn-secondary">انصراف</button>

@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Query, Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Categories - دسته‌بندی کالا')
 @ApiBearerAuth()
@@ -35,5 +36,14 @@ export class CategoriesController {
 
   @Delete(':id')
   @RequirePermissions('warehouse.delete')
-  remove(@Param('id') id: string) { return this.s.remove(id); }
+  remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.s.remove(id, { force: wantForce && isAdmin });
+  }
 }

@@ -9,8 +9,35 @@ export class PurchaseOrdersService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.purchaseOrder.count();
-    return 'PO-' + year + '-' + String(count + 1).padStart(4, '0');
+    const prefix = 'PO-' + year + '-';
+
+    const last = await (this.prisma as any).purchaseOrder.findFirst({
+      __withDeleted: true,
+      where: { code: { startsWith: prefix } },
+      orderBy: { code: 'desc' },
+      select: { code: true },
+    });
+
+    let lastNum = 0;
+    if (last && last.code) {
+      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)$'));
+      if (m) lastNum = parseInt(m[1], 10) || 0;
+    }
+
+    let candidate = prefix + String(lastNum + 1).padStart(4, '0');
+    let tries = 0;
+    while (tries < 100) {
+      const exists = await (this.prisma as any).purchaseOrder.findFirst({
+        __withDeleted: true,
+        where: { code: candidate },
+        select: { code: true },
+      });
+      if (!exists) return candidate;
+      tries++;
+      lastNum++;
+      candidate = prefix + String(lastNum + 1).padStart(4, '0');
+    }
+    throw new Error('Cannot generate unique code for PO');
   }
 
   private computeTotals(items: any[], taxPercent: number) {
@@ -59,7 +86,7 @@ export class PurchaseOrdersService {
 
   async create(dto: CreatePODto, userId: string) {
     const code = await this.generateCode();
-    const taxPercent = dto.taxPercent ?? 9;
+    const taxPercent = dto.taxPercent ?? 10;
 
     const itemsWithTotals = dto.items.map((it, idx) => ({
       rowNumber: idx + 1,
@@ -178,4 +205,32 @@ export class PurchaseOrdersService {
       data: { status: 'SENT' },
     });
   }
+
+
+  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    await this.prisma.purchaseOrder.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+    });
+    return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    await this.prisma.purchaseOrder.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null } as any,
+    });
+    return { ok: true, id, restored: true, by: userId || null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  }
+
 }

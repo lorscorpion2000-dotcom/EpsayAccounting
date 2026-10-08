@@ -24,6 +24,8 @@ export default function StatementsListPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
   const [actionItem, setActionItem] = useState<{ item: SubcontractorStatement; action: 'delete' | 'submit' | 'approve' | 'pay' } | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -44,12 +46,16 @@ export default function StatementsListPage() {
 
   useEffect(() => { load(); }, [statusFilter, projectFilter]);
 
-  const handleAction = async () => {
+  const handleAction = async (force = false) => {
     if (!actionItem) return;
     setActionLoading(true);
+    setForceError(null);
     try {
       const a = actionItem.action;
-      if (a === 'delete') { await payrollApi.statements.remove(actionItem.item.id); toast.success('حذف شد'); }
+      if (a === 'delete') {
+        await payrollApi.statements.remove(actionItem.item.id, force);
+        toast.success(force ? 'به‌طور کامل حذف شد' : 'حذف شد');
+      }
       else if (a === 'submit') {
         await payrollApi.statements.submit(actionItem.item.id);
         toast.success('به کارتابل ارسال شد');
@@ -60,10 +66,17 @@ export default function StatementsListPage() {
       else if (a === 'approve') { await payrollApi.statements.approve(actionItem.item.id); toast.success('تایید شد'); }
       else if (a === 'pay') { await payrollApi.statements.pay(actionItem.item.id); toast.success('پرداخت شد'); }
       setActionItem(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      const err = e?.response?.data;
+      const msg = err?.message;
+      // اگر خطا مربوط به status بود و کاربر admin هست — مودال force باز کن
+      if (actionItem.action === 'delete' && !force && typeof msg === 'string' && msg.includes('دسترسی مدیر')) {
+        setForceError(msg);
+      } else {
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      }
     } finally { setActionLoading(false); }
   };
 
@@ -200,14 +213,32 @@ export default function StatementsListPage() {
                           </>
                         )}
                         {s.status === 'SUBMITTED' && (
-                          <button onClick={() => setActionItem({ item: s, action: 'approve' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="تایید">
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
+                          <>
+                            <button onClick={() => navigate('/payroll/subcontractor-statements/' + s.id + '/edit')} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setActionItem({ item: s, action: 'approve' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="تایید">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setActionItem({ item: s, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
-                        {s.status === 'APPROVED' && (
-                          <button onClick={() => setActionItem({ item: s, action: 'pay' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="پرداخت">
-                            <DollarSign className="w-4 h-4" />
-                          </button>
+                        {(s.status === 'APPROVED' || s.status === 'PAID') && (
+                          <>
+                            {s.status === 'APPROVED' && (
+                              <button onClick={() => setActionItem({ item: s, action: 'pay' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="پرداخت">
+                                <DollarSign className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button onClick={() => navigate('/payroll/subcontractor-statements/' + s.id + '/edit')} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش (مدیر)">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setActionItem({ item: s, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف (مدیر)">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -220,7 +251,7 @@ export default function StatementsListPage() {
       </div>
 
       <ConfirmDialog
-        isOpen={!!actionItem}
+        isOpen={!!actionItem && !forceConfirm}
         title={
           actionItem?.action === 'delete' ? 'حذف صورت‌وضعیت' :
           actionItem?.action === 'submit' ? 'ارسال به کارتابل' :
@@ -236,9 +267,33 @@ export default function StatementsListPage() {
         confirmLabel="بله"
         variant={actionItem?.action === 'delete' ? 'danger' : 'info'}
         loading={actionLoading}
-        onConfirm={handleAction}
+        onConfirm={() => handleAction(false)}
         onCancel={() => setActionItem(null)}
       />
+
+      {forceError && actionItem && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل صورت‌وضعیت (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700">{forceError}</p>
+              <p className="text-xs text-slate-500">
+                با کلیک روی «حذف کامل»، سند حسابداری مرتبط نیز ابطال و صورت‌وضعیت پاک می‌شود.
+              </p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setActionItem(null); }} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={() => handleAction(true)} disabled={actionLoading} className="btn-danger">
+                  {actionLoading ? 'در حال حذف...' : 'حذف کامل (خطرناک)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

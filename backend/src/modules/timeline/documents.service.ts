@@ -76,9 +76,10 @@ export class DocumentsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, options?: { force?: boolean }) {
     await this.findOne(id);
+    // مستقیم پاک کن (این موجودیت‌ها معمولاً ارجاعی ندارند)
     await this.prisma.technicalDocument.delete({ where: { id } });
-    return { success: true };
+    return { success: true, hardDeleted: true };
   }
 }

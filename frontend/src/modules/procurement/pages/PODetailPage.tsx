@@ -11,6 +11,7 @@ import type { PurchaseOrder, POStatus } from '@/types/procurement';
 import { PO_STATUS_LABELS, PO_STATUS_COLORS, PR_UNIT_LABELS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function PODetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -73,6 +74,7 @@ export default function PODetailPage() {
         <button className="btn-secondary" onClick={() => window.print()}>
           <Printer className="w-4 h-4" /> چاپ / PDF
         </button>
+        <AdminDeleteButton endpoint="/procurement/orders" id={po.id} itemLabel={po.code} onSuccess={() => navigate('/procurement/orders')} variant="button" />
         {po.status === 'DRAFT' && (
           <button className="btn-primary" onClick={() => setActionItem({ action: 'approve' })}>
             <CheckCircle2 className="w-4 h-4" /> تایید

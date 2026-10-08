@@ -1,0 +1,81 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ChequesService } from './cheques.service';
+import { CreateChequeDto } from './dto/create-cheque.dto';
+import { UpdateChequeDto } from './dto/update-cheque.dto';
+import { ChequeActionDto } from './dto/cheque-action.dto';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+@ApiTags('Cheques - چک‌ها')
+@ApiBearerAuth()
+@Controller('cheques')
+export class ChequesController {
+  constructor(private service: ChequesService) {}
+
+  @Get()
+  @RequirePermissions('accounting.read')
+  @ApiQuery({ name: 'direction', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'partnerId', required: false })
+  @ApiQuery({ name: 'bankAccountId', required: false })
+  @ApiQuery({ name: 'fromDueDate', required: false })
+  @ApiQuery({ name: 'toDueDate', required: false })
+  findAll(
+    @Query('direction') direction?: string,
+    @Query('status') status?: string,
+    @Query('partnerId') partnerId?: string,
+    @Query('bankAccountId') bankAccountId?: string,
+    @Query('fromDueDate') fromDueDate?: string,
+    @Query('toDueDate') toDueDate?: string,
+  ) {
+    return this.service.findAll({ direction, status, partnerId, bankAccountId, fromDueDate, toDueDate });
+  }
+
+  @Get(':id')
+  @RequirePermissions('accounting.read')
+  findOne(@Param('id') id: string) { return this.service.findOne(id); }
+
+  @Post()
+  @RequirePermissions('accounting.create')
+  create(@Body() dto: CreateChequeDto, @CurrentUser('id') userId: string) {
+    return this.service.create(dto, userId);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('accounting.update')
+  update(@Param('id') id: string, @Body() dto: UpdateChequeDto) {
+    return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('accounting.delete')
+  remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.service.remove(id, { force: wantForce && isAdmin });
+  }
+
+  @Patch(':id/pass')
+  @RequirePermissions('accounting.update')
+  pass(@Param('id') id: string, @Body() dto: ChequeActionDto, @CurrentUser('id') userId: string) {
+    return this.service.pass(id, dto.note, userId);
+  }
+
+  @Patch(':id/return')
+  @RequirePermissions('accounting.update')
+  return_(@Param('id') id: string, @Body() dto: ChequeActionDto, @CurrentUser('id') userId: string) {
+    return this.service.return_(id, dto.note, userId);
+  }
+
+  @Patch(':id/cancel')
+  @RequirePermissions('accounting.update')
+  cancel(@Param('id') id: string, @Body() dto: ChequeActionDto, @CurrentUser('id') userId: string) {
+    return this.service.cancel(id, dto.note, userId);
+  }
+}

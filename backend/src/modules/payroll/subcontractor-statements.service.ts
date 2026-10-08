@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 
 @Injectable()
 export class SubcontractorStatementsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private engine: AccountingEngineService,
+  ) {}
 
   private async generateCode(projectId: string): Promise<string> {
     const year = new Date().getFullYear();
@@ -34,6 +38,12 @@ export class SubcontractorStatementsService {
       include: {
         project: { select: { id: true, code: true, name: true } },
         contractor: true,
+        contract: {
+          select: {
+            id: true, code: true, kind: true, title: true,
+            items: { orderBy: { rowNumber: 'asc' } },
+          },
+        },
         approvedBy: { select: { id: true, fullName: true } },
         items: { orderBy: { rowNumber: 'asc' } },
       },
@@ -88,6 +98,7 @@ export class SubcontractorStatementsService {
       data: {
         code,
         contractorId: dto.contractorId,
+        contractId: dto.contractId,
         projectId: dto.projectId,
         statementNumber: dto.statementNumber,
         periodStart: new Date(dto.periodStart),
@@ -124,13 +135,16 @@ export class SubcontractorStatementsService {
     });
   }
 
-  async update(id: string, dto: Partial<CreateSubcontractorStatementDto>) {
+  async update(id: string, dto: Partial<CreateSubcontractorStatementDto>, options?: { force?: boolean }) {
     const s = await this.findOne(id);
-    if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
+    const force = options?.force === true;
+    if (!force && s.status !== 'DRAFT' && s.status !== 'SUBMITTED')
+      throw new BadRequestException('فقط پیش‌نویس یا ارسال‌شده قابل ویرایش است. برای ویرایش صورت‌وضعیت تاییدشده، نیاز به دسترسی مدیر دارید.');
 
     return this.prisma.$transaction(async (tx) => {
       const data: any = {};
       if (dto.contractorId) data.contractorId = dto.contractorId;
+      if (dto.contractId !== undefined) data.contractId = dto.contractId || null;
       if (dto.projectId) data.projectId = dto.projectId;
       if (dto.statementNumber) data.statementNumber = dto.statementNumber;
       if (dto.periodStart) data.periodStart = new Date(dto.periodStart);
@@ -172,11 +186,42 @@ export class SubcontractorStatementsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, options?: { force?: boolean }) {
     const s = await this.findOne(id);
-    if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
-    await this.prisma.subcontractorStatement.delete({ where: { id } });
-    return { success: true };
+    const force = options?.force === true;
+
+    const isDraftOrSubmitted = s.status === 'DRAFT' || s.status === 'SUBMITTED';
+
+    if (!isDraftOrSubmitted && !force) {
+      throw new BadRequestException('فقط پیشنویس یا ارسالشده قابل حذف است. برای حذف صورتوضعیت تاییدشده نیاز به دسترسی مدیر دارید.');
+    }
+
+    if (isDraftOrSubmitted) {
+      // حذف مستقیم
+      await this.prisma.$transaction(async (tx) => {
+        await tx.subcontractorStatementItem.deleteMany({ where: { statementId: id } });
+        await tx.subcontractorStatement.delete({ where: { id } });
+      });
+      return { success: true, hardDeleted: true };
+    }
+
+    // force (admin) — برای APPROVED/PAID
+    // 1) ابطال سند JE اگر وجود داشته
+    const jeId = (s as any).journalEntryId || (s as any).approvedJournalEntryId;
+    if (jeId) {
+      await this.prisma.journalEntry.update({
+        where: { id: jeId },
+        data: { deletedAt: new Date() } as any,
+      }).catch(() => {});
+    }
+
+    // 2) حذف اجزا + صورتوضعیت
+    await this.prisma.$transaction(async (tx) => {
+      await tx.subcontractorStatementItem.deleteMany({ where: { statementId: id } });
+      await tx.subcontractorStatement.delete({ where: { id } });
+    });
+
+    return { success: true, hardDeleted: true, journalEntryInvalidated: !!jeId };
   }
 
   async submit(id: string) {
@@ -191,9 +236,149 @@ export class SubcontractorStatementsService {
   async approve(id: string, userId: string) {
     const s = await this.findOne(id);
     if (s.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
-    return this.prisma.subcontractorStatement.update({
+
+    const updated = await this.prisma.subcontractorStatement.update({
       where: { id },
       data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
+    });
+
+    // ═══ سند خودکار ═══
+    let journal: any = null;
+    try {
+      journal = await this.createApprovalJE(id, userId);
+    } catch (e: any) {
+      this.prisma.$executeRawUnsafe(
+        'INSERT INTO notifications (id, type, severity, title, message, entity, entity_id, created_at, updated_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW()) ON CONFLICT DO NOTHING',
+        'JE_FAILED',
+        'CRITICAL',
+        'خطا در سند خودکار صورت‌وضعیت پیمانکار',
+        'برای صورت‌وضعیت ' + id + ': ' + (e?.message || 'خطای نامشخص'),
+        'SubcontractorStatement',
+        id,
+      ).catch(() => {});
+    }
+
+    return { ...updated, journal };
+  }
+
+  /**
+   * ساخت JE چندخطی برای صورت‌وضعیت پیمانکار
+   */
+  private async createApprovalJE(statementId: string, userId: string) {
+    const s = await this.findOne(statementId);
+
+    // Idempotency: اگر سند قبلاً ساخته شده، همان را برگردان
+    const existing = await this.prisma.journalEntry.findFirst({
+      where: { sourceType: 'SUBCONTRACTOR_STATEMENT', sourceId: statementId },
+      select: { id: true, code: true },
+    });
+    if (existing) return existing;
+
+    // ═══ حساب‌های لازم ═══
+    const [expAcc, payAcc, insAcc, taxAcc, retAcc] = await Promise.all([
+      this.prisma.account.findUnique({ where: { code: '5.1.3' } }), // پیمانکاران جزء (هزینه)
+      this.prisma.account.findUnique({ where: { code: '2.1.5' } }), // پیمانکاران و تأمین‌کنندگان (بدهی)
+      this.prisma.account.findUnique({ where: { code: '2.1.4' } }), // بیمه تأمین اجتماعی
+      this.prisma.account.findUnique({ where: { code: '2.1.3' } }), // مالیات و عوارض
+      this.prisma.account.findUnique({ where: { code: '2.1.7' } }), // حسن انجام کار پرداختنی
+    ]);
+
+    if (!expAcc || !payAcc || !insAcc || !taxAcc || !retAcc) {
+      throw new Error('حساب‌های لازم برای JE صورت‌وضعیت موجود نیستند');
+    }
+
+    const total = Number(s.totalAmount);
+    const ins = Number(s.insuranceAmount);
+    const tax = Number(s.taxAmount);
+    const ret = Number(s.retentionAmount);
+    const prepayDep = Number(s.prepaymentDepreciation || 0);
+    const other = Number(s.otherDeduction || 0);
+    const net = Number(s.netPayable);
+
+    const lines: any[] = [];
+
+    // Dr: هزینه
+    lines.push({
+      accountId: expAcc.id,
+      debit: total,
+      credit: 0,
+      description: 'صورت‌وضعیت ' + s.code + ' — ' + (s.contractor?.name || ''),
+      projectId: s.projectId,
+      partnerId: s.contractorId,
+    });
+
+    // Cr: بدهی پیمانکار (خالص)
+    if (net > 0) {
+      lines.push({
+        accountId: payAcc.id,
+        debit: 0,
+        credit: net,
+        description: 'خالص قابل پرداخت',
+        projectId: s.projectId,
+        partnerId: s.contractorId,
+      });
+    }
+
+    // Cr: بیمه
+    if (ins > 0) {
+      lines.push({
+        accountId: insAcc.id,
+        debit: 0,
+        credit: ins,
+        description: 'بیمه سهم پیمانکار (' + s.insurancePercent + '٪)',
+        projectId: s.projectId,
+      });
+    }
+
+    // Cr: مالیات
+    if (tax > 0) {
+      lines.push({
+        accountId: taxAcc.id,
+        debit: 0,
+        credit: tax,
+        description: 'مالیات تکلیفی (' + s.taxPercent + '٪)',
+        projectId: s.projectId,
+      });
+    }
+
+    // Cr: حسن انجام کار
+    if (ret > 0) {
+      lines.push({
+        accountId: retAcc.id,
+        debit: 0,
+        credit: ret,
+        description: 'حسن انجام کار (' + s.retentionPercent + '٪)',
+        projectId: s.projectId,
+      });
+    }
+
+    // Cr: پیش‌پرداخت / سایر (به بدهی پیمانکار اضافه می‌شود برای حفظ تراز)
+    if (prepayDep + other > 0) {
+      lines.push({
+        accountId: payAcc.id,
+        debit: 0,
+        credit: prepayDep + other,
+        description: 'کسر پیش‌پرداخت و سایر کسورات',
+        projectId: s.projectId,
+        partnerId: s.contractorId,
+      });
+    }
+
+    // بررسی تراز
+    const sumDr = lines.reduce((s2, l) => s2 + Number(l.debit || 0), 0);
+    const sumCr = lines.reduce((s2, l) => s2 + Number(l.credit || 0), 0);
+    if (Math.abs(sumDr - sumCr) > 0.01) {
+      throw new Error('سند تراز نیست: Dr=' + sumDr + ' Cr=' + sumCr);
+    }
+
+    // ═══ درج JE ═══
+    return this.engine.postMultiLine('SUBCONTRACTOR_STATEMENT', {
+      entryDate: s.periodEnd.toISOString().slice(0, 10),
+      description: 'صورت‌وضعیت پیمانکار ' + s.code + ' — ' + (s.contractor?.name || ''),
+      reference: s.code,
+      sourceId: statementId,
+      lines,
+      userId,
     });
   }
 

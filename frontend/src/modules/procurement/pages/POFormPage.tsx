@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import UnitSelect from '@/components/UnitSelect';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -46,14 +47,14 @@ export default function POFormPage() {
     defaultValues: {
       prId: prIdQuery || undefined,
       poDate: new Date().toISOString().slice(0, 10),
-      taxPercent: 9,
+      taxPercent: 10,
       items: [{ description: '', quantity: 1, unit: 'NUMBER', unitPrice: 0 }],
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const items = watch('items') || [];
-  const taxPercent = watch('taxPercent') || 9;
+  const taxPercent = watch('taxPercent') || 10;
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
@@ -80,7 +81,7 @@ export default function POFormPage() {
               projectId: pr.projectId,
               supplierId: '',
               poDate: new Date().toISOString().slice(0, 10),
-              taxPercent: 9,
+              taxPercent: 10,
               notes: undefined,
               items: pr.items.map((it) => ({
                 description: it.description,
@@ -251,9 +252,7 @@ export default function POFormPage() {
                         <input type="number" step="0.01" {...register(`items.${idx}.quantity`, { valueAsNumber: true })} className="input num text-xs py-1.5" dir="ltr" />
                       </td>
                       <td className="px-2 py-2">
-                        <select {...register(`items.${idx}.unit`)} className="input text-xs py-1.5">
-                          {Object.entries(PR_UNIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
+                        <UnitSelect registerProps={register(`items.${idx}.unit`)} className="input text-xs py-1.5" />
                       </td>
                       <td className="px-2 py-2">
                         <input type="number" step="1" {...register(`items.${idx}.unitPrice`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />

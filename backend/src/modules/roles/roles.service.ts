@@ -39,13 +39,13 @@ export class RolesService {
       where: { id },
       include: this.roleInclude,
     });
-    if (!role) throw new NotFoundException('Ù†Ù‚ش ÛŒافت Ù†شد');
+    if (!role) throw new NotFoundException('نقش یافت نشد');
     return this.shape(role);
   }
 
   async create(dto: CreateRoleDto) {
     const exists = await this.prisma.role.findUnique({ where: { code: dto.code } });
-    if (exists) throw new ConflictException('کد Ù†Ù‚ش ØªÚ©Ø±Ø§Ø±ÛŒ است');
+    if (exists) throw new ConflictException('کد نقش تکراری است');
 
     const role = await this.prisma.role.create({
       data: {
@@ -67,7 +67,7 @@ export class RolesService {
   async update(id: string, dto: UpdateRoleDto) {
     const role = await this.findOne(id);
     if (role.isSystem && dto.code && dto.code !== role.code) {
-      throw new ConflictException('کد Ù†Ù‚Ø´â€ŒÙ‡Ø§ÛŒ Ø³ÛŒØ³ØªÙ…ÛŒ Ù‚Ø§Ø¨Ù„ ØªØºÛŒÛŒر Ù†ÛŒست');
+      throw new ConflictException('کد نقش‌های سیستمی قابل تغییر نیست');
     }
 
     if (dto.permissionIds) {
@@ -107,7 +107,7 @@ export class RolesService {
   async remove(id: string) {
     const role = await this.findOne(id);
     if (role.isSystem) {
-      throw new ConflictException('Ù†Ù‚Ø´â€ŒÙ‡Ø§ÛŒ Ø³ÛŒØ³ØªÙ…ÛŒ Ù‚Ø§Ø¨Ù„ حذف Ù†ÛŒØ³ØªÙ†د');
+      throw new ConflictException('نقش‌های سیستمی قابل حذف نیستند');
     }
     await this.prisma.role.delete({ where: { id } });
     return { success: true };

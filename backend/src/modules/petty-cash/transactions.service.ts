@@ -3,12 +3,14 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePettyCashTransactionDto } from './dto/create-transaction.dto';
 import { UpdatePettyCashTransactionDto } from './dto/update-transaction.dto';
 import { PettyCashAccountsService } from './accounts.service';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 
 @Injectable()
 export class PettyCashTransactionsService {
   constructor(
     private prisma: PrismaService,
     private accountsService: PettyCashAccountsService,
+    private engine: AccountingEngineService,
   ) {}
 
   private async generateCode(type: string): Promise<string> {
@@ -242,7 +244,11 @@ export class PettyCashTransactionsService {
     if (tx.status !== 'SUBMITTED') {
       throw new BadRequestException('فقط تراکنش‌های ارسال‌شده قابل تایید هستند');
     }
-    return this.prisma.pettyCashTransaction.update({
+    if (tx.journalEntryId) {
+      throw new BadRequestException('این تراکنش قبلاً سند حسابداری دارد');
+    }
+
+    const approved = await this.prisma.pettyCashTransaction.update({
       where: { id },
       data: {
         status: 'APPROVED',
@@ -250,6 +256,48 @@ export class PettyCashTransactionsService {
         approvedAt: new Date(),
       },
     });
+
+    const mappingCode =
+      tx.type === 'FUNDING'
+        ? 'PETTYCASH_FUND'
+        : tx.type === 'EXPENSE'
+          ? 'PETTYCASH_EXPENSE'
+          : null;
+
+    if (!mappingCode) {
+      // SETTLEMENT / ADJUSTMENT فعلاً mapping حسابداری ندارن
+      return approved;
+    }
+
+    try {
+      const entry = await this.engine.postEvent(mappingCode, {
+        amount: Number(tx.amount),
+        entryDate: tx.txDate,
+        description: tx.description,
+        reference: tx.code,
+        partnerId: tx.partnerId ?? undefined,
+        projectId: tx.projectId ?? undefined,
+        pettyCashId: tx.accountId,
+        sourceId: tx.id,
+        userId: approverId,
+      });
+
+      return this.prisma.pettyCashTransaction.update({
+        where: { id },
+        data: { journalEntryId: entry.id },
+      });
+    } catch (e) {
+      // rollback به SUBMITTED تا کاربر بتونه دوباره تلاش کنه
+      await this.prisma.pettyCashTransaction.update({
+        where: { id },
+        data: {
+          status: 'SUBMITTED',
+          approvedById: null,
+          approvedAt: null,
+        },
+      });
+      throw e;
+    }
   }
 
   async reject(id: string, reason: string) {
@@ -265,4 +313,36 @@ export class PettyCashTransactionsService {
       },
     });
   }
+
+
+  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    const existing: any = await this.prisma.pettyCashTransaction.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+
+    await this.prisma.pettyCashTransaction.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+    });
+
+    return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.pettyCashTransaction.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+
+    await this.prisma.pettyCashTransaction.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null } as any,
+    });
+
+    return { ok: true, id, restored: true, by: userId || null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  }
+
 }

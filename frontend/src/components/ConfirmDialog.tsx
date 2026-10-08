@@ -8,7 +8,8 @@ interface Props {
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'info';
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
+  onClose?: () => void;
   loading?: boolean;
 }
 
@@ -21,9 +22,12 @@ export default function ConfirmDialog({
   variant = 'danger',
   onConfirm,
   onCancel,
+  onClose,
   loading = false,
 }: Props) {
   if (!isOpen) return null;
+
+  const close = onClose ?? onCancel ?? (() => {});
 
   const variantStyles = {
     danger: {
@@ -43,7 +47,7 @@ export default function ConfirmDialog({
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
-      onClick={onCancel}
+      onClick={close}
     >
       <div
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
@@ -59,7 +63,7 @@ export default function ConfirmDialog({
               <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
             </div>
             <button
-              onClick={onCancel}
+              onClick={close}
               className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"
             >
               <X className="w-5 h-5" />
@@ -69,7 +73,7 @@ export default function ConfirmDialog({
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
           <button
-            onClick={onCancel}
+            onClick={close}
             disabled={loading}
             className="btn-secondary"
           >

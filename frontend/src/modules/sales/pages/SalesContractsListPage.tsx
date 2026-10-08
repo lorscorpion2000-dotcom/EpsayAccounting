@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, ShoppingBag, Edit, Ban, RefreshCw, Eye, Play } from 'lucide-react';
+import { Plus, Search, Loader2, ShoppingBag, Edit, RefreshCw, Eye, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { salesApi, SalesContract } from '../services/sales.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس', ACTIVE: 'فعال', COMPLETED: 'خاتمه',
@@ -17,6 +18,10 @@ export default function SalesContractsListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [deleting, setDeleting] = useState<SalesContract | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -31,6 +36,26 @@ export default function SalesContractsListPage() {
   };
 
   useEffect(() => { load(); }, [statusFilter]);
+
+  const handleDelete = async (force = false) => {
+    if (!deleting) return;
+    setForceError(null);
+    try {
+      const res = await salesApi.contracts.remove(deleting.id, force);
+      toast.success(force ? 'به‌طور کامل حذف شد' : 'حذف شد');
+      setDeleting(null);
+      setForceConfirm(false);
+      load();
+    } catch (e: any) {
+      const err = e?.response?.data;
+      if (err?.code === 'CONTRACT_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      }
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -119,9 +144,27 @@ export default function SalesContractsListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => nav('/sales/contracts/' + c.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600">
+                        <button onClick={() => nav('/sales/contracts/' + c.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>
+                        {c.status === 'DRAFT' && (
+                          <button
+                            onClick={() => nav('/sales/contracts/' + c.id + '/edit')}
+                            className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
+                            title="ویرایش"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(c.status === 'DRAFT' || c.status === 'CANCELLED') && (
+                          <button
+                            onClick={() => setDeleting(c)}
+                            className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -131,6 +174,33 @@ export default function SalesContractsListPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleting && !forceConfirm}
+        title="حذف قرارداد"
+        message={deleting ? "قرارداد «" + deleting.code + "» حذف شود؟ واحد آزاد خواهد شد." : ""}
+        confirmLabel="بله، حذف شود"
+        variant="danger"
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
+      />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل قرارداد (مدیر)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">انصراف</button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">حذف کامل (خطرناک)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

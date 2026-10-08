@@ -43,4 +43,19 @@ export class ContractsController {
   remove(@Param('id') id: string) {
     return this.contracts.remove(id);
   }
+  @Patch(':id/complete')
+  @RequirePermissions('projects.update')
+  complete(@Param('id') id: string) { return this.contracts.complete(id); }
+
+  @Patch(':id/suspend')
+  @RequirePermissions('projects.update')
+  suspend(@Param('id') id: string) { return this.contracts.suspend(id); }
+
+  @Patch(':id/terminate')
+  @RequirePermissions('projects.update')
+  terminate(@Param('id') id: string) { return this.contracts.terminate(id); }
+
+  @Patch(':id/reactivate')
+  @RequirePermissions('projects.update')
+  reactivate(@Param('id') id: string) { return this.contracts.reactivate(id); }
 }

@@ -4,6 +4,7 @@ import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Warehouses - انبارها')
 @ApiBearerAuth()
@@ -36,5 +37,14 @@ export class WarehousesController {
 
   @Delete(':id')
   @RequirePermissions('warehouse.delete')
-  remove(@Param('id') id: string) { return this.s.remove(id); }
+  remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.s.remove(id, { force: wantForce && isAdmin });
+  }
 }

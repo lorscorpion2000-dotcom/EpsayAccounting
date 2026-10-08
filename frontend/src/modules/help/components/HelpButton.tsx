@@ -1,60 +1,51 @@
 import { HelpCircle } from 'lucide-react';
-import { useHelp } from './HelpProvider';
 import clsx from 'clsx';
+import { useHelp } from './HelpProvider';
 
-interface Props {
-  className?: string;
-  variant?: 'header' | 'floating' | 'inline';
-  label?: string;
+interface HelpButtonProps {
+  variant?: 'inline' | 'floating';
 }
 
-export default function HelpButton({ className, variant = 'header', label }: Props) {
+export default function HelpButton({ variant = 'inline' }: HelpButtonProps) {
   const { open, currentHelp } = useHelp();
-
-  if (!currentHelp) return null;
+  const hasPageHelp = !!currentHelp;
 
   if (variant === 'floating') {
     return (
       <button
         onClick={open}
-        className={clsx(
-          'fixed bottom-6 left-6 z-30 w-14 h-14 rounded-full',
-          'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xl',
-          'hover:scale-110 transition-transform flex items-center justify-center',
-          'no-print',
-          className,
-        )}
-        title="راهنمای این صفحه"
+        title={hasPageHelp ? 'راهنمای این صفحه' : 'راهنمای جامع'}
+        aria-label="راهنما"
+        className="fixed bottom-6 left-6 z-40 w-12 h-12 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group print:hidden"
       >
         <HelpCircle className="w-6 h-6" />
+        {hasPageHelp && (
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+        )}
+        <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          {hasPageHelp ? 'راهنمای این صفحه' : 'راهنمای جامع'}
+        </span>
       </button>
     );
   }
 
-  if (variant === 'inline') {
-    return (
-      <button
-        onClick={open}
-        className={clsx('btn-ghost text-brand-600 hover:bg-brand-50', className)}
-      >
-        <HelpCircle className="w-4 h-4" />
-        {label || 'راهنما'}
-      </button>
-    );
-  }
-
-  // header variant
+  // inline — برای header
   return (
     <button
       onClick={open}
+      title={hasPageHelp ? 'راهنمای این صفحه' : 'راهنمای جامع'}
+      aria-label="راهنما"
       className={clsx(
-        'p-2 rounded-lg hover:bg-brand-50 text-brand-600 transition-colors relative',
-        'no-print',
-        className,
+        'relative p-2 rounded-lg transition-colors',
+        hasPageHelp
+          ? 'text-brand-600 hover:bg-brand-50'
+          : 'text-slate-500 hover:bg-slate-100',
       )}
-      title="راهنمای این صفحه"
     >
       <HelpCircle className="w-5 h-5" />
+      {hasPageHelp && (
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
+      )}
     </button>
   );
 }

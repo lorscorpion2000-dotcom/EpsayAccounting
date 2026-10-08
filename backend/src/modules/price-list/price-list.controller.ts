@@ -1,0 +1,116 @@
+import {
+  Body, Controller, Delete, Get, Param, Patch, Post, Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { PriceListService } from './price-list.service';
+import {
+  CreatePriceListDto, UpdatePriceListDto,
+  CreatePriceListItemDto, UpdatePriceListItemDto,
+  ImportItemsDto, LinkWbsDto,
+} from './dto/price-list.dto';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+
+@ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
+@ApiBearerAuth()
+@Controller('price-lists')
+export class PriceListController {
+  constructor(private svc: PriceListService) {}
+
+  // â•â•â• Price Lists â•â•â•
+  @Get()
+  @RequirePermissions('price-list.read')
+  list(
+    @Query('year') year?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.svc.list({
+      year: year ? parseInt(year, 10) : undefined,
+      status, search,
+    });
+  }
+
+  @Get('stats')
+  @RequirePermissions('price-list.read')
+  stats() { return this.svc.stats(); }
+
+  @Get(':id')
+  @RequirePermissions('price-list.read')
+  get(@Param('id') id: string) { return this.svc.get(id); }
+
+  @Post()
+  @RequirePermissions('price-list.manage')
+  create(@Body() dto: CreatePriceListDto) { return this.svc.create(dto); }
+
+  @Patch(':id')
+  @RequirePermissions('price-list.manage')
+  update(@Param('id') id: string, @Body() dto: UpdatePriceListDto) {
+    return this.svc.update(id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('price-list.manage')
+  remove(@Param('id') id: string) { return this.svc.remove(id); }
+
+  @Post(':id/publish')
+  @RequirePermissions('price-list.manage')
+  publish(@Param('id') id: string) { return this.svc.publish(id); }
+
+  // â•â•â• Items â•â•â•
+  @Get(':id/items')
+  @RequirePermissions('price-list.read')
+  listItems(
+    @Param('id') id: string,
+    @Query('search') search?: string,
+    @Query('chapter') chapter?: string,
+  ) { return this.svc.listItems(id, { search, chapter }); }
+
+  @Post(':id/items')
+  @RequirePermissions('price-list.manage')
+  createItem(@Param('id') id: string, @Body() dto: CreatePriceListItemDto) {
+    return this.svc.createItem(id, dto);
+  }
+
+  @Post(':id/items/import')
+  @RequirePermissions('price-list.manage')
+  importItems(@Param('id') id: string, @Body() dto: ImportItemsDto) {
+    return this.svc.importItems(id, dto);
+  }
+
+  @Delete(':id/items/clear')
+  @RequirePermissions('price-list.manage')
+  clearItems(@Param('id') id: string) { return this.svc.clearItems(id); }
+
+  @Get('items/:itemId')
+  @RequirePermissions('price-list.read')
+  getItem(@Param('itemId') itemId: string) { return this.svc.getItem(itemId); }
+
+  @Patch('items/:itemId')
+  @RequirePermissions('price-list.manage')
+  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdatePriceListItemDto) {
+    return this.svc.updateItem(itemId, dto);
+  }
+
+  @Delete('items/:itemId')
+  @RequirePermissions('price-list.manage')
+  removeItem(@Param('itemId') itemId: string) { return this.svc.removeItem(itemId); }
+
+  // â•â•â• WBS Linking â•â•â•
+  @Get('wbs/:wbsItemId')
+  @RequirePermissions('price-list.read')
+  itemsForWbs(@Param('wbsItemId') wbsItemId: string) {
+    return this.svc.itemsForWbs(wbsItemId);
+  }
+  
+  @Get('project/:projectId/wbs-mapping')
+  @RequirePermissions('price-list.read')
+  projectWbsMapping(@Param('projectId') projectId: string) {
+    return this.svc.projectWbsMapping(projectId);
+  }
+
+  @Patch('wbs/:wbsItemId/link')
+  @RequirePermissions('price-list.manage')
+  linkWbs(@Param('wbsItemId') wbsItemId: string, @Body() dto: LinkWbsDto) {
+    return this.svc.linkWbs(wbsItemId, dto.priceListItemId);
+  }
+}

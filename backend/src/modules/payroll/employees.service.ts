@@ -1,11 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreateEmployeeDto } from './dto/employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private detailAccounts: DetailAccountsService,
+  ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
@@ -96,6 +101,17 @@ export class EmployeesService {
       include: { partner: true },
     });
 
+    // ─── تفضیل خودکار پرسنل زیر معین 2.1.2 ───
+    try {
+      await this.detailAccounts.ensureDetailAccount(this.prisma, {
+        detailType: AccountDetailType.EMPLOYEE,
+        entityId: dto.partnerId,
+        entityName: partner.name,
+      });
+    } catch (err) {
+      console.error('[Employees] Failed to create detail account:', err);
+    }
+
     // Sync partner fields on create
     const partnerUpdate: any = {};
     if (dto.fatherName !== undefined) partnerUpdate.fatherName = dto.fatherName;
@@ -180,7 +196,24 @@ export class EmployeesService {
       }
     }
 
-    // 4) Auto-sync related contract parties
+    // 4) Sync employee detail account name
+    try {
+      const fullProfile = await this.prisma.employeeProfile.findUnique({
+        where: { id },
+        include: { partner: true },
+      });
+      if (fullProfile?.partner) {
+        await this.detailAccounts.ensureDetailAccount(this.prisma, {
+          detailType: AccountDetailType.EMPLOYEE,
+          entityId: fullProfile.partnerId,
+          entityName: fullProfile.partner.name,
+        });
+      }
+    } catch (err) {
+      console.error('[Employees] Failed to sync detail account:', err);
+    }
+
+    // 5) Auto-sync related contract parties
     try {
       const syncResult = await this.syncRelatedParties(id);
       console.log('[syncRelatedParties] result: ' + JSON.stringify(syncResult));
@@ -188,21 +221,61 @@ export class EmployeesService {
       console.error('[syncRelatedParties] error:', e?.message || e);
     }
 
-    // 5) Return fresh record
+    // 6) Return fresh record
     return this.prisma.employeeProfile.findUnique({
       where: { id },
       include: { partner: true },
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    const records = await this.prisma.payrollRecord.count({ where: { employeeProfileId: id } });
-    if (records > 0) {
-      throw new BadRequestException('این پرسنل دارای سابقه حقوق است و قابل حذف نیست');
+  async remove(id: string, options?: { force?: boolean }) {
+    const emp = await this.findOne(id);
+    const force = options?.force === true;
+
+    if (!force) {
+      const records = await this.prisma.payrollRecord.count({ where: { employeeProfileId: id } });
+      if (records > 0) {
+        throw new BadRequestException('این پرسنل دارای سابقه حقوق است — از حالت مدیر برای حذف کامل استفاده کنید');
+      }
+      // soft: غیرفعال
+      await this.prisma.employeeProfile.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return { success: true, softDeleted: true };
     }
+
+    // force (admin) — چک ارجاعها
+    const refs = await this.countEmployeeRefs(id);
+    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+
+    if (total > 0) {
+      const details = Object.entries(refs)
+        .filter(([, v]: any) => Number(v) > 0)
+        .map(([k, v]) => '  - ' + k + ': ' + v)
+        .join('\n');
+      throw new BadRequestException({
+        code: 'EMPLOYEE_HAS_REFS',
+        message: 'پرسنل در ' + total + ' مورد دیگر استفاده شده است:\n' + details + '\n\nبرای حذف همه از دکمه تأیید دوم استفاده کنید.',
+        refs, total,
+      });
+    }
+
     await this.prisma.employeeProfile.delete({ where: { id } });
-    return { success: true };
+    return { success: true, hardDeleted: true };
+  }
+
+  private async countEmployeeRefs(id: string) {
+    const p = this.prisma;
+    const [payrollRecords, attendances, workLogs, leaveRequests, advanceRequests, statements] = await Promise.all([
+      p.payrollRecord.count({ where: { employeeProfileId: id } }),
+      (p as any).attendance.count({ where: { employeeProfileId: id } }).catch(() => 0),
+      (p as any).dailyWorkLog.count({ where: { employeeProfileId: id } }).catch(() => 0),
+      (p as any).leaveRequest.count({ where: { employeeProfileId: id } }).catch(() => 0),
+      (p as any).advanceRequest.count({ where: { employeeProfileId: id } }).catch(() => 0),
+      (p as any).workerStatement?.count({ where: { employeeId: id } }).catch(() => 0) || Promise.resolve(0),
+    ]);
+    return { payrollRecords, attendances, workLogs, leaveRequests, advanceRequests, statements };
   }
 
   async stats() {

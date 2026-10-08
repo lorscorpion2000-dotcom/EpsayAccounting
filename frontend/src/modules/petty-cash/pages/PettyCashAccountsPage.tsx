@@ -11,6 +11,7 @@ import type { PettyCashAccount } from '@/types/petty-cash';
 import { formatNumber } from '@/utils/format';
 import AccountFormModal from '../components/AccountFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
 export default function PettyCashAccountsPage() {
@@ -196,13 +197,7 @@ export default function PettyCashAccountsPage() {
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDeletingAccount(a); }}
-                  className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-200 hover:bg-red-50 hover:text-red-600 text-slate-600"
-                  title="حذف"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <AdminDeleteButton endpoint="/petty-cash/accounts" id={a.id} itemLabel={a.name || a.code} />
               </div>
 
               <div onClick={() => navigate('/petty-cash/' + a.id)} className="cursor-pointer">

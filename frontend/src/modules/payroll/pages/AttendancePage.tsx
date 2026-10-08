@@ -8,6 +8,7 @@ import { ATTENDANCE_LABELS, ATTENDANCE_COLORS } from '@/types/payroll';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import AttendanceFormModal from '../components/AttendanceFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 
 import { exportToExcel } from '@/utils/export-excel';
@@ -173,9 +174,7 @@ export default function AttendancePage() {
                         <button onClick={() => { setEditing(a); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setDeleting(a)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <AdminDeleteButton endpoint="/payroll/attendance" id={a.id} itemLabel={a.id} onSuccess={load} />
                       </div>
                     </td>
                   </tr>

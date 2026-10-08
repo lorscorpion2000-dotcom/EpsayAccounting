@@ -14,10 +14,10 @@ export class PermissionsGuard implements CanActivate {
     if (!required || required.length === 0) return true;
 
     const { user } = context.switchToHttp().getRequest();
-    if (!user?.permissions) throw new ForbiddenException('Ø¯Ø³ØªØ±Ø³ÛŒ ØºÛŒØ±Ù…جاز');
+    if (!user?.permissions) throw new ForbiddenException('دسترسی غیرمجاز');
 
     const has = required.every((p) => user.permissions.includes(p));
-    if (!has) throw new ForbiddenException('Ø¯Ø³ØªØ±Ø³ÛŒ ØºÛŒØ±Ù…جاز');
+    if (!has) throw new ForbiddenException('دسترسی غیرمجاز');
     return true;
   }
 }

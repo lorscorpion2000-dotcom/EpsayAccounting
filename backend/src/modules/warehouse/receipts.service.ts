@@ -17,6 +17,66 @@ export class ReceiptsService {
     return 'GRN-' + year + '-' + String(count + 1).padStart(4, '0');
   }
 
+  /**
+   * محاسبه‌ی مقادیر مالی هر ردیف و جمع کل
+   */
+  private computeLine(it: any) {
+    const qty = Number(it.quantity) || 0;
+    const unitCost = Number(it.unitCost) || 0;
+    const base = qty * unitCost;
+
+    const discountPercent = Number(it.discountPercent) || 0;
+    const discountAmount = Number(it.discountAmount) || (discountPercent > 0 ? (base * discountPercent) / 100 : 0);
+
+    const additionAmount  = Number(it.additionAmount)  || 0;
+    const deductionAmount = Number(it.deductionAmount) || 0;
+
+    const afterDiscount = base - discountAmount;
+    const taxPercent    = Number(it.taxPercent) || 0;
+    const taxAmount     = taxPercent > 0 ? (afterDiscount * taxPercent) / 100 : 0;
+
+    const shippingCost = Number(it.shippingCost) || 0;
+    const loadingCost  = 0;
+
+    const lineTotal = afterDiscount + additionAmount - deductionAmount + taxAmount + shippingCost + loadingCost;
+
+    return {
+      base,
+      discountPercent,
+      discountAmount,
+      additionAmount,
+      deductionAmount,
+      taxPercent,
+      taxAmount,
+      shippingCost,
+      loadingCost,
+      lineTotal,
+      totalCost: base, // برای محاسبه‌ی میانگین موزون انبار
+    };
+  }
+
+  /**
+   * تجمیع کل رسید از روی اقلام
+   */
+  private computeTotals(items: any[]) {
+    let subtotal = 0, totalDiscount = 0, totalAddition = 0, totalDeduction = 0;
+    let totalTax = 0, totalShipping = 0, totalLoading = 0, grandTotal = 0, totalValue = 0;
+
+    for (const it of items) {
+      const c = this.computeLine(it);
+      subtotal       += c.base;
+      totalDiscount  += c.discountAmount;
+      totalAddition  += c.additionAmount;
+      totalDeduction += c.deductionAmount;
+      totalTax       += c.taxAmount;
+      totalShipping  += c.shippingCost;
+      totalLoading   += c.loadingCost;
+      grandTotal     += c.lineTotal;
+      totalValue     += c.totalCost;
+    }
+    return { subtotal, totalDiscount, totalAddition, totalDeduction, totalTax, totalShipping, totalLoading, grandTotal, totalValue };
+  }
+
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
     const where: any = {};
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
@@ -54,7 +114,7 @@ export class ReceiptsService {
 
   async create(dto: CreateReceiptDto, userId: string) {
     const code = await this.generateCode();
-    const totalValue = dto.items.reduce((s, it) => s + it.quantity * it.unitCost, 0);
+    const totals = this.computeTotals(dto.items);
 
     return this.prisma.goodsReceipt.create({
       data: {
@@ -69,18 +129,38 @@ export class ReceiptsService {
         driverName: dto.driverName,
         vehiclePlate: dto.vehiclePlate,
         notes: dto.notes,
-        totalValue,
+        totalValue: totals.totalValue,
+        subtotal: totals.subtotal,
+        totalDiscount: totals.totalDiscount,
+        totalAddition: totals.totalAddition,
+        totalDeduction: totals.totalDeduction,
+        totalTax: totals.totalTax,
+        totalShipping: totals.totalShipping,
+        totalLoading: totals.totalLoading,
+        grandTotal: totals.grandTotal,
         status: 'DRAFT',
         createdById: userId,
         items: {
-          create: dto.items.map((it, idx) => ({
-            itemId: it.itemId,
-            rowNumber: idx + 1,
-            quantity: it.quantity,
-            unitCost: it.unitCost,
-            totalCost: it.quantity * it.unitCost,
-            notes: it.notes,
-          })),
+          create: dto.items.map((it, idx) => {
+            const c = this.computeLine(it);
+            return {
+              itemId: it.itemId,
+              rowNumber: idx + 1,
+              quantity: it.quantity,
+              unitCost: it.unitCost,
+              totalCost: c.totalCost,
+              discountPercent: c.discountPercent,
+              discountAmount: c.discountAmount,
+              additionAmount: c.additionAmount,
+              deductionAmount: c.deductionAmount,
+              taxPercent: c.taxPercent,
+              taxAmount: c.taxAmount,
+              shippingCost: c.shippingCost,
+              loadingCost: c.loadingCost,
+              lineTotal: c.lineTotal,
+              notes: it.notes,
+            };
+          }),
         },
       },
       include: {
@@ -107,18 +187,39 @@ export class ReceiptsService {
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.items) {
-        const totalValue = dto.items.reduce((s, it) => s + it.quantity * it.unitCost, 0);
-        data.totalValue = totalValue;
+        const totals = this.computeTotals(dto.items);
+        data.totalValue = totals.totalValue;
+        data.subtotal = totals.subtotal;
+        data.totalDiscount = totals.totalDiscount;
+        data.totalAddition = totals.totalAddition;
+        data.totalDeduction = totals.totalDeduction;
+        data.totalTax = totals.totalTax;
+        data.totalShipping = totals.totalShipping;
+        data.totalLoading = totals.totalLoading;
+        data.grandTotal = totals.grandTotal;
+
         await tx.goodsReceiptItem.deleteMany({ where: { receiptId: id } });
         data.items = {
-          create: dto.items.map((it, idx) => ({
-            itemId: it.itemId,
-            rowNumber: idx + 1,
-            quantity: it.quantity,
-            unitCost: it.unitCost,
-            totalCost: it.quantity * it.unitCost,
-            notes: it.notes,
-          })),
+          create: dto.items.map((it, idx) => {
+            const c = this.computeLine(it);
+            return {
+              itemId: it.itemId,
+              rowNumber: idx + 1,
+              quantity: it.quantity,
+              unitCost: it.unitCost,
+              totalCost: c.totalCost,
+              discountPercent: c.discountPercent,
+              discountAmount: c.discountAmount,
+              additionAmount: c.additionAmount,
+              deductionAmount: c.deductionAmount,
+              taxPercent: c.taxPercent,
+              taxAmount: c.taxAmount,
+              shippingCost: c.shippingCost,
+              loadingCost: c.loadingCost,
+              lineTotal: c.lineTotal,
+              notes: it.notes,
+            };
+          }),
         };
       }
       return tx.goodsReceipt.update({

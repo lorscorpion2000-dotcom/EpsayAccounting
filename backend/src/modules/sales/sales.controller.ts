@@ -1,6 +1,7 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, Query, UseGuards,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards,
 } from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SalesService } from './sales.service';
 import { CreateSalesUnitDto, UpdateSalesUnitDto } from './dto/create-unit.dto';
 import {
@@ -80,6 +81,18 @@ export class SalesCustomersController {
   update(@Param('id') id: string, @Body() dto: UpdateSalesCustomerDto) {
     return this.svc.updateCustomer(id, dto);
   }
+
+  @Delete(':id')
+  remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.svc.removeCustomer(id, { force: wantForce && isAdmin });
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -128,6 +141,18 @@ export class SalesContractsController {
   @Post(':id/cancel')
   cancel(@Param('id') id: string, @Body() dto: CancelSalesContractDto) {
     return this.svc.cancelContract(id, dto.reason);
+  }
+
+  @Delete(':id')
+  removeContract(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const roles = (user?.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.svc.removeContract(id, { force: wantForce && isAdmin });
   }
 }
 

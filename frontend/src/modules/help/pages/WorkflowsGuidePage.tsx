@@ -4,6 +4,7 @@ import {
   ClipboardList, PackagePlus, FileCheck2, Users, Calendar,
   ArrowDown, CheckCircle2, XCircle, User, Send, Ban,
   GitBranch, Info, Printer,
+  Package, FileWarning, Lock, Trash2, Ruler,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
@@ -209,7 +210,139 @@ const WORKFLOWS: Workflow[] = [
       'دلیل ابطال در سند اصلی نمایش داده می‌شود',
     ],
   },
-];
+  {
+    key: 'budget-check',
+    title: 'کنترل بودجه در تأیید PO',
+    description: 'هنگام تأیید دستور خرید، مجموع تعهدات و واقعی با بودجه WBS مقایسه می‌شود',
+    icon: ClipboardList,
+    color: 'amber',
+    route: '/procurement/orders',
+    steps: [
+      { actor: 'سیستم', action: 'محاسبه بودجه + تعهدات + واقعی', icon: ClipboardList, color: 'slate', target: 'بررسی آستانه' },
+      { actor: 'سیستم', action: 'مقایسه با بودجه × (۱ + آستانه)', icon: FileCheck2, color: 'amber', target: 'هشدار یا تأیید' },
+      { actor: 'مدیر', action: 'تأیید با وجود هشدار', icon: CheckCircle2, color: 'emerald', target: 'PO → APPROVED' },
+    ],
+    onApprove: [
+      'بودجه از WBS خوانده می‌شود',
+      'تعهدات = مجموع PO های APPROVED روی همان WBS',
+      'واقعی = مجموع فاکتورهای خرید روی همان WBS',
+      'آستانه پیش‌فرض ۱۰٪ — قابل تغییر در کد',
+      'اگر مجموع پیش‌بینی از آستانه بگذرد، هشدار نمایش داده می‌شود',
+    ],
+    onReject: [
+      'اگر کاربر تأیید نکند، PO در DRAFT باقی می‌ماند',
+    ],
+  },
+  {
+    key: 'fixed-asset',
+    title: 'دارایی ثابت از فاکتور خرید',
+    description: 'در فاکتور خرید، اقلام CAPITAL به‌صورت خودکار به دارایی ثابت تبدیل می‌شوند',
+    icon: Package,
+    color: 'violet',
+    route: '/procurement/invoices',
+    steps: [
+      { actor: 'کاربر', action: 'ثبت فاکتور با تیک «دارایی ثابت»', icon: User, color: 'slate', target: 'ذخیره DRAFT' },
+      { actor: 'حسابدار', action: 'تأیید فاکتور', icon: CheckCircle2, color: 'amber', target: 'سیستم' },
+      { actor: 'سیستم', action: 'ساخت FixedAsset + سند خودکار', icon: FileText, color: 'emerald' },
+    ],
+    onApprove: [
+      'برای هر قلم isCapital، یک FixedAsset ساخته می‌شود',
+      'عمر مفید پیش‌فرض ۱۲۰ ماه — قابل تنظیم روی هر ردیف',
+      'حساب‌ها از mapping FIXED_ASSET_ACQUISITION و DEPRECIATION_MONTHLY',
+      'کد FA-YYYY-#### تولید می‌شود',
+      'سند خرید به حساب دارایی (نه هزینه) بدهکار می‌شود',
+    ],
+  },
+  {
+    key: 'failed-forwardings',
+    title: 'صندوق خطای ارسال گزارش روزانه',
+    description: 'ردیف‌هایی که در forward شدن به واحد مقصد خطا خورده‌اند',
+    icon: FileWarning,
+    color: 'red',
+    route: '/site-ops/failed-forwardings',
+    steps: [
+      { actor: 'سیستم', action: 'تلاش برای forward ردیف‌ها', icon: Send, color: 'slate', target: 'ثبت نتیجه' },
+      { actor: 'سیستم', action: 'ثبت FAILED + پیام خطا', icon: XCircle, color: 'red', target: 'صندوق خطا' },
+      { actor: 'کاربر', action: 'کلیک Retry در صندوق خطا', icon: CheckCircle2, color: 'emerald', target: 'تلاش مجدد' },
+    ],
+    onApprove: [
+      'Forwarding نهایی به چند جدول: DailyWorkLog، GoodsReceipt، GoodsIssue، EquipmentDailyLog، PurchaseRequest، PettyCashRequest',
+      'هر ردیف با کلید یکتا (reportId + sectionType + rowNumber + targetType) ذخیره می‌شود',
+      'در صورت موفقیت مجدد، از لیست صندوق خطا حذف می‌شود',
+    ],
+  },
+  {
+    key: 'period-lock',
+    title: 'قفل دوره مالی',
+    description: 'جلوگیری از ثبت اسناد حسابداری در ماه‌های قفل‌شده',
+    icon: Lock,
+    color: 'orange',
+    route: '/settings/period-lock',
+    steps: [
+      { actor: 'حسابدار', action: 'قفل کردن ماه', icon: Lock, color: 'slate', target: 'ذخیره در FiscalYear.lockedMonths' },
+      { actor: 'سیستم', action: 'رد کردن سند با تاریخ ماه قفل‌شده', icon: XCircle, color: 'red' },
+      { actor: 'حسابدار', action: 'بازکردن قفل (در صورت نیاز)', icon: Lock, color: 'emerald' },
+    ],
+    onApprove: [
+      'در لحظه ثبت هر سند (JournalsService.create)، چک می‌شود',
+      'اگر ماه قفل باشد → PERIOD_LOCKED با پیام فارسی',
+      'در صفحه فاکتور/سند/صورت‌وضعیت نمایش داده می‌شود',
+    ],
+  },
+  {
+    key: 'admin-hard-delete',
+    title: 'حذف کامل توسط مدیر (Hard Delete)',
+    description: 'امکان حذف کامل برای admin روی همه‌ی موجودیت‌های main',
+    icon: Trash2,
+    color: 'red',
+    route: '/recycle-bin',
+    steps: [
+      { actor: 'کاربر', action: 'کلیک حذف روی رکورد', icon: Trash2, color: 'slate', target: 'مودال اول' },
+      { actor: 'سیستم', action: 'چک ارجاع‌ها', icon: ClipboardList, color: 'amber', target: 'مودال دوم (admin)' },
+      { actor: 'مدیر', action: 'تأیید حذف کامل', icon: CheckCircle2, color: 'red', target: 'پاک‌سازی' },
+    ],
+    onApprove: [
+      'اگر رکورد ارجاعی نداشته باشد → پاک می‌شود',
+      'اگر داشته باشد → حالت پیش‌فرض soft delete (غیرفعال) با پیام هشدار',
+      'اگر admin تأیید کند → تمام ارجاع‌ها حذف و رکورد اصلی پاک می‌شود',
+      'موجودیت‌های پشتیبانی: اسناد، اشخاص، پروژه، قرارداد، کالا، انبار، دسته، ماشین، مشتری، قرارداد فروش، چک، مجوز، بیمه، تضمین، سند فنی، چک‌لیست، پرسنل',
+    ],
+  },
+  {
+    key: 'telegram-alerts',
+    title: 'هشدار تلگرام در مانیتورینگ',
+    description: 'ارسال پیام تلگرام در صورت خطا یا restart سرویس‌ها',
+    icon: Send,
+    color: 'cyan',
+    steps: [
+      { actor: 'سیستم', action: 'هر ۵ دقیقه چک HTTP سرویس‌ها', icon: ClipboardList, color: 'slate', target: 'لاگ' },
+      { actor: 'سیستم', action: 'در صورت ERROR/WARN/RESTART → تلگرام', icon: Send, color: 'amber' },
+    ],
+    onApprove: [
+      'تنظیمات در E:\EpsayAccounting\tools\telegram.config.json',
+      'levels: ERROR, WARN, RESTART',
+      'rateLimitSeconds: فاصله حداقل بین پیام‌های هم‌سطح',
+      'در هر پیام: نام کامپیوتر + سطح + متن خطا',
+    ],
+  },
+  {
+    key: 'custom-units',
+    title: 'واحدهای قابل تعریف کاربر',
+    description: 'تعریف واحد جدید در Settings و استفاده بلافاصله در همه فرم‌ها',
+    icon: Ruler,
+    color: 'blue',
+    route: '/settings/units',
+    steps: [
+      { actor: 'مدیر سیستم', action: 'افزودن واحد جدید در تنظیمات', icon: User, color: 'slate', target: 'ذخیره در DB' },
+      { actor: 'سیستم', action: 'بارگذاری خودکار در useUnits hook', icon: ClipboardList, color: 'amber' },
+      { actor: 'کاربر', action: 'استفاده در فرم کالا/WBS/PR/PO/PI', icon: CheckCircle2, color: 'emerald' },
+    ],
+    onApprove: [
+      'واحدهای سیستمی (NUMBER, KG, TON, M, ...) قابل حذف نیستند — فقط غیرفعال',
+      'واحدهای کاربری اگر در اسناد استفاده نشده باشند قابل حذف هستند',
+      'کش در useUnits مشترک است — یک بار از API خوانده می‌شود',
+    ],
+  },];
 
 const COLOR_MAP: Record<string, { bg: string; text: string; border: string; gradient: string }> = {
   emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', gradient: 'from-emerald-500 to-emerald-700' },

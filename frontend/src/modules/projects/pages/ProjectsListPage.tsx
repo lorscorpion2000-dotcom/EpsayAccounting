@@ -20,6 +20,8 @@ export default function ProjectsListPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const loadData = async () => {
@@ -46,17 +48,28 @@ export default function ProjectsListPage() {
     loadData();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deletingProject) return;
     setDeleting(true);
+    setForceError(null);
     try {
-      await projectsApi.remove(deletingProject.id);
-      toast.success('پروژه با موفقیت حذف شد');
+      const res = await projectsApi.remove(deletingProject.id, force);
+      if (res?.hardDeleted) {
+        toast.success('پروه بهطور کامل حذف شد');
+      } else {
+        toast.success('پروه غیرفعال شد');
+      }
       setDeletingProject(null);
+      setForceConfirm(false);
       loadData();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
+      const err = e?.response?.data;
+      if (err?.code === 'PROJECT_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+      const msg = err?.message;
       toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+      }
     } finally {
       setDeleting(false);
     }
@@ -243,15 +256,42 @@ export default function ProjectsListPage() {
 
       {/* Delete Confirm */}
       <ConfirmDialog
-        isOpen={!!deletingProject}
-        title="حذف پروژه"
-        message={`آیا از حذف پروژه «${deletingProject?.name}» اطمینان دارید؟ تمام قراردادها، WBS و بودجه‌های مرتبط نیز غیرفعال خواهند شد.`}
-        confirmLabel="بله، حذف شود"
+        isOpen={!!deletingProject && !forceConfirm}
+        title="غیرفعالسازی پروه"
+        message={`پروه «${deletingProject?.name}» غیرفعال شود این عمل قابل بازگشت است.`}
+        confirmLabel="بله غیرفعال شود"
         variant="danger"
         loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setDeletingProject(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeletingProject(null); setForceError(null); }}
       />
+
+      {/* Force delete modal */}
+      {forceError && deletingProject && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل پروه (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">
+                {forceError}
+              </p>
+              <p className="text-xs text-slate-500">
+                با کلیک روی «حذف کامل» تمام ارجاعهای این پروه پاک میشود. اطمینان دارید
+              </p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeletingProject(null); }} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={() => handleDelete(true)} disabled={deleting} className="btn-danger">
+                  {deleting ? 'در حال حذف...' : 'حذف کامل (خطرناک)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

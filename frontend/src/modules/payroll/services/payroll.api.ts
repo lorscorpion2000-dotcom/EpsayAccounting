@@ -27,10 +27,15 @@ export const payrollApi = {
       const { data } = await api.patch<Employee>('/payroll/employees/' + id, payload);
       return data;
     },
-    remove: async (id: string) => {
-      const { data } = await api.delete('/payroll/employees/' + id);
+    remove: async (id: string, force?: boolean) => {
+      const url = '/payroll/employees/' + id + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       return data;
     },
+        getCard: (id: string) =>
+      api.get(`/payroll/employees/${id}/card`).then((r) => r.data),
+    getMonthlyWork: (id: string, year: number, month: number) =>
+      api.get(`/payroll/employees/${id}/monthly-work`, { params: { year, month } }).then((r) => r.data),
   },
 
   // ===== Periods =====
@@ -201,12 +206,14 @@ export const payrollApi = {
       const { data } = await api.post<SubcontractorStatement>('/payroll/subcontractor-statements', payload);
       return data;
     },
-    update: async (id: string, payload: any) => {
-      const { data } = await api.patch<SubcontractorStatement>('/payroll/subcontractor-statements/' + id, payload);
+    update: async (id: string, payload: any, force?: boolean) => {
+      const url = '/payroll/subcontractor-statements/' + id + (force ? '?force=true' : '');
+      const { data } = await api.patch<SubcontractorStatement>(url, payload);
       return data;
     },
-    remove: async (id: string) => {
-      const { data } = await api.delete('/payroll/subcontractor-statements/' + id);
+    remove: async (id: string, force?: boolean) => {
+      const url = '/payroll/subcontractor-statements/' + id + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       return data;
     },
     submit: async (id: string) => {
@@ -222,4 +229,54 @@ export const payrollApi = {
       return data;
     },
   },
+
+  // ===== Worker Statements (صورت‌وضعیت پرسنل) =====
+  workerStatements: {
+    list: async (params?: { projectId?: string; partnerId?: string; status?: string }) => {
+      const { data } = await api.get('/payroll/worker-statements', { params });
+      return data;
+    },
+    stats: async (projectId?: string) => {
+      const { data } = await api.get('/payroll/worker-statements/stats', {
+        params: projectId ? { projectId } : {},
+      });
+      return data;
+    },
+    get: async (id: string) => {
+      const { data } = await api.get('/payroll/worker-statements/' + id);
+      return data;
+    },
+    preview: async (payload: {
+      partnerId: string; contractId?: string;
+      periodStart: string; periodEnd: string;
+    }) => {
+      const { data } = await api.post('/payroll/worker-statements/preview', payload);
+      return data;
+    },
+    create: async (payload: any) => {
+      const { data } = await api.post('/payroll/worker-statements', payload);
+      return data;
+    },
+    update: async (id: string, payload: any) => {
+      const { data } = await api.patch('/payroll/worker-statements/' + id, payload);
+      return data;
+    },
+    remove: async (id: string) => {
+      const { data } = await api.delete('/payroll/worker-statements/' + id);
+      return data;
+    },
+    submit: async (id: string) => {
+      const { data } = await api.patch('/payroll/worker-statements/' + id + '/submit');
+      return data;
+    },
+    approve: async (id: string) => {
+      const { data } = await api.patch('/payroll/worker-statements/' + id + '/approve');
+      return data;
+    },
+    pay: async (id: string) => {
+      const { data } = await api.patch('/payroll/worker-statements/' + id + '/pay');
+      return data;
+    },
+  },
+
 };

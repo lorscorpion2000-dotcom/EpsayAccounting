@@ -23,8 +23,9 @@ export const warehouseApi = {
       const { data } = await api.patch<Warehouse>('/warehouses/' + id, payload);
       return data;
     },
-    remove: async (id: string) => {
-      const { data } = await api.delete('/warehouses/' + id);
+    remove: async (id: string, force?: boolean) => {
+      const url = '/warehouses/' + id + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       return data;
     },
   },
@@ -51,8 +52,9 @@ export const warehouseApi = {
       const { data } = await api.patch<ItemCategory>('/warehouse/categories/' + id, payload);
       return data;
     },
-    remove: async (id: string) => {
-      const { data } = await api.delete('/warehouse/categories/' + id);
+    remove: async (id: string, force?: boolean) => {
+      const url = '/warehouse/categories/' + id + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       return data;
     },
   },
@@ -75,8 +77,9 @@ export const warehouseApi = {
       const { data } = await api.patch<Item>('/warehouse/items/' + id, payload);
       return data;
     },
-    remove: async (id: string) => {
-      const { data } = await api.delete('/warehouse/items/' + id);
+    remove: async (id: string, force?: boolean) => {
+      const url = '/warehouse/items/' + id + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       return data;
     },
   },

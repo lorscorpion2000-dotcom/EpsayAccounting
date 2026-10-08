@@ -26,7 +26,7 @@ export class ApprovalsController {
   @Post('approve')
   @RequirePermissions('approvals.update')
   approve(@Body() dto: ApproveDto, @CurrentUser('id') userId: string) {
-    return this.service.approve(dto.module, dto.id, userId);
+    return this.service.approve(dto.module, dto.id, userId, dto.force);
   }
 
   @Post('reject')

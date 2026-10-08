@@ -20,6 +20,8 @@ export default function WarehousesListPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -36,19 +38,23 @@ export default function WarehousesListPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
-    setActionLoading(true);
+    setForceError(null);
     try {
-      await warehouseApi.warehouses.remove(deleting.id);
-      toast.success('انبار حذف شد');
+      const res = await warehouseApi.warehouses.remove(deleting.id, force);
+      toast.success(force ? 'انبار به‌طور کامل حذف شد' : 'انبار غیرفعال شد');
       setDeleting(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
-    } finally {
-      setActionLoading(false);
+      const err = e?.response?.data;
+      const msg = err?.message;
+      if (force && typeof msg === 'string' && msg.includes('\n')) {
+        setForceError(msg);
+      } else {
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+      }
     }
   };
 
@@ -177,15 +183,32 @@ export default function WarehousesListPage() {
       />
 
       <ConfirmDialog
-        isOpen={!!deleting}
+        isOpen={!!deleting && !forceConfirm}
         title="حذف انبار"
-        message={`آیا از حذف «${deleting?.name}» اطمینان دارید؟`}
-        confirmLabel="بله، حذف شود"
+        message={deleting ? "انبار «" + deleting.name + "» غیرفعال شود؟ این عمل قابل بازگشت است." : ""}
+        confirmLabel="بله، غیرفعال شود"
         variant="danger"
-        loading={actionLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
       />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل انبار (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
+              <p className="text-xs text-slate-500">با کلیک روی «حذف کامل»، تمام موجودی، گردش و رسید/حواله این انبار پاک می‌شود. اطمینان دارید؟</p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">انصراف</button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">حذف کامل (خطرناک)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

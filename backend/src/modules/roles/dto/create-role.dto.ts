@@ -7,7 +7,7 @@ export class CreateRoleDto {
   @MinLength(3)
   code!: string;
 
-  @ApiProperty({ example: 'Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±' })
+  @ApiProperty({ example: 'حسابدار' })
   @IsString()
   displayName!: string;
 
@@ -16,7 +16,7 @@ export class CreateRoleDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ type: [String], description: 'Ø¢Ø±Ø§ÛŒÙ‡ Ø´Ù†Ø§Ø³Ù‡ Ù…Ø¬ÙˆØ²Ù‡Ø§' })
+  @ApiPropertyOptional({ type: [String], description: 'آرایه شناسه مجوزها' })
   @IsOptional()
   @IsArray()
   permissionIds?: string[];

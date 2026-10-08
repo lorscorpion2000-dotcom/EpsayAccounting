@@ -42,7 +42,9 @@ export class ChecklistsController {
 
   @Delete(':id')
   @RequirePermissions('timeline.delete')
-  remove(@Param('id') id: string) { return this.s.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser() _user: any) {
+    return this.s.remove(id, { force: true });
+  }
 
   @Patch(':id/submit')
   @RequirePermissions('timeline.update')

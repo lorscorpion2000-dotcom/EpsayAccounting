@@ -70,12 +70,34 @@ export class CategoriesService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, options?: { force?: boolean }) {
     const cat = await this.findOne(id);
-    if (cat.children.length > 0) throw new BadRequestException('ابتدا زیردسته‌ها را حذف کنید');
-    const itemsCount = await this.prisma.item.count({ where: { categoryId: id } });
-    if (itemsCount > 0) throw new BadRequestException('این دسته دارای کالا است');
+    const force = options?.force === true;
+
+    if (!force) {
+      if (cat.children.length > 0) throw new BadRequestException('ابتدا زیردستهها را حذف کنید');
+      const itemsCount = await this.prisma.item.count({ where: { categoryId: id } });
+      if (itemsCount > 0) throw new BadRequestException('این دسته دارای کالا است');
+      await this.prisma.itemCategory.delete({ where: { id } });
+      return { success: true, hardDeleted: true };
+    }
+
+    // force: بررسی ارجاعها
+    const items = await this.prisma.item.count({ where: { categoryId: id } });
+    const children = await this.prisma.itemCategory.count({ where: { parentId: id } });
+
+    if (items > 0 || children > 0) {
+      const parts: string[] = [];
+      if (children > 0) parts.push('زیردسته: ' + children);
+      if (items > 0) parts.push('کالا: ' + items);
+      throw new BadRequestException({
+        code: 'CATEGORY_HAS_REFS',
+        message: 'این دسته در موارد زیر استفاده شده است. ابتدا آنها را پاک کنید یا از حالت غیرفعال استفاده کنید:\n  - ' + parts.join('\n  - '),
+        refs: { children, items }, total: children + items,
+      });
+    }
+
     await this.prisma.itemCategory.delete({ where: { id } });
-    return { success: true };
+    return { success: true, hardDeleted: true };
   }
 }

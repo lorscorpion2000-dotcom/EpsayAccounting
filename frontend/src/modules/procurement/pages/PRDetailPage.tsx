@@ -16,6 +16,7 @@ import {
 } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function PRDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -122,6 +123,7 @@ export default function PRDetailPage() {
             <button className="btn-secondary" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> چاپ
             </button>
+            <AdminDeleteButton endpoint="/procurement/requests" id={pr.id} itemLabel={pr.code} onSuccess={() => navigate('/procurement/requests')} variant="button" />
             {pr.status === 'DRAFT' && (
               <>
                 <button className="btn-secondary" onClick={() => navigate('/procurement/requests/' + pr.id + '/edit')}>

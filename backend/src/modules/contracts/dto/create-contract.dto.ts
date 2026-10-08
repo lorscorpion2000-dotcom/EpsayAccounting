@@ -1,5 +1,6 @@
 import {
   IsString, IsOptional, IsEnum, IsNumber, IsInt, IsDateString, IsBoolean,
+  IsArray, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -42,6 +43,22 @@ export class CreateLegalContractDto {
   @IsOptional() @IsString() supervisorName?: string;
   @IsOptional() @IsString() companySignerName?: string;
   @IsOptional() @IsString() workerSignerName?: string;
+
+  @IsOptional() @IsString() notes?: string;
+
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => LegalContractItemDto)
+  items?: LegalContractItemDto[];
+}
+
+export class LegalContractItemDto {
+  @IsOptional() @IsInt() @Type(() => Number) rowNumber?: number;
+
+  @IsString() description!: string;
+
+  @IsOptional() @IsString() unit?: string;
+
+  @IsOptional() @IsNumber() @Type(() => Number) quantity?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) unitPrice?: number;
 
   @IsOptional() @IsString() notes?: string;
 }

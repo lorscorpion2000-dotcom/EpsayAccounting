@@ -2,6 +2,9 @@ export type WeatherCondition = 'SUNNY' | 'CLOUDY' | 'RAINY' | 'SNOWY' | 'WINDY' 
 export type ReportStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LEAVE' | 'SICK' | 'HOLIDAY';
 export type EquipmentStatus = 'ACTIVE' | 'IDLE' | 'BROKEN' | 'MAINTENANCE';
+export type EntryExitKind = 'PERSON' | 'VEHICLE';
+export type RequestType = 'PURCHASE' | 'PETTY_CASH' | 'MANPOWER' | 'TECHNICAL' | 'REPAIR';
+export type EventType = 'STOP' | 'INCIDENT' | 'VISIT' | 'INSTRUCTION' | 'OTHER';
 
 export const WEATHER_LABELS: Record<WeatherCondition, string> = {
   SUNNY: 'آفتابی',
@@ -56,6 +59,50 @@ export const EQUIPMENT_STATUS_COLORS: Record<EquipmentStatus, string> = {
   MAINTENANCE: 'bg-amber-50 text-amber-700',
 };
 
+export const ENTRY_EXIT_KIND_LABELS: Record<EntryExitKind, string> = {
+  PERSON: 'شخص',
+  VEHICLE: 'خودرو',
+};
+
+export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
+  PURCHASE: 'خرید کالا',
+  PETTY_CASH: 'تنخواه',
+  MANPOWER: 'تأمین نیرو',
+  TECHNICAL: 'فنی',
+  REPAIR: 'تعمیر',
+};
+
+export const REQUEST_PRIORITY_LABELS: Record<string, string> = {
+  LOW: 'کم',
+  NORMAL: 'معمولی',
+  HIGH: 'بالا',
+  URGENT: 'فوری',
+};
+
+export const REQUEST_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'در انتظار',
+  APPROVED: 'تاییدشده',
+  REJECTED: 'رد‌شده',
+  DONE: 'انجام‌شده',
+};
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  STOP: 'توقف کار',
+  INCIDENT: 'حادثه',
+  VISIT: 'بازدید',
+  INSTRUCTION: 'دستورکار',
+  OTHER: 'سایر',
+};
+
+export const EVENT_SEVERITY_LABELS: Record<string, string> = {
+  LOW: 'کم',
+  MEDIUM: 'متوسط',
+  HIGH: 'شدید',
+};
+
+// ═══════════════════════════════════════════════════════════
+// Interfaces
+// ═══════════════════════════════════════════════════════════
 export interface DailyReportWorker {
   id?: string;
   rowNumber?: number;
@@ -72,11 +119,15 @@ export interface DailyReportWorker {
 export interface DailyReportEquipment {
   id?: string;
   rowNumber?: number;
+  equipmentId?: string | null;
   name: string;
   plateNumber?: string | null;
   operator?: string | null;
   hoursWorked: string | number;
   status: EquipmentStatus;
+  wbsItemId?: string | null;
+  fuelLiters?: string | number | null;
+  stopReason?: string | null;
   description?: string | null;
 }
 
@@ -89,6 +140,10 @@ export interface DailyReportMaterial {
   supplier?: string | null;
   vehiclePlate?: string | null;
   billNumber?: string | null;
+  movementType?: string | null;
+  qcResult?: string | null;
+  exitType?: string | null;
+  exitDest?: string | null;
   description?: string | null;
 }
 
@@ -98,7 +153,54 @@ export interface DailyReportProgress {
   wbsItemId?: string | null;
   description: string;
   progressPct: string | number;
+  quantity?: string | number | null;
+  location?: string | null;
   notes?: string | null;
+}
+
+export interface DailyReportEntryExit {
+  id?: string;
+  rowNumber?: number;
+  kind: EntryExitKind;
+  personName?: string | null;
+  organization?: string | null;
+  purpose?: string | null;
+  vehicleType?: string | null;
+  plateNumber?: string | null;
+  driverName?: string | null;
+  cargo?: string | null;
+  entryTime?: string | null;
+  exitTime?: string | null;
+  notes?: string | null;
+}
+
+export interface DailyReportRequest {
+  id?: string;
+  rowNumber?: number;
+  requestType: RequestType;
+  title: string;
+  description?: string | null;
+  quantity?: string | number | null;
+  unit?: string | null;
+  priority?: string | null;
+  requiredDate?: string | null;
+  wbsItemId?: string | null;
+  amount?: string | number | null;
+  status?: string;
+  managerNote?: string | null;
+}
+
+export interface DailyReportEvent {
+  id?: string;
+  rowNumber?: number;
+  eventType: EventType;
+  title: string;
+  description?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  durationHrs?: string | number | null;
+  severity?: string | null;
+  actorName?: string | null;
 }
 
 export interface DailyReport {
@@ -110,6 +212,8 @@ export interface DailyReport {
   weather?: WeatherCondition | null;
   tempMin?: number | null;
   tempMax?: number | null;
+  startTime?: string | null;
+  endTime?: string | null;
   operations?: string | null;
   issues?: string | null;
   incidents?: string | null;
@@ -120,8 +224,14 @@ export interface DailyReport {
   equipments?: DailyReportEquipment[];
   materials?: DailyReportMaterial[];
   progresses?: DailyReportProgress[];
+  entryExits?: DailyReportEntryExit[];
+  requests?: DailyReportRequest[];
+  events?: DailyReportEvent[];
   createdAt: string;
-  _count?: { workers: number; equipments: number; materials: number; progresses: number };
+  _count?: {
+    workers: number; equipments: number; materials: number;
+    progresses: number; entryExits: number; requests: number; events: number;
+  };
 }
 
 export interface SiteOpsStats {

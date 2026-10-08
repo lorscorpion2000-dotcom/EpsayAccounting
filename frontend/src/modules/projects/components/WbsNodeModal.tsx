@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { X, Loader2, Save, Layers } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import type { WbsItem, WbsLevel, WbsUnit } from '@/types/project';
-import { WBS_LEVEL_LABELS, WBS_UNIT_LABELS } from '@/types/project';
+import { WBS_LEVEL_LABELS } from '@/types/project';
+import UnitSelect from '@/components/UnitSelect';
 import { formatNumber } from '@/utils/format';
 
 interface Props {
@@ -174,12 +175,7 @@ export default function WbsNodeModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="label">واحد</label>
-              <select {...register('unit')} className="input">
-                <option value="">— انتخاب کنید —</option>
-                {Object.entries(WBS_UNIT_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <UnitSelect registerProps={register('unit')} className="input" placeholder="— انتخاب کنید —" />
             </div>
             <div>
               <label className="label">مقدار</label>

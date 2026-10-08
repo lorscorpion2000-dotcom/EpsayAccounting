@@ -72,6 +72,7 @@ export default function ApprovalsPage() {
   const { user } = useAuthStore();
   const userRoles = (user?.roles || []) as string[];
   const [payingItem, setPayingItem] = useState<PendingApproval | null>(null);
+  const [budgetWarning, setBudgetWarning] = useState<{ item: PendingApproval; detail: any } | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -177,10 +178,29 @@ export default function ApprovalsPage() {
       setReason('');
       loadData();
     } catch (e: any) {
+      if (e?.response?.data?.code === 'BUDGET_EXCEEDED' && actionItem?.action === 'approve') {
+        setBudgetWarning({ item: actionItem.item, detail: e.response.data.detail });
+        setActionItem(null);
+        setReason('');
+        return;
+      }
       const msg = e?.response?.data?.message;
       toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleForceApprove = async () => {
+    if (!budgetWarning) return;
+    try {
+      await approvalsApi.approve(budgetWarning.item.module, budgetWarning.item.id, undefined, true);
+      toast.success('با وجود هشدار بودجه تأیید شد');
+      setBudgetWarning(null);
+      loadData();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
     }
   };
 
@@ -448,6 +468,54 @@ export default function ApprovalsPage() {
       )}
 
 
+      {budgetWarning && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-amber-100 text-amber-600">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-slate-800">
+                    هشدار بودجه — {budgetWarning.item.title}
+                  </h3>
+                  <p className="text-sm text-slate-600 mt-1">
+                    کد: <span className="num font-medium">{budgetWarning.item.code}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm space-y-2">
+                <BudgetRow label="بودجه مصوب" value={budgetWarning.detail.budget} />
+                <BudgetRow label="تعهدات قبلی" value={budgetWarning.detail.committed} />
+                <BudgetRow label="واقعی (فاکتورها)" value={budgetWarning.detail.actual} />
+                <BudgetRow label="این دستور خرید" value={budgetWarning.detail.currentPO} highlight />
+                <div className="border-t border-amber-300 my-2" />
+                <BudgetRow label="مجموع پیش‌بینی‌شده" value={budgetWarning.detail.projectedTotal} />
+                <BudgetRow label="آستانه مجاز" value={budgetWarning.detail.threshold} />
+                {budgetWarning.detail.overBudget > 0 && (
+                  <BudgetRow label="مازاد بر بودجه" value={budgetWarning.detail.overBudget} danger />
+                )}
+              </div>
+
+              <p className="text-xs text-slate-500 mb-4">
+                با تأیید، سند بدون توجه به هشدار بودجه ثبت می‌شود. ادامه می‌دهید؟
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button onClick={() => setBudgetWarning(null)} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={handleForceApprove} className="btn-danger">
+                  تأیید با وجود هشدار
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AccountPickerModal
         isOpen={!!payingItem}
         amount={Number(payingItem?.amount || 0)}
@@ -626,5 +694,20 @@ function InfoItem({ icon: Icon, label, value }: any) {
       <span className="text-slate-400 shrink-0">{label}:</span>
       <span className="truncate num" title={value}>{value}</span>
 </div>
+  );
+}
+
+
+function BudgetRow({ label, value, highlight, danger }: any) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-slate-600">{label}:</span>
+      <span className={
+        'num font-bold ' +
+        (danger ? 'text-red-600' : highlight ? 'text-amber-700' : 'text-slate-800')
+      }>
+        {Number(value || 0).toLocaleString('fa-IR')}
+      </span>
+    </div>
   );
 }

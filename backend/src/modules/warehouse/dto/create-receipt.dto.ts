@@ -1,11 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray, IsDateString, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested,
+} from 'class-validator';
 
 export class ReceiptItemDto {
   @ApiProperty() @IsUUID() itemId!: string;
   @ApiProperty() @IsNumber() @Min(0) quantity!: number;
   @ApiProperty() @IsNumber() @Min(0) unitCost!: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) discountPercent?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) additionAmount?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) deductionAmount?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) taxPercent?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) taxAmount?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) shippingCost?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) loadingCost?: number;
+
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
 }
 
@@ -20,5 +32,7 @@ export class CreateReceiptDto {
   @ApiPropertyOptional() @IsOptional() @IsString() driverName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() vehiclePlate?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
-  @ApiProperty({ type: [ReceiptItemDto] }) @IsArray() @ValidateNested({ each: true }) @Type(() => ReceiptItemDto) items!: ReceiptItemDto[];
+  @ApiProperty({ type: [ReceiptItemDto] })
+  @IsArray() @ValidateNested({ each: true }) @Type(() => ReceiptItemDto)
+  items!: ReceiptItemDto[];
 }

@@ -24,6 +24,9 @@ export default function JournalsListPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [deletingJournal, setDeletingJournal] = useState<JournalEntry | null>(null);
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<JournalEntry | null>(null);
+  const [hardDeleteReason, setHardDeleteReason] = useState('');
+  const [hardDeleteForce, setHardDeleteForce] = useState(false);
   const [postingJournal, setPostingJournal] = useState<JournalEntry | null>(null);
   const [reversingJournal, setReversingJournal] = useState<JournalEntry | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -83,6 +86,34 @@ export default function JournalsListPage() {
     }
   };
 
+  const handleHardDelete = async () => {
+    if (!hardDeleteTarget) return;
+    const reason = hardDeleteReason.trim();
+    if (reason.length < 5) {
+      toast.error('دلیل باید حداقل ۵ کاراکتر باشد');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      if (hardDeleteForce) {
+        await accountingApi.journals.hardDelete(hardDeleteTarget.id, reason);
+        toast.success('سند بهطور کامل حذف شد');
+      } else {
+        await accountingApi.journals.removeAdmin(hardDeleteTarget.id, reason, false);
+        toast.success('سند حذف نرم شد — از سوابق حذف قابل بازیابی است');
+      }
+      setHardDeleteTarget(null);
+      setHardDeleteReason('');
+      setHardDeleteForce(false);
+      loadData();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handlePost = async () => {
     if (!postingJournal) return;
     setActionLoading(true);
@@ -100,8 +131,14 @@ export default function JournalsListPage() {
   };
 
   const handleReverse = async () => {
-    if (!reversingJournal || !reversalReason.trim()) {
+    if (!reversingJournal) return;
+    const reason = reversalReason.trim();
+    if (!reason) {
       toast.error('دلیل ابطال الزامی است');
+      return;
+    }
+    if (reason.length < 5) {
+      toast.error('دلیل ابطال باید حداقل ۵ کاراکتر باشد');
       return;
     }
     setActionLoading(true);
@@ -334,6 +371,13 @@ export default function JournalsListPage() {
                             >
                               <XCircle className="w-4 h-4" />
                             </button>
+                            <button
+                              onClick={() => setHardDeleteTarget(j)}
+                              className="p-1.5 rounded-lg hover:bg-red-100 text-red-800 transition-colors"
+                              title="حذف توسط مدیر"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </>
                         )}
                         {j.status === 'REVERSED' && (
@@ -362,6 +406,52 @@ export default function JournalsListPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeletingJournal(null)}
       />
+
+      {hardDeleteTarget && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف سند حسابداری (مدیر)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700">
+                سند <span className="font-bold num">{hardDeleteTarget.code}</span> — {hardDeleteTarget.description}
+              </p>
+              <div>
+                <label className="label">دلیل *</label>
+                <textarea
+                  rows={3}
+                  value={hardDeleteReason}
+                  onChange={(e) => setHardDeleteReason(e.target.value)}
+                  placeholder="حداقل ۵ کاراکتر"
+                  className="input resize-none"
+                  autoFocus
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hardDeleteForce}
+                  onChange={(e) => setHardDeleteForce(e.target.checked)}
+                  className="w-4 h-4 accent-red-600"
+                />
+                <span className="text-red-800 font-medium">حذف کامل (خطرناک) — سند قابل بازیابی نیست</span>
+              </label>
+              <p className="text-xs text-slate-500">
+                حالت پیشفرض: حذف نرم (قابل بازیابی از سوابق حذف). با تیک بالا سند کاملا پاک میشود.
+              </p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setHardDeleteTarget(null); setHardDeleteReason(''); setHardDeleteForce(false); }} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={handleHardDelete} disabled={actionLoading || hardDeleteReason.trim().length < 5} className="btn-danger">
+                  {actionLoading ? 'در حال حذف...' : hardDeleteForce ? 'حذف کامل (خطرناک)' : 'حذف نرم'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Post */}
       <ConfirmDialog

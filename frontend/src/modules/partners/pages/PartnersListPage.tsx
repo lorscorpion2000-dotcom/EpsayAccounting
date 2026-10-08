@@ -37,6 +37,8 @@ export default function PartnersListPage() {
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [deletingPartner, setDeletingPartner] = useState<Partner | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -53,19 +55,37 @@ export default function PartnersListPage() {
     }
   };
 
-  useEffect(() => { load(); }, [typeFilter]);
+  // جستجوی زنده با debounce
+  useEffect(() => {
+    const t = setTimeout(() => { load(); }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, typeFilter]);
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deletingPartner) return;
     setDeleting(true);
+    setForceError(null);
     try {
-      await partnersApi.remove(deletingPartner.id);
-      toast.success('شخص با موفقیت حذف شد');
-      setDeletingPartner(null);
-      load();
+      const res = await partnersApi.remove(deletingPartner.id, force);
+      if (res?.hardDeleted) {
+        toast.success('شخص حذف شد');
+        setDeletingPartner(null);
+        setForceConfirm(false);
+        load();
+      } else {
+        toast.success('شخص غیرفعال شد');
+        setDeletingPartner(null);
+        load();
+      }
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+      const err = e?.response?.data;
+      if (err?.code === 'PARTNER_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      }
     } finally {
       setDeleting(false);
     }
@@ -203,18 +223,44 @@ export default function PartnersListPage() {
         onClose={() => setEditingPartner(null)}
         onUpdated={load}
       />
-
-      {/* Delete Confirm */}
+      {/* Delete Confirm — normal */}
       <ConfirmDialog
-        isOpen={!!deletingPartner}
+        isOpen={!!deletingPartner && !forceConfirm}
         title="حذف شخص"
-        message={`آیا از حذف «${deletingPartner?.name}» اطمینان دارید؟ این عمل قابل بازگشت نیست.`}
-        confirmLabel="بله، حذف شود"
+        message={deletingPartner ? `شخص «${deletingPartner.name}» غیرفعال شود این عمل قابل بازگشت است.` : ''}
+        confirmLabel="بله غیرفعال شود"
         variant="danger"
         loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setDeletingPartner(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeletingPartner(null); setForceError(null); }}
       />
+
+      {/* Force delete dialog */}
+      {forceError && deletingPartner && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">
+                {forceError}
+              </p>
+              <p className="text-xs text-slate-500">
+                با کلیک روی «حذف کامل» تمام ارجاعهای این شخص پاک میشود. اطمینان دارید
+              </p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); }} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={() => handleDelete(true)} disabled={deleting} className="btn-danger">
+                  {deleting ? 'در حال حذف...' : 'حذف کامل (خطرناک)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

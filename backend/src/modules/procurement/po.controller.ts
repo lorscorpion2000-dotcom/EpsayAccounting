@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './po.service';
 import { CreatePODto } from './dto/create-po.dto';
@@ -54,4 +54,27 @@ export class PurchaseOrdersController {
   @Patch(':id/send')
   @RequirePermissions('procurement.update')
   send(@Param('id') id: string) { return this.service.send(id); }
+
+
+  @Delete(':id/admin')
+  @RequirePermissions('procurement.manage')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.service.adminDelete(id, user.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('procurement.manage')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.service.restore(id, user.id);
+  }
+
 }

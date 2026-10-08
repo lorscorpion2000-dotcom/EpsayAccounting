@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import {
   SalesUnitsController,
@@ -7,9 +7,10 @@ import {
   SalesPaymentsController,
 } from './sales.controller';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AccountingModule],
   controllers: [
     SalesUnitsController,
     SalesCustomersController,

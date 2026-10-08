@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Delete } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RFQService } from './rfq.service';
 import { CreateRFQDto } from './dto/create-rfq.dto';
@@ -39,4 +39,27 @@ export class RFQController {
   selectSupplier(@Body() dto: SelectSupplierDto, @CurrentUser('id') userId: string) {
     return this.service.selectSupplier(dto, userId);
   }
+
+
+  @Delete(':id/admin')
+  @RequirePermissions('rfq.delete')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.service.adminDelete(id, user.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('rfq.delete')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.service.restore(id, user.id);
+  }
+
 }

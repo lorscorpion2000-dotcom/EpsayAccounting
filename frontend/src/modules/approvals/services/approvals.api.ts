@@ -54,8 +54,8 @@ export const approvalsApi = {
     const { data } = await api.get<ApprovalStats>('/approvals/stats');
     return data;
   },
-  approve: async (module: string, id: string, note?: string) => {
-    const { data } = await api.post('/approvals/approve', { module, id, note });
+  approve: async (module: string, id: string, note?: string, force?: boolean) => {
+    const { data } = await api.post('/approvals/approve', { module, id, note, force });
     return data;
   },
   reject: async (module: string, id: string, reason: string) => {

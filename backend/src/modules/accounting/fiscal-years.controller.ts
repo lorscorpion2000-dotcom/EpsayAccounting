@@ -74,4 +74,23 @@ export class FiscalYearsController {
   generateOpening(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.service.generateOpeningEntry(id, userId);
   }
+
+  @Get(':id/locked-months')
+  @RequirePermissions('accounting.fiscal-years.manage')
+  getLockedMonths(@Param('id') id: string) {
+    return this.service.getLockedMonths(id);
+  }
+
+  @Post(':id/lock-month')
+  @RequirePermissions('accounting.fiscal-years.manage')
+  lockMonth(@Param('id') id: string, @Body() body: { monthKey: string }) {
+    return this.service.lockMonth(id, body.monthKey);
+  }
+
+  @Post(':id/unlock-month')
+  @RequirePermissions('accounting.fiscal-years.manage')
+  unlockMonth(@Param('id') id: string, @Body() body: { monthKey: string }) {
+    return this.service.unlockMonth(id, body.monthKey);
+  }
+
 }

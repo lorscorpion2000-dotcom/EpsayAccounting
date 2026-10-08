@@ -1,3 +1,4 @@
+import 'dotenv/config';
 // backend/prisma/seed-templates.mjs
 // Seeds the 4 default legal contract templates with Persian legal text.
 // Run: node prisma/seed-templates.mjs

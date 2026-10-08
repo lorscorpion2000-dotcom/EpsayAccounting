@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreatePettyCashAccountDto } from './dto/create-account.dto';
 import { UpdatePettyCashAccountDto } from './dto/update-account.dto';
 
 @Injectable()
 export class PettyCashAccountsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private detailAccounts: DetailAccountsService,
+  ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
@@ -23,8 +28,8 @@ export class PettyCashAccountsService {
       where,
       include: {
         holder: { select: { id: true, fullName: true, username: true } },
-            employee: { select: { id: true, fullName: true, code: true } },
-            partner: { select: { id: true, name: true, code: true } },
+        employee: { select: { id: true, fullName: true, code: true } },
+        partner: { select: { id: true, name: true, code: true } },
         project: { select: { id: true, code: true, name: true } },
         _count: { select: { transactions: true, requests: true } },
       },
@@ -37,8 +42,8 @@ export class PettyCashAccountsService {
       where: { id },
       include: {
         holder: { select: { id: true, fullName: true, username: true, mobile: true } },
-            employee: { select: { id: true, fullName: true, code: true } },
-            partner: { select: { id: true, name: true, code: true } },
+        employee: { select: { id: true, fullName: true, code: true } },
+        partner: { select: { id: true, name: true, code: true } },
         project: { select: { id: true, code: true, name: true } },
         _count: { select: { transactions: true, requests: true } },
       },
@@ -49,25 +54,40 @@ export class PettyCashAccountsService {
 
   async create(dto: CreatePettyCashAccountDto) {
     const code = await this.generateCode();
-    return this.prisma.pettyCashAccount.create({
-      data: {
-        code,
-        name: dto.name,
-        holderId: dto.holderId || null,
-            employeeId: dto.employeeId || null,
-            partnerId: dto.partnerId || null,
-        projectId: dto.projectId,
-        ceilingPerTx: dto.ceilingPerTx ?? 200000000,
-        weeklyLimit: dto.weeklyLimit ?? 300000000,
-        isActive: dto.isActive ?? true,
-        description: dto.description,
-      },
-      include: {
-        holder: { select: { id: true, fullName: true } },
-            employee: { select: { id: true, fullName: true, code: true } },
-            partner: { select: { id: true, name: true, code: true } },
-        project: { select: { id: true, code: true, name: true } },
-      },
+    return this.prisma.$transaction(async (tx: any) => {
+      const account = await tx.pettyCashAccount.create({
+        data: {
+          code,
+          name: dto.name,
+          holderId: dto.holderId || null,
+          employeeId: dto.employeeId || null,
+          partnerId: dto.partnerId || null,
+          projectId: dto.projectId,
+          ceilingPerTx: dto.ceilingPerTx ?? 200000000,
+          weeklyLimit: dto.weeklyLimit ?? 300000000,
+          isActive: dto.isActive ?? true,
+          description: dto.description,
+        },
+        include: {
+          holder: { select: { id: true, fullName: true } },
+          employee: { select: { id: true, fullName: true, code: true } },
+          partner: { select: { id: true, name: true, code: true } },
+          project: { select: { id: true, code: true, name: true } },
+        },
+      });
+
+      // ─── تفضیل خودکار تنخواه زیر معین 1.1.5 ───
+      try {
+        await this.detailAccounts.ensureDetailAccount(tx, {
+          detailType: AccountDetailType.PETTY_CASH,
+          entityId: account.id,
+          entityName: account.name,
+        });
+      } catch (err) {
+        console.error('[PettyCash] Failed to create detail account:', err);
+      }
+
+      return account;
     });
   }
 
@@ -82,15 +102,39 @@ export class PettyCashAccountsService {
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.description !== undefined) data.description = dto.description;
 
-    return this.prisma.pettyCashAccount.update({
-      where: { id },
-      data,
-      include: {
-        holder: { select: { id: true, fullName: true } },
-            employee: { select: { id: true, fullName: true, code: true } },
-            partner: { select: { id: true, name: true, code: true } },
-        project: { select: { id: true, code: true, name: true } },
-      },
+    return this.prisma.$transaction(async (tx: any) => {
+      const account = await tx.pettyCashAccount.update({
+        where: { id },
+        data,
+        include: {
+          holder: { select: { id: true, fullName: true } },
+          employee: { select: { id: true, fullName: true, code: true } },
+          partner: { select: { id: true, name: true, code: true } },
+          project: { select: { id: true, code: true, name: true } },
+        },
+      });
+
+      // ─── همگام‌سازی نام تفضیل ───
+      if (dto.name) {
+        const detail = await tx.account.findFirst({
+          where: { detailType: AccountDetailType.PETTY_CASH, detailId: id },
+        });
+        if (detail && detail.name !== dto.name) {
+          await tx.account.update({ where: { id: detail.id }, data: { name: dto.name } });
+        }
+      }
+
+      // ─── همگام‌سازی isActive ───
+      if (dto.isActive !== undefined) {
+        const detail = await tx.account.findFirst({
+          where: { detailType: AccountDetailType.PETTY_CASH, detailId: id },
+        });
+        if (detail && detail.isActive !== dto.isActive) {
+          await tx.account.update({ where: { id: detail.id }, data: { isActive: dto.isActive } });
+        }
+      }
+
+      return account;
     });
   }
 
@@ -100,8 +144,18 @@ export class PettyCashAccountsService {
     if (txCount > 0) {
       throw new BadRequestException('این حساب دارای تراکنش است و قابل حذف نیست');
     }
-    await this.prisma.pettyCashAccount.delete({ where: { id } });
-    return { success: true };
+
+    return this.prisma.$transaction(async (tx: any) => {
+      // ─── غیرفعال‌سازی تفضیل قبل از حذف ───
+      const detail = await tx.account.findFirst({
+        where: { detailType: AccountDetailType.PETTY_CASH, detailId: id },
+      });
+      if (detail) {
+        await tx.account.update({ where: { id: detail.id }, data: { isActive: false } });
+      }
+      await tx.pettyCashAccount.delete({ where: { id } });
+      return { success: true };
+    });
   }
 
   /**
@@ -127,4 +181,36 @@ export class PettyCashAccountsService {
 
     return Number(result._sum.amount || 0);
   }
+
+
+  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    const existing: any = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+
+    await this.prisma.pettyCashAccount.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+    });
+
+    return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+
+    await this.prisma.pettyCashAccount.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null } as any,
+    });
+
+    return { ok: true, id, restored: true, by: userId || null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  }
+
 }

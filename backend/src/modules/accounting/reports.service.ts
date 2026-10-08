@@ -501,7 +501,7 @@ export class ReportsService {
     for (const l of lines) {
       const acc = l.account;
       const first = acc.code.charAt(0);
-      if (first !== '1' && first !== '2' && first !== '3') continue;
+      if (!['1','2','3','4','5'].includes(first)) continue;
 
       if (!byAccount.has(acc.id)) {
         byAccount.set(acc.id, {
@@ -554,6 +554,22 @@ export class ReportsService {
       .filter((a) => Math.abs(a.amount) > 0.01)
       .sort((a, b) => a.code.localeCompare(b.code));
 
+// Current-period earnings (codes 4 and 5)
+    let revenueSum = 0;
+    let expenseSum = 0;
+    for (const a of accounts) {
+      const first = a.code.charAt(0);
+      if (first === '4') revenueSum += a.credit - a.debit;
+      else if (first === '5') expenseSum += a.debit - a.credit;
+    }
+    const netIncome = Number((revenueSum - expenseSum).toFixed(2));
+    if (Math.abs(netIncome) > 0.01) {
+      equity.push({
+        code: '3999',
+        name: 'Current Period Earnings',
+        amount: netIncome,
+      });
+    }
     const totalAssets = Number(assets.reduce((s, a) => s + a.amount, 0).toFixed(2));
     const totalLiabilities = Number(liabilities.reduce((s, a) => s + a.amount, 0).toFixed(2));
     const totalEquity = Number(equity.reduce((s, a) => s + a.amount, 0).toFixed(2));

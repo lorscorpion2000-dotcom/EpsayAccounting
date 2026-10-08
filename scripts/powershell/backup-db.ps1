@@ -1,16 +1,78 @@
-# scripts/powershell/backup-db.ps1
-# PostgreSQL database backup with auto-detection.
+﻿# scripts/powershell/backup-db.ps1
+# PostgreSQL database backup with auto-detection + Telegram alerts + logging.
 
 param(
     [string]$Root = "E:\EpsayAccounting",
-    [int]$KeepDays = 7
+    [int]$KeepDays = 30
 )
 
 $ErrorActionPreference = 'Continue'
 
+# -- Logging setup -------------------------------------------
+$LogDir = Join-Path $Root "logs\backup"
+$LogFile = Join-Path $LogDir ("backup-" + (Get-Date -Format "yyyy-MM") + ".log")
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
+function Write-Log {
+    param([string]$Msg, [string]$Level = 'INFO')
+    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Msg"
+    Add-Content -Path $LogFile -Value $line -Encoding UTF8
+    $color = switch ($Level) {
+        'ERROR' { 'Red' }
+        'WARN'  { 'Yellow' }
+        'OK'    { 'Green' }
+        default { 'Gray' }
+    }
+    Write-Host $line -ForegroundColor $color
+}
+
+# -- Telegram ------------------------------------------------
+$TelegramConfigPath = Join-Path $Root "tools\telegram.config.json"
+$TelegramConfig = $null
+if (Test-Path $TelegramConfigPath) {
+    try {
+        $TelegramConfig = Get-Content $TelegramConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    } catch { }
+}
+$script:TelegramLastSent = @{}
+
+function Send-Telegram {
+    param([string]$Msg, [string]$Level = 'ERROR')
+    if (-not $TelegramConfig) { return }
+    if (-not $TelegramConfig.enabled) { return }
+    if ($TelegramConfig.levels -notcontains $Level) { return }
+    $token = $TelegramConfig.botToken
+    $chat  = $TelegramConfig.chatId
+    if (-not $token -or $token -like "*PUT_YOUR*") { return }
+    if (-not $chat  -or $chat  -like "*PUT_YOUR*") { return }
+
+    $rl = [int]$TelegramConfig.rateLimitSeconds
+    if ($rl -gt 0) {
+        $last = $script:TelegramLastSent[$Level]
+        if ($last) {
+            $elapsed = ((Get-Date) - $last).TotalSeconds
+            if ($elapsed -lt $rl) { return }
+        }
+        $script:TelegramLastSent[$Level] = Get-Date
+    }
+
+    $hostName = $env:COMPUTERNAME
+    $prefix = [char]0x26A0
+    $text = $prefix + " Epsay Backup [" + $Level + "]" + [Environment]::NewLine + $hostName + " - " + $Msg
+    $body = @{ chat_id = $chat; text = $text } | ConvertTo-Json
+    $uri = "https://api.telegram.org/bot" + $token + "/sendMessage"
+    try {
+        Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json; charset=utf-8" `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    } catch {
+        Write-Log "Telegram send failed: $($_.Exception.Message)" 'WARN'
+    }
+}
+
 # -- Resolve paths -------------------------------------------
 if (-not (Test-Path $Root)) {
-    Write-Host "  [!] Root not found: $Root" -ForegroundColor Yellow
+    Write-Log "Root not found: $Root" 'ERROR'
+    Send-Telegram "Root not found: $Root" 'ERROR'
     exit 0
 }
 $Backend = Join-Path $Root "backend"
@@ -68,22 +130,27 @@ function Get-DbUrl {
 }
 
 # -- Main ----------------------------------------------------
+Write-Log "=== Backup started ==="
+
 $pgDump = Find-PgDump
 if (-not $pgDump) {
-    Write-Host "  [!] pg_dump not found - skipping DB backup" -ForegroundColor Yellow
+    Write-Log "pg_dump not found - skipping DB backup" 'ERROR'
+    Send-Telegram "pg_dump یافت نشد - بکاپ انجام نشد" 'ERROR'
     exit 0
 }
-Write-Host "  pg_dump: $pgDump" -ForegroundColor DarkGray
+Write-Log "pg_dump: $pgDump"
 
 $dbUrl = Get-DbUrl -BackendPath $Backend
 if (-not $dbUrl) {
-    Write-Host "  [!] DATABASE_URL not found in $Backend\.env" -ForegroundColor Yellow
+    Write-Log "DATABASE_URL not found in $Backend\.env" 'ERROR'
+    Send-Telegram "DATABASE_URL در .env یافت نشد" 'ERROR'
     exit 0
 }
 
 $m = [regex]::Match($dbUrl, '^postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)')
 if (-not $m.Success) {
-    Write-Host "  [!] Could not parse DATABASE_URL" -ForegroundColor Yellow
+    Write-Log "Could not parse DATABASE_URL" 'ERROR'
+    Send-Telegram "خطا در پردازش DATABASE_URL" 'ERROR'
     exit 0
 }
 
@@ -96,25 +163,32 @@ $DbName = $m.Groups[5].Value
 $stamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $outFile = Join-Path $BackupDir "db-$stamp.sql"
 
-Write-Host "  Backing up $DbName@$DbHost`:$DbPort ..." -ForegroundColor Cyan
+Write-Log "Backing up $DbName@$DbHost`:$DbPort ..."
 
 $env:PGPASSWORD = $DbPass
 try {
     & $pgDump -h $DbHost -p $DbPort -U $DbUser -d $DbName -f $outFile --no-owner --no-acl 2>&1 |
-        ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+        ForEach-Object { Write-Log "  pg_dump: $_" }
     $code = $LASTEXITCODE
 } finally {
     Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
 }
 
 if ($code -ne 0) {
-    Write-Host "  [X] pg_dump exited with code $code" -ForegroundColor Red
+    Write-Log "pg_dump exited with code $code" 'ERROR'
     if (Test-Path $outFile) { Remove-Item $outFile -Force -ErrorAction SilentlyContinue }
+    Send-Telegram "بکاپ دیتابیس ناموفق بود (کد $code)" 'ERROR'
     exit 1
 }
 
 $sizeMB = [math]::Round((Get-Item $outFile).Length / 1MB, 2)
-Write-Host "  [OK] Saved: db-$stamp.sql ($sizeMB MB)" -ForegroundColor Green
+Write-Log "Saved: db-$stamp.sql ($sizeMB MB)" 'OK'
+
+# هشدار اگر حجم غیرعادی کم بود
+if ((Get-Item $outFile).Length -lt 50KB) {
+    Write-Log "WARN: backup file unusually small ($sizeMB MB)" 'WARN'
+    Send-Telegram "حجم بکاپ غیرعادی کم است: $sizeMB MB" 'WARN'
+}
 
 # -- Cleanup old backups -------------------------------------
 $cutoff = (Get-Date).AddDays(-$KeepDays)
@@ -126,7 +200,13 @@ Get-ChildItem $BackupDir -Filter "db-*.sql" -ErrorAction SilentlyContinue |
         $deleted++
     }
 if ($deleted -gt 0) {
-    Write-Host "  Cleaned $deleted old backup(s)" -ForegroundColor DarkGray
+    Write-Log "Cleaned $deleted old backup(s) (older than $KeepDays days)"
 }
+
+# آمار
+$all = Get-ChildItem $BackupDir -Filter "db-*.sql" -ErrorAction SilentlyContinue
+$totalMB = [math]::Round(($all | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
+Write-Log "Total backups: $($all.Count) files, $totalMB MB"
+Write-Log "=== Backup finished ==="
 
 exit 0

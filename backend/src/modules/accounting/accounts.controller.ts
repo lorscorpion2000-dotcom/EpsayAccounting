@@ -32,10 +32,18 @@ export class AccountsController {
     return this.service.generateCode(parentId).then((code) => ({ code }));
   }
 
-  @Get(':id')
-  @RequirePermissions('accounting.read')
-  findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  
+  @Get('for-filter')
+  @RequirePermissions('accounting.accounts.read')
+  findAllForFilter() {
+    return this.service.findAllForFilter();
+  }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
+  }
+  
   @Post()
   @RequirePermissions('accounting.create')
   create(@Body() dto: CreateAccountDto) { return this.service.create(dto); }
@@ -49,4 +57,6 @@ export class AccountsController {
   @Delete(':id')
   @RequirePermissions('accounting.delete')
   remove(@Param('id') id: string) { return this.service.remove(id); }
+
+  
 }

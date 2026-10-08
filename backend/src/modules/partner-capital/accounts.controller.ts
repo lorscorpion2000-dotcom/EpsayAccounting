@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CapitalAccountsService } from './accounts.service';
 import { CreateCapitalAccountDto } from './dto/capital-account.dto';
@@ -30,4 +30,27 @@ export class CapitalAccountsController {
   @Delete(':id')
   @RequirePermissions('partners.delete')
   remove(@Param('id') id: string) { return this.s.remove(id); }
+
+
+  @Delete(':id/admin')
+  @RequirePermissions('capitalaccount.delete')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.s.adminDelete(id, user.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('capitalaccount.delete')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.s.restore(id, user.id);
+  }
+
 }

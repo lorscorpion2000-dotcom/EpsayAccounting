@@ -80,13 +80,11 @@ export class ChecklistsService {
     });
   }
 
-  async remove(id: string) {
-    const c = await this.findOne(id);
-    if (c.status === 'APPROVED') {
-      throw new BadRequestException('چک‌لیست تاییدشده قابل حذف نیست');
-    }
+  async remove(id: string, options?: { force?: boolean }) {
+    await this.findOne(id);
+    // مستقیم پاک کن (این موجودیت‌ها معمولاً ارجاعی ندارند)
     await this.prisma.phaseChecklist.delete({ where: { id } });
-    return { success: true };
+    return { success: true, hardDeleted: true };
   }
 
   async submit(id: string) {

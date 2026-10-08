@@ -11,7 +11,20 @@ import { ITEM_UNIT_LABELS } from '@/types/warehouse';
 import type { Project, Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
 
-interface ItemForm { itemId: string; quantity: number; unitCost: number; notes?: string; }
+interface ItemForm {
+  itemId: string;
+  quantity: number;
+  unitCost: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  additionAmount?: number;
+  deductionAmount?: number;
+  taxPercent?: number;
+  taxAmount?: number;
+  shippingCost?: number;
+  loadingCost?: number;
+  notes?: string;
+}
 
 interface FormData {
   warehouseId: string;
@@ -23,6 +36,46 @@ interface FormData {
   vehiclePlate?: string;
   notes?: string;
   items: ItemForm[];
+}
+
+const emptyItem = (): ItemForm => ({
+  itemId: '',
+  quantity: 1,
+  unitCost: 0,
+  discountPercent: 0,
+  discountAmount: 0,
+  additionAmount: 0,
+  deductionAmount: 0,
+  taxPercent: 0,
+  taxAmount: 0,
+  shippingCost: 0,
+  loadingCost: 0,
+});
+
+function computeLine(it: ItemForm) {
+  const qty = Number(it.quantity) || 0;
+  const unitCost = Number(it.unitCost) || 0;
+  const base = qty * unitCost;
+
+  const discountPercent = Number(it.discountPercent) || 0;
+  const discountAmount =
+    Number(it.discountAmount) || (discountPercent > 0 ? (base * discountPercent) / 100 : 0);
+
+  const additionAmount = Number(it.additionAmount) || 0;
+  const deductionAmount = Number(it.deductionAmount) || 0;
+
+  const afterDiscount = base - discountAmount;
+  const taxPercent = Number(it.taxPercent) || 0;
+  const taxAmount =
+    Number(it.taxAmount) || (taxPercent > 0 ? (afterDiscount * taxPercent) / 100 : 0);
+
+  const shippingCost = Number(it.shippingCost) || 0;
+  const loadingCost = Number(it.loadingCost) || 0;
+
+  const lineTotal =
+    afterDiscount + additionAmount - deductionAmount + taxAmount + shippingCost + loadingCost;
+
+  return { base, discountAmount, taxAmount, lineTotal };
 }
 
 export default function ReceiptFormPage() {
@@ -40,7 +93,7 @@ export default function ReceiptFormPage() {
   const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       receiptDate: new Date().toISOString().slice(0, 10),
-      items: [{ itemId: '', quantity: 1, unitCost: 0 }],
+      items: [emptyItem()],
     },
   });
 
@@ -48,9 +101,20 @@ export default function ReceiptFormPage() {
   const lines = watch('items') || [];
 
   const totals = useMemo(() => {
-    let total = 0;
-    lines.forEach((l) => { total += (Number(l.quantity) || 0) * (Number(l.unitCost) || 0); });
-    return { total };
+    let subtotal = 0, totalDiscount = 0, totalAddition = 0, totalDeduction = 0;
+    let totalTax = 0, totalShipping = 0, totalLoading = 0, grandTotal = 0;
+    lines.forEach((l) => {
+      const c = computeLine(l);
+      subtotal       += c.base;
+      totalDiscount  += Number(l.discountAmount) || (Number(l.discountPercent) > 0 ? (c.base * Number(l.discountPercent)) / 100 : 0);
+      totalAddition  += Number(l.additionAmount) || 0;
+      totalDeduction += Number(l.deductionAmount) || 0;
+      totalTax       += c.taxAmount;
+      totalShipping  += Number(l.shippingCost) || 0;
+      totalLoading   = 0;
+      grandTotal     += c.lineTotal;
+    });
+    return { subtotal, totalDiscount, totalAddition, totalDeduction, totalTax, totalShipping, totalLoading, grandTotal };
   }, [lines]);
 
   useEffect(() => {
@@ -77,10 +141,18 @@ export default function ReceiptFormPage() {
           driverName: r.driverName || undefined,
           vehiclePlate: r.vehiclePlate || undefined,
           notes: r.notes || undefined,
-          items: (r.items || []).map((it) => ({
+          items: (r.items || []).map((it: any) => ({
             itemId: it.itemId,
             quantity: Number(it.quantity),
             unitCost: Number(it.unitCost),
+            discountPercent: Number(it.discountPercent) || 0,
+            discountAmount: Number(it.discountAmount) || 0,
+            additionAmount: Number(it.additionAmount) || 0,
+            deductionAmount: Number(it.deductionAmount) || 0,
+            taxPercent: Number(it.taxPercent) || 0,
+            taxAmount: 0,
+            shippingCost: Number(it.shippingCost) || 0,
+            loadingCost: 0,
             notes: it.notes || undefined,
           })),
         });
@@ -100,6 +172,14 @@ export default function ReceiptFormPage() {
           itemId: it.itemId,
           quantity: Number(it.quantity),
           unitCost: Number(it.unitCost),
+          discountPercent: Number(it.discountPercent) || 0,
+          discountAmount: Number(it.discountAmount) || 0,
+          additionAmount: Number(it.additionAmount) || 0,
+          deductionAmount: Number(it.deductionAmount) || 0,
+          taxPercent: Number(it.taxPercent) || 0,
+          taxAmount: 0,
+          shippingCost: Number(it.shippingCost) || 0,
+          loadingCost: 0,
           notes: it.notes,
         })),
       };
@@ -122,7 +202,7 @@ export default function ReceiptFormPage() {
   if (loadingData) return <div className="card p-12 flex items-center justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-[1400px] mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <PackagePlus className="w-6 h-6 text-emerald-600" />
@@ -187,29 +267,36 @@ export default function ReceiptFormPage() {
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-slate-800">اقلام ورودی</h2>
-            <button type="button" onClick={() => append({ itemId: '', quantity: 1, unitCost: 0 })} className="btn-secondary text-sm">
+            <button type="button" onClick={() => append(emptyItem())} className="btn-secondary text-sm">
               <Plus className="w-4 h-4" /> افزودن قلم
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+          <div className="overflow-x-auto -mx-6 px-6">
+            <table className="w-full text-sm min-w-[1400px]">
               <thead className="bg-slate-50 border-b">
                 <tr>
                   <th className="text-center px-2 py-2 font-medium text-slate-600 w-10">#</th>
-                  <th className="text-right px-2 py-2 font-medium text-slate-600">کالا *</th>
-                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-24">مقدار</th>
-                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-32">بهای واحد</th>
-                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-32">مبلغ کل</th>
+                  <th className="text-right px-2 py-2 font-medium text-slate-600 min-w-[180px]">کالا *</th>
+                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-20">مقدار</th>
+                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-24">بهای واحد</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-28">مبلغ پایه</th>
+                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-20">تخفیف %</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-24">تخفیف</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-24">اضافات</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-24">کسورات</th>
+                  <th className="text-right px-2 py-2 font-medium text-slate-600 w-20">مالیات %</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-24">حمل و بارگیری</th>
+                  <th className="text-left px-2 py-2 font-medium text-slate-600 w-28 bg-emerald-50">جمع ردیف</th>
                   <th className="text-center px-2 py-2 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {fields.map((f, idx) => {
-                  const q = Number(lines[idx]?.quantity) || 0;
-                  const c = Number(lines[idx]?.unitCost) || 0;
+                  const line = lines[idx] || emptyItem();
+                  const c = computeLine(line);
                   return (
-                    <tr key={f.id}>
+                    <tr key={f.id} className="hover:bg-slate-50/50">
                       <td className="px-2 py-2 text-center text-slate-500 num">{idx + 1}</td>
                       <td className="px-2 py-2">
                         <select {...register(`items.${idx}.itemId`, { required: true })} className="input text-xs py-1.5">
@@ -228,7 +315,28 @@ export default function ReceiptFormPage() {
                         <input type="number" step="1" {...register(`items.${idx}.unitCost`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
                       </td>
                       <td className="px-2 py-2 text-left">
-                        <span className="num text-sm font-medium text-slate-800" dir="ltr">{formatNumber(q * c)}</span>
+                        <span className="num text-xs text-slate-700" dir="ltr">{formatNumber(c.base)}</span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="0.01" {...register(`items.${idx}.discountPercent`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="1" {...register(`items.${idx}.discountAmount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="1" {...register(`items.${idx}.additionAmount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="1" {...register(`items.${idx}.deductionAmount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="0.01" {...register(`items.${idx}.taxPercent`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2">
+                        <input type="number" step="1" {...register(`items.${idx}.shippingCost`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" />
+                      </td>
+                      <td className="px-2 py-2 text-left bg-emerald-50/50">
+                        <span className="num text-sm font-bold text-emerald-700" dir="ltr">{formatNumber(c.lineTotal)}</span>
                       </td>
                       <td className="px-2 py-2 text-center">
                         {fields.length > 1 && (
@@ -246,12 +354,43 @@ export default function ReceiptFormPage() {
         </div>
 
         <div className="card p-6 bg-gradient-to-bl from-emerald-50 to-white border-emerald-200">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-4">
             <Calculator className="w-5 h-5 text-emerald-600" />
-            <h2 className="font-bold text-slate-800">ارزش کل رسید</h2>
+            <h2 className="font-bold text-slate-800">خلاصه مالی رسید</h2>
           </div>
-          <div className="text-3xl font-bold text-emerald-700 num" dir="ltr">
-            {formatNumber(totals.total)} <span className="text-sm font-normal text-slate-500">ریال</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">جمع پایه</div>
+              <div className="num font-bold text-slate-800" dir="ltr">{formatNumber(totals.subtotal)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">تخفیف</div>
+              <div className="num font-bold text-rose-600" dir="ltr">{formatNumber(totals.totalDiscount)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">اضافات</div>
+              <div className="num font-bold text-blue-600" dir="ltr">{formatNumber(totals.totalAddition)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">کسورات</div>
+              <div className="num font-bold text-rose-600" dir="ltr">{formatNumber(totals.totalDeduction)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">مالیات</div>
+              <div className="num font-bold text-amber-600" dir="ltr">{formatNumber(totals.totalTax)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">حمل</div>
+              <div className="num font-bold text-slate-800" dir="ltr">{formatNumber(totals.totalShipping)}</div>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200">
+              <div className="text-slate-500 text-xs">بارگیری</div>
+              <div className="num font-bold text-slate-800" dir="ltr">{formatNumber(totals.totalLoading)}</div>
+            </div>
+            <div className="bg-emerald-600 text-white rounded-lg p-3">
+              <div className="text-emerald-100 text-xs">جمع کل فاکتور</div>
+              <div className="num font-bold text-xl" dir="ltr">{formatNumber(totals.grandTotal)}</div>
+            </div>
           </div>
         </div>
 

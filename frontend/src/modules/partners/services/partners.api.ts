@@ -5,9 +5,16 @@ export interface CreatePartnerPayload {
   name: string;
   type?: string;
   nationalId?: string;
+  fatherName?: string;
+  aliasName?: string;
   phone?: string;
   email?: string;
+  postalCode?: string;
   address?: string;
+  jobDescription?: string;
+  shabaNumber?: string;
+  bankAccountNumber?: string;
+  bankCardNumber?: string;
 }
 
 export const partnersApi = {
@@ -27,8 +34,9 @@ export const partnersApi = {
     const { data } = await api.patch<Partner>('/partners/' + id, payload);
     return data;
   },
-  remove: async (id: string) => {
-    const { data } = await api.delete('/partners/' + id);
+  remove: async (id: string, force?: boolean) => {
+    const url = '/partners/' + id + (force ? '?force=true' : '');
+    const { data } = await api.delete(url);
     return data;
   },
 };

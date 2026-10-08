@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { X, Loader2, Save, Package } from 'lucide-react';
 import { warehouseApi } from '../services/warehouse.api';
 import type { Item, ItemType, ItemUnit, ItemCategory } from '@/types/warehouse';
-import { ITEM_TYPE_LABELS, ITEM_UNIT_LABELS } from '@/types/warehouse';
+import { ITEM_TYPE_LABELS } from '@/types/warehouse';
+import UnitSelect from '@/components/UnitSelect';
 
 interface Props {
   isOpen: boolean;
@@ -109,11 +110,7 @@ export default function ItemFormModal({ isOpen, editing, onClose, onSaved }: Pro
             </div>
             <div>
               <label className="label">واحد *</label>
-              <select {...register('unit')} className="input">
-                {Object.entries(ITEM_UNIT_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <UnitSelect registerProps={register('unit')} className="input" />
             </div>
             <div>
               <label className="label">دسته</label>

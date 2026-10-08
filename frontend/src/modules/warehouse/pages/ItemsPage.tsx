@@ -39,14 +39,20 @@ export default function ItemsPage() {
 
   useEffect(() => { load(); }, [typeFilter]);
 
-  const handleDelete = async () => {
+  const [forceConfirm, setForceConfirm] = useState(false);
+
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
     setActionLoading(true);
     try {
-      await warehouseApi.items.remove(deleting.id);
-      toast.success('کالا حذف شد');
-      setDeleting(null);
-      load();
+      const res = await warehouseApi.items.remove(deleting.id, force);
+      if (res?.hardDeleted) {
+        toast.success('کالا حذف شد');
+        setDeleting(null);
+        load();
+      } else {
+        setForceConfirm(true);
+      }
     } catch (e: any) {
       const msg = e?.response?.data?.message;
       toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
@@ -143,12 +149,12 @@ export default function ItemsPage() {
                   <th className="text-center px-4 py-3 font-medium text-slate-600 w-24">واحد</th>
                   <th className="text-right px-4 py-3 font-medium text-slate-600 w-40">موجودی کل</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600 w-40">ارزش موجودی</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600 w-32">عملیات</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600 w-32 sticky left-0 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] z-10">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((it) => (
-                  <tr key={it.id} className="hover:bg-slate-50/50">
+                  <tr key={it.id} className="group hover:bg-slate-50/50">
                     <td className="px-4 py-3"><span className="num text-xs font-mono" dir="ltr">{it.code}</span></td>
                     <td className="px-4 py-3 font-medium text-slate-800">{it.name}</td>
                     <td className="px-4 py-3 text-center">
@@ -168,7 +174,7 @@ export default function ItemsPage() {
                     <td className="px-4 py-3 text-left">
                       <span className="num text-slate-700" dir="ltr">{formatNumber(it.totalValue || 0)}</span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center sticky left-0 bg-white group-hover:bg-slate-50/50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => { setEditing(it); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
@@ -194,14 +200,25 @@ export default function ItemsPage() {
       />
 
       <ConfirmDialog
-        isOpen={!!deleting}
+        isOpen={!!deleting && !forceConfirm}
         title="حذف کالا"
         message={`آیا از حذف «${deleting?.name}» اطمینان دارید؟`}
         confirmLabel="بله، حذف شود"
         variant="danger"
         loading={actionLoading}
-        onConfirm={handleDelete}
+        onConfirm={() => handleDelete(false)}
         onCancel={() => setDeleting(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={forceConfirm}
+        title="حذف کامل (مدیر سیستم)"
+        message={`کالای «${deleting?.name}» در اسناد انباری استفاده شده است. حذف کامل همه‌ی اسناد مرتبط (رسید، حواله، کاردکس، موجودی) را نیز پاک می‌کند. اطمینان دارید؟`}
+        confirmLabel="حذف کامل (خطرناک)"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={() => handleDelete(true)}
+        onCancel={() => { setForceConfirm(false); setDeleting(null); }}
       />
     </div>
   );

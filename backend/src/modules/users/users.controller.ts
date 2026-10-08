@@ -7,7 +7,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
-@ApiTags('Users - Ú©Ø§Ø±Ø¨Ø±Ø§Ù†')
+@ApiTags('Users - کاربران')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {

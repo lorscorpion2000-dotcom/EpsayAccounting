@@ -69,8 +69,20 @@ export interface LegalContract {
   cancellationReason?: string;
   cancelledAt?: string;
   attachments?: any[];
+  items?: LegalContractItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LegalContractItem {
+  id?: string;
+  rowNumber?: number;
+  description: string;
+  unit?: string;
+  quantity?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  notes?: string;
 }
 
 
@@ -95,12 +107,19 @@ export const contractsApi = {
     api.patch<LegalContract>('/contracts/' + id, data).then((r: any) => r.data),
   cancel: (id: string, reason: string) =>
     api.post('/contracts/' + id + '/cancel', { reason }).then((r: any) => r.data),
-  remove: (id: string) =>
-    api.delete('/contracts/' + id).then((r: any) => r.data),
+  remove: (id: string, force?: boolean) =>
+    api.delete('/contracts/' + id + (force ? '?force=true' : '')).then((r: any) => r.data),
   activate: (id: string) =>
     api.post('/contracts/' + id + '/activate').then((r: any) => r.data),
   complete: (id: string) =>
     api.post('/contracts/' + id + '/complete').then((r: any) => r.data),
+
+  suspend: (id: string) =>
+    api.post('/contracts/' + id + '/suspend').then((r: any) => r.data),
+  terminate: (id: string) =>
+    api.post('/contracts/' + id + '/terminate').then((r: any) => r.data),
+  reactivate: (id: string) =>
+    api.post('/contracts/' + id + '/reactivate').then((r: any) => r.data),
 
   listParties: (search?: string) =>
     api.get<LegalContractParty[]>('/contracts/parties/list', { params: { search } }).then((r: any) => r.data),
@@ -120,4 +139,13 @@ export const contractsApi = {
   // Build or fetch a Party from an EmployeeProfile (payroll)
   findOrCreatePartyFromEmployee: (employeeId: string) =>
     api.post<LegalContractParty>('/contracts/parties/from-employee/' + employeeId).then((r: any) => r.data),
+
+  // Build or fetch a Party from a Partner (CONTRACTOR / SUPPLIER etc.)
+  findOrCreatePartyFromPartner: (partnerId: string) =>
+    api.post<LegalContractParty>('/contracts/parties/from-partner/' + partnerId).then((r: any) => r.data),
+
+  // لیست قراردادهای یک طرف قرارداد (برای فرم صورت‌وضعیت)
+  listByParty: (partyId: string, kind?: LegalContractKind) =>
+    api.get<LegalContract[]>('/contracts/by-party/' + partyId, { params: kind ? { kind } : {} })
+      .then((r: any) => r.data),
 };

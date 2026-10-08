@@ -8,7 +8,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
-@ApiTags('Roles - Ù†Ù‚Ø´â€ŒÙ‡Ø§ Ùˆ Ù…Ø¬ÙˆØ²Ù‡Ø§')
+@ApiTags('Roles - نقش‌ها و مجوزها')
 @ApiBearerAuth()
 @Controller('roles')
 export class RolesController {

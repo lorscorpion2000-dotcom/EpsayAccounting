@@ -1,10 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePayrollPeriodDto } from './dto/payroll-period.dto';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 
 @Injectable()
 export class PayrollPeriodsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private engine: AccountingEngineService,
+  ) {}
 
   private async generateCode(year: number, month: number): Promise<string> {
     return 'PRD-' + year + '-' + String(month).padStart(2, '0');
@@ -71,15 +75,43 @@ export class PayrollPeriodsService {
     return { success: true };
   }
 
-  async approve(id: string) {
+  async approve(id: string, userId?: string) {
     const p = await this.findOne(id);
     if (p.status !== 'CALCULATED') {
       throw new BadRequestException('ابتدا محاسبه حقوق را انجام دهید');
     }
-    return this.prisma.payrollPeriod.update({
+
+    // ─── accrual JE per record (idempotent via JournalEntry lookup) ───
+    const created: Array<{ recordId: string; entryId: string; code: string }> = [];
+    for (const rec of p.records as any[]) {
+      const existing = await this.prisma.journalEntry.findFirst({
+        where: { sourceType: 'PAYROLL_ACCRUAL', sourceId: rec.id },
+        select: { id: true, code: true },
+      });
+      if (existing) {
+        created.push({ recordId: rec.id, entryId: existing.id, code: existing.code });
+        continue;
+      }
+
+      const empName = rec.employee?.name ?? '';
+      const entry = await this.engine.postEvent('PAYROLL_ACCRUAL', {
+        amount: Number(rec.netSalary),
+        entryDate: p.endDate,
+        description: 'حقوق ' + empName + ' - ' + p.code,
+        partnerId: rec.employeeId,
+        sourceId: rec.id,
+        reference: p.code + '/' + rec.rowNumber,
+        userId,
+      });
+      created.push({ recordId: rec.id, entryId: entry.id, code: entry.code });
+    }
+
+    const updated = await this.prisma.payrollPeriod.update({
       where: { id },
       data: { status: 'APPROVED', approvedAt: new Date() },
     });
+
+    return { ...updated, journalEntries: created };
   }
 
   async markPaid(id: string) {

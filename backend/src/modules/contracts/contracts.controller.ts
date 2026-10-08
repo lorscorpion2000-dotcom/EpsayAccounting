@@ -51,12 +51,25 @@ export class ContractsController {
     return this.svc.activate(id);
   }
 
+  @Post(':id/reactivate')
+  reactivate(@Param('id') id: string) {
+    return this.svc.reactivate(id);
+  }
+
   @Post(':id/complete')
   complete(@Param('id') id: string) {
     return this.svc.complete(id);
   }
 
   // ── Parties ──
+  @Get('by-party/:partyId')
+  listByParty(
+    @Param('partyId') partyId: string,
+    @Query('kind') kind?: string,
+  ) {
+    return this.svc.listByParty(partyId, kind);
+  }
+
   @Get('parties/list')
   listParties(@Query('search') search?: string) {
     return this.svc.listParties(search);
@@ -106,8 +119,21 @@ export class ContractsController {
     return this.svc.findOrCreatePartyFromEmployee(employeeId);
   }
 
+  @Post('parties/from-partner/:partnerId')
+  findOrCreatePartyFromPartner(@Param('partnerId') partnerId: string) {
+    return this.svc.findOrCreatePartyFromPartner(partnerId);
+  }
+
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.svc.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    const roles = (user.roles || []) as string[];
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    const wantForce = force === 'true' || force === '1';
+    return this.svc.remove(id, { force: wantForce && isAdmin });
   }
 }

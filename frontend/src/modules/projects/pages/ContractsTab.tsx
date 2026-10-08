@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Plus, Loader2, FileText, Printer, Edit, Trash2,
+  CheckCircle2, XCircle, PauseCircle, PlayCircle,
 } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import type { Project, Contract } from '@/types/project';
@@ -24,6 +25,8 @@ export default function ContractsTab() {
   const [loading, setLoading] = useState(true);
   const [deletingContract, setDeletingContract] = useState<Contract | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [statusMenuFor, setStatusMenuFor] = useState<string | null>(null);
+  const [statusChanging, setStatusChanging] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -41,6 +44,21 @@ export default function ContractsTab() {
     loadData();
   }, [project.id]);
 
+  const handleStatusChange = async (contract: Contract, action: 'complete' | 'suspend' | 'terminate' | 'reactivate') => {
+    setStatusChanging(true);
+    setStatusMenuFor(null);
+    try {
+      const apiMethod = (projectsApi.contracts as any)[action];
+      await apiMethod(contract.id);
+      toast.success('وضعیت قرارداد تغییر کرد');
+      loadData();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در تغییر وضعیت');
+    } finally {
+      setStatusChanging(false);
+    }
+  };
   const handleDelete = async () => {
     if (!deletingContract) return;
     setDeleting(true);
@@ -165,7 +183,7 @@ export default function ContractsTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1 relative">
                         <button
                           onClick={() => navigate('/projects/' + project.id + '/contracts/' + c.id + '/edit')}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
@@ -173,6 +191,41 @@ export default function ContractsTab() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        {c.status === 'ACTIVE' && (
+                          <div className="relative">
+                            <button
+                              onClick={() => setStatusMenuFor(statusMenuFor === c.id ? null : c.id)}
+                              disabled={statusChanging}
+                              className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+                              title="تغییر وضعیت"
+                            >
+                              <PauseCircle className="w-4 h-4" />
+                            </button>
+                            {statusMenuFor === c.id && (
+                              <div className="absolute top-full mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-20 min-w-[160px] text-right">
+                                <button onClick={() => handleStatusChange(c, 'complete')} className="w-full text-right px-3 py-2 hover:bg-slate-50 text-xs flex items-center gap-2">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-600" /> خاتمه یافته
+                                </button>
+                                <button onClick={() => handleStatusChange(c, 'suspend')} className="w-full text-right px-3 py-2 hover:bg-slate-50 text-xs flex items-center gap-2">
+                                  <PauseCircle className="w-3.5 h-3.5 text-amber-600" /> تعلیق
+                                </button>
+                                <button onClick={() => handleStatusChange(c, 'terminate')} className="w-full text-right px-3 py-2 hover:bg-slate-50 text-xs flex items-center gap-2 text-red-600">
+                                  <XCircle className="w-3.5 h-3.5" /> فسخ
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {(c.status === 'COMPLETED' || c.status === 'SUSPENDED' || c.status === 'TERMINATED') && (
+                          <button
+                            onClick={() => handleStatusChange(c, 'reactivate')}
+                            disabled={statusChanging}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                            title="بازگشت به فعال"
+                          >
+                            <PlayCircle className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setDeletingContract(c)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"

@@ -3,7 +3,7 @@ import { useNavigate, useParams, Outlet, NavLink } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowRight, Edit, Loader2, Building2, MapPin, Calendar,
-  Layers, FileText, DollarSign, Package,
+  Layers, FileText, DollarSign, Package, Link2, Activity,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { projectsApi } from '../services/projects.api';
@@ -16,6 +16,7 @@ import { toPersianDigits } from '@/utils/format';
 
 const TABS = [
   { to: '', label: 'شناسنامه', icon: Building2, end: true },
+  { to: 'dashboard', label: 'داشبورد', icon: Activity, end: false },
   { to: 'contracts', label: 'قراردادها', icon: FileText, end: false },
   { to: 'wbs', label: 'ساختار شکست کار', icon: Layers, end: false },
   { to: 'budgets', label: 'بودجه', icon: DollarSign, end: false },
@@ -83,13 +84,22 @@ export default function ProjectDetailPage() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/projects/' + project.id + '/edit')}
-            className="btn-secondary"
-          >
-            <Edit className="w-4 h-4" />
-            ویرایش
-          </button>
+                    <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/projects/' + project.id + '/boq-mapping')}
+              className="btn-secondary"
+            >
+              <Link2 className="w-4 h-4" />
+              اتصال فهرست بها
+            </button>
+            <button
+              onClick={() => navigate('/projects/' + project.id + '/edit')}
+              className="btn-secondary"
+            >
+              <Edit className="w-4 h-4" />
+              ویرایش
+            </button>
+          </div>
         </div>
 
         {/* Quick stats */}

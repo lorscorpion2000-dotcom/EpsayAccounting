@@ -21,8 +21,9 @@ export const projectsApi = {
     const { data } = await api.patch<Project>('/projects/' + id, payload);
     return data;
   },
-  remove: async (id: string) => {
-    const { data } = await api.delete('/projects/' + id);
+  remove: async (id: string, force?: boolean) => {
+    const url = '/projects/' + id + (force ? '?force=true' : '');
+    const { data } = await api.delete(url);
     return data;
   },
 
@@ -48,6 +49,22 @@ export const projectsApi = {
     },
     remove: async (id: string) => {
       const { data } = await api.delete('/project-contracts/' + id);
+      return data;
+    },
+    complete: async (id: string) => {
+      const { data } = await api.patch('/project-contracts/' + id + '/complete');
+      return data;
+    },
+    suspend: async (id: string) => {
+      const { data } = await api.patch('/project-contracts/' + id + '/suspend');
+      return data;
+    },
+    terminate: async (id: string) => {
+      const { data } = await api.patch('/project-contracts/' + id + '/terminate');
+      return data;
+    },
+    reactivate: async (id: string) => {
+      const { data } = await api.patch('/project-contracts/' + id + '/reactivate');
       return data;
     },
   },

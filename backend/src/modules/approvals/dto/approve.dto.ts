@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class ApproveDto {
   @ApiProperty({ description: 'ماژول مربوطه', example: 'petty-cash-transaction' })
@@ -14,6 +14,11 @@ export class ApproveDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional({ description: 'Ignore budget warning (purchase-order only)' })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 export class RejectDto {

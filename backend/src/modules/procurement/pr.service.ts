@@ -9,8 +9,35 @@ export class PurchaseRequestsService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.purchaseRequest.count();
-    return 'PR-' + year + '-' + String(count + 1).padStart(4, '0');
+    const prefix = 'PR-' + year + '-';
+
+    const last = await (this.prisma as any).purchaseRequest.findFirst({
+      __withDeleted: true,
+      where: { code: { startsWith: prefix } },
+      orderBy: { code: 'desc' },
+      select: { code: true },
+    });
+
+    let lastNum = 0;
+    if (last && last.code) {
+      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)$'));
+      if (m) lastNum = parseInt(m[1], 10) || 0;
+    }
+
+    let candidate = prefix + String(lastNum + 1).padStart(4, '0');
+    let tries = 0;
+    while (tries < 100) {
+      const exists = await (this.prisma as any).purchaseRequest.findFirst({
+        __withDeleted: true,
+        where: { code: candidate },
+        select: { code: true },
+      });
+      if (!exists) return candidate;
+      tries++;
+      lastNum++;
+      candidate = prefix + String(lastNum + 1).padStart(4, '0');
+    }
+    throw new Error('Cannot generate unique code for PR');
   }
 
   async findAll(query?: { status?: string; projectId?: string; search?: string }) {
@@ -155,4 +182,32 @@ export class PurchaseRequestsService {
       data: { status: 'REJECTED', rejectedReason: reason },
     });
   }
+
+
+  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    const existing: any = await this.prisma.purchaseRequest.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    await this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+    });
+    return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.purchaseRequest.findUnique({ where: { id } });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    await this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null } as any,
+    });
+    return { ok: true, id, restored: true, by: userId || null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  }
+
 }

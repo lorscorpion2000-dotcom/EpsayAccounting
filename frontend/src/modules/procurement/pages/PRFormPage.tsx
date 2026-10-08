@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import UnitSelect from '@/components/UnitSelect';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -253,11 +254,7 @@ export default function PRFormPage() {
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <select {...register(`items.${idx}.unit`)} className="input text-xs py-1.5">
-                        {Object.entries(PR_UNIT_LABELS).map(([k, v]) => (
-                          <option key={k} value={k}>{v}</option>
-                        ))}
-                      </select>
+                      <UnitSelect registerProps={register(`items.${idx}.unit`)} className="input text-xs py-1.5" />
                     </td>
                     <td className="px-2 py-2">
                       <select {...register(`items.${idx}.priority`)} className="input text-xs py-1.5">

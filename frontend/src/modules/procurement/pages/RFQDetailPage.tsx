@@ -11,6 +11,7 @@ import type { RFQ } from '@/types/procurement';
 import { PR_UNIT_LABELS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function RFQDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -160,6 +161,11 @@ export default function RFQDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Admin delete (super admin only) */}
+      <div className="flex justify-end no-print">
+        <AdminDeleteButton endpoint="/procurement/rfqs" id={rfq.id} itemLabel={rfq.code} onSuccess={() => navigate('/procurement/rfqs')} variant="button" />
       </div>
 
       {/* Comparison Table */}

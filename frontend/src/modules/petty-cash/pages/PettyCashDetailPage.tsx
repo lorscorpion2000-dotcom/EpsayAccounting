@@ -19,6 +19,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 import TransactionFormModal from '../components/TransactionFormModal';
 import RequestFormModal from '../components/RequestFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
 export default function PettyCashDetailPage() {
@@ -359,13 +360,7 @@ export default function PettyCashDetailPage() {
                             >
                               <Send className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => setDeletingTx(t)}
-                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
-                              title="حذف"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <AdminDeleteButton endpoint="/petty-cash/transactions" id={t.id} itemLabel={t.description || t.id} />
                           </>
                         )}
                         {t.status === 'SUBMITTED' && (

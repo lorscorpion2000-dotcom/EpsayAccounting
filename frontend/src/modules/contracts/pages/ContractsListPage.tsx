@@ -46,6 +46,8 @@ export default function ContractsListPage() {
   const [editing, setEditing] = useState<LegalContract | null>(null);
   const [cancelling, setCancelling] = useState<LegalContract | null>(null);
   const [deleting, setDeleting] = useState<LegalContract | null>(null);
+  const [forceConfirm, setForceConfirm] = useState(false);
+  const [forceError, setForceError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -81,24 +83,38 @@ export default function ContractsListPage() {
     catch { toast.error('خطا'); }
   };
 
+  const handleReactivate = async (c: LegalContract) => {
+    try {
+      await contractsApi.reactivate(c.id);
+      toast.success('به حالت فعال بازگشت');
+      load();
+    } catch (e: any) {
+      const m = e?.response?.data?.message;
+      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در بازگشت به فعال');
+    }
+  };
   const handleComplete = async (c: LegalContract) => {
     try { await contractsApi.complete(c.id); toast.success('خاتمه یافت'); load(); }
     catch { toast.error('خطا'); }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (force = false) => {
     if (!deleting) return;
-    setActionLoading(true);
+    setForceError(null);
     try {
-      await contractsApi.remove(deleting.id);
-      toast.success('قرارداد حذف شد');
+      const res = await contractsApi.remove(deleting.id, force);
+      toast.success(force ? 'قرارداد بهطور کامل حذف شد' : 'قرارداد حذف شد');
       setDeleting(null);
+      setForceConfirm(false);
       load();
     } catch (e: any) {
-      const m = e?.response?.data?.message;
-      toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
-    } finally {
-      setActionLoading(false);
+      const err = e?.response?.data;
+      if (err?.code === 'CONTRACT_HAS_REFS') {
+        setForceError(err.message);
+      } else {
+        const msg = err?.message;
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
+      }
     }
   };
   const handleExportExcel = () => {
@@ -222,7 +238,16 @@ export default function ContractsListPage() {
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
-                        {c.status !== 'CANCELLED' && c.status !== 'COMPLETED' && (
+                                                {(c.status === 'COMPLETED' || c.status === 'CANCELLED' || c.status === 'TERMINATED') && (
+                          <button
+                            onClick={() => handleReactivate(c)}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600"
+                            title="بازگشت به فعال"
+                          >
+                            <Play className="w-4 h-4" />
+                          </button>
+                        )}
+{c.status !== 'CANCELLED' && c.status !== 'COMPLETED' && (
                           <button onClick={() => setCancelling(c)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="ابطال">
                             <Ban className="w-4 h-4" />
                           </button>
@@ -250,15 +275,40 @@ export default function ContractsListPage() {
         loading={actionLoading} onConfirm={handleCancel} onCancel={() => setCancelling(null)} />
 
       <ConfirmDialog
-        isOpen={!!deleting}
+        isOpen={!!deleting && !forceConfirm}
         title="حذف قرارداد"
-        message={"آیا از حذف کامل قرارداد «" + (deleting?.title || "") + "» اطمینان دارید؟ این عمل قابل بازگشت نیست."}
-        confirmLabel="بله، حذف شود"
+        message={deleting ? "قرارداد «" + (deleting.title || "") + "» حذف شود برای قراردادهای غیر پیشنویس این عمل نیاز به دسترسی مدیر دارد." : ""}
+        confirmLabel="بله حذف شود"
         variant="danger"
-        loading={actionLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
+        onConfirm={() => handleDelete(false)}
+        onCancel={() => { setDeleting(null); setForceError(null); }}
       />
+
+      {forceError && deleting && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50">
+              <h3 className="text-lg font-bold text-red-800">حذف کامل قرارداد (مدیر سیستم)</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-700 whitespace-pre-line">
+                {forceError}
+              </p>
+              <p className="text-xs text-slate-500">
+                با کلیک روی «حذف کامل» تمام ارجاعهای این قرارداد پاک میشود. اطمینان دارید
+              </p>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">
+                  انصراف
+                </button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">
+                  حذف کامل (خطرناک)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

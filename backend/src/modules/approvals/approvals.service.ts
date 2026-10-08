@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -378,7 +378,7 @@ export class ApprovalsService {
     };
   }
 
-  async approve(module: string, id: string, userId: string) {
+  async approve(module: string, id: string, userId: string, force?: boolean) {
     switch (module) {
       case 'petty-cash-transaction':
         return this.prisma.pettyCashTransaction.update({
@@ -396,10 +396,7 @@ export class ApprovalsService {
         return this.approvePurchaseRequest(id, userId);
 
       case 'purchase-order':
-        return this.prisma.purchaseOrder.update({
-          where: { id },
-          data: { status: 'APPROVED' },
-        });
+        return this.approvePurchaseOrderWithBudgetCheck(id, userId, force);
 
       case 'daily-report':
         return this.prisma.dailyReport.update({
@@ -568,5 +565,84 @@ export class ApprovalsService {
 
       return po;
     });
+  }
+
+  // ============================================================
+  // C-5: Budget control for Purchase Order approval
+  // ============================================================
+  private async approvePurchaseOrderWithBudgetCheck(
+    poId: string,
+    userId: string,
+    force?: boolean,
+  ) {
+    const check = await this.checkBudgetForPurchaseOrder(poId);
+    if (check && check.exceeded && !force) {
+      throw new BadRequestException({
+        code: 'BUDGET_EXCEEDED',
+        message: 'Budget threshold exceeded. Send force=true to approve anyway.',
+        detail: check,
+      });
+    }
+    return this.prisma.purchaseOrder.update({
+      where: { id: poId },
+      data: { status: 'APPROVED' },
+    });
+  }
+
+  // C-5: Compute budget status for a PO based on its PR's WBS item
+  async checkBudgetForPurchaseOrder(poId: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: poId },
+      include: { pr: { select: { wbsItemId: true } } },
+    });
+    if (!po) throw new NotFoundException('PO not found');
+    if (!po.pr?.wbsItemId) return null;
+
+    const wbsItemId = po.pr.wbsItemId;
+
+    const budgetAgg = await this.prisma.projectBudget.aggregate({
+      where: { wbsItemId, projectId: po.projectId },
+      _sum: { amount: true },
+    });
+    const budget = Number(budgetAgg._sum.amount || 0);
+    if (budget <= 0) return null;
+
+    const committedAgg = await this.prisma.purchaseOrder.aggregate({
+      where: {
+        status: 'APPROVED',
+        id: { not: poId },
+        pr: { wbsItemId },
+      },
+      _sum: { totalAmount: true },
+    });
+    const committed = Number(committedAgg._sum.totalAmount || 0);
+
+    const actualAgg = await this.prisma.purchaseInvoiceItem.aggregate({
+      where: {
+        wbsItemId,
+        invoice: { status: { notIn: ['DRAFT', 'CANCELLED'] } },
+      },
+      _sum: { totalPrice: true },
+    });
+    const actual = Number(actualAgg._sum.totalPrice || 0);
+
+    const currentPO = Number(po.totalAmount);
+    const projectedTotal = committed + actual + currentPO;
+    const thresholdPercent = 10;
+    const threshold = budget * (1 + thresholdPercent / 100);
+    const exceeded = projectedTotal > threshold;
+
+    return {
+      wbsItemId,
+      budget,
+      committed,
+      actual,
+      currentPO,
+      projectedTotal,
+      threshold,
+      thresholdPercent,
+      exceeded,
+      overBudget: exceeded ? projectedTotal - budget : 0,
+    };
   }
 }

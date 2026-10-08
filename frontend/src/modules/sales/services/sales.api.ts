@@ -100,6 +100,8 @@ export const salesApi = {
       api.post<SalesCustomer>('/sales/customers', data).then((r: any) => r.data),
     update: (id: string, data: Partial<SalesCustomer>) =>
       api.patch<SalesCustomer>('/sales/customers/' + id, data).then((r: any) => r.data),
+    remove: (id: string, force?: boolean) =>
+      api.delete('/sales/customers/' + id + (force ? '?force=true' : '')).then((r: any) => r.data),
   },
   contracts: {
     list: (params?: { status?: string; search?: string; unitId?: string; customerId?: string }) =>
@@ -111,6 +113,8 @@ export const salesApi = {
     activate: (id: string) => api.post('/sales/contracts/' + id + '/activate').then((r: any) => r.data),
     cancel: (id: string, reason: string) =>
       api.post('/sales/contracts/' + id + '/cancel', { reason }).then((r: any) => r.data),
+    remove: (id: string, force?: boolean) =>
+      api.delete('/sales/contracts/' + id + (force ? '?force=true' : '')).then((r: any) => r.data),
     summary: () => api.get('/sales/contracts/summary').then((r: any) => r.data),
   },
   payments: {

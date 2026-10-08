@@ -137,3 +137,12 @@ backend/*.json
 !backend/tsconfig.json
 !backend/package-lock.json
 tools/telegram.config.json
+
+# One-off scripts (historical, not needed in git)
+scripts/*.mjs
+scripts/*.txt
+scripts/_pii.txt
+
+# One-off dev scripts
+/scripts/*.mjs
+/scripts/*.txt
