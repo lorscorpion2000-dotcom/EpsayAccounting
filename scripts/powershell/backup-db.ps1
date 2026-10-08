@@ -27,12 +27,17 @@ function Write-Log {
 }
 
 # -- Telegram ------------------------------------------------
-$TelegramConfigPath = Join-Path $Root "tools\telegram.config.json"
 $TelegramConfig = $null
-if (Test-Path $TelegramConfigPath) {
-    try {
-        $TelegramConfig = Get-Content $TelegramConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    } catch { }
+try {
+    $helper = Join-Path $Root "tools\get-telegram-config.mjs"
+    if (Test-Path $helper) {
+        $raw = & node $helper 2>$null
+        if ($raw) {
+            $TelegramConfig = $raw | ConvertFrom-Json
+        }
+    }
+} catch {
+    # silent — اگه تلگرام کار نکرد، بکاپ رو متوقف نمی‌کنیم
 }
 $script:TelegramLastSent = @{}
 
@@ -182,18 +187,54 @@ if ($code -ne 0) {
 }
 
 $sizeMB = [math]::Round((Get-Item $outFile).Length / 1MB, 2)
-Write-Log "Saved: db-$stamp.sql ($sizeMB MB)" 'OK'
 
-# هشدار اگر حجم غیرعادی کم بود
-if ((Get-Item $outFile).Length -lt 50KB) {
-    Write-Log "WARN: backup file unusually small ($sizeMB MB)" 'WARN'
-    Send-Telegram "حجم بکاپ غیرعادی کم است: $sizeMB MB" 'WARN'
+# هشدار اگر حجم غیرعادی کم بود (روی فایل اصلی)
+if (Test-Path $outFile) {
+    $rawSize = (Get-Item $outFile).Length
+    if ($rawSize -lt 50KB) {
+        Write-Log "WARN: backup file unusually small ($sizeMB MB)" 'WARN'
+        Send-Telegram "حجم بکاپ غیرعادی کم است: $sizeMB MB" 'WARN'
+    }
 }
+
+# هشدار اگر حجم غیرعادی کم بود (روی فایل اصلی)
+if (Test-Path $outFile) {
+    $rawSize = (Get-Item $outFile).Length
+    if ($rawSize -lt 50KB) {
+        Write-Log "WARN: backup file unusually small ($sizeMB MB)" 'WARN'
+        Send-Telegram "حجم بکاپ غیرعادی کم است: $sizeMB MB" 'WARN'
+    }
+}
+
+# --- Encryption (AES-256-GCM) ---
+$encryptor = Join-Path $Root "tools\encrypt-backup.mjs"
+if (Test-Path $encryptor) {
+    Write-Log "Encrypting backup..." 'INFO'
+    $encResult = & node $encryptor $outFile 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Log "Encrypted: db-$stamp.sql.enc ($sizeMB MB)" 'OK'
+    } else {
+        Write-Log "Encryption failed: $encResult" 'ERROR'
+        Send-Telegram "رمزنگاری بکاپ ناموفق بود" 'ERROR'
+        # فایل plaintext باقی می‌مونه برای بررسی دستی
+        exit 1
+    }
+} else {
+    Write-Log "Encryptor not found - plaintext backup remains" 'WARN'
+}
+
+# آمار
+$allEnc = Get-ChildItem $BackupDir -Filter "db-*.sql.enc" -ErrorAction SilentlyContinue
+$totalMB = [math]::Round(($allEnc | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
+Write-Log "Total encrypted backups: $($allEnc.Count) files, $totalMB MB"
+Write-Log "=== Backup finished ==="
+
+# هشدار حجم غیرعادی کم — روی فایل اصلی (قبل از رمزنگاری بررسی می‌شود)
 
 # -- Cleanup old backups -------------------------------------
 $cutoff = (Get-Date).AddDays(-$KeepDays)
 $deleted = 0
-Get-ChildItem $BackupDir -Filter "db-*.sql" -ErrorAction SilentlyContinue |
+Get-ChildItem $BackupDir -Filter "db-*.sql*" -ErrorAction SilentlyContinue |
     Where-Object { $_.LastWriteTime -lt $cutoff } |
     ForEach-Object {
         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
@@ -203,10 +244,6 @@ if ($deleted -gt 0) {
     Write-Log "Cleaned $deleted old backup(s) (older than $KeepDays days)"
 }
 
-# آمار
-$all = Get-ChildItem $BackupDir -Filter "db-*.sql" -ErrorAction SilentlyContinue
-$totalMB = [math]::Round(($all | Measure-Object -Property Length -Sum).Sum / 1MB, 2)
-Write-Log "Total backups: $($all.Count) files, $totalMB MB"
-Write-Log "=== Backup finished ==="
+
 
 exit 0
