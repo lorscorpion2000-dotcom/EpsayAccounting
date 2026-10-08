@@ -146,3 +146,8 @@ scripts/_pii.txt
 # One-off dev scripts
 /scripts/*.mjs
 /scripts/*.txt
+
+# Encrypted configs (secrets)
+tools/telegram.config.enc.json
+tools/*.UNUSED
+tools/telegram.config.json.bak-*

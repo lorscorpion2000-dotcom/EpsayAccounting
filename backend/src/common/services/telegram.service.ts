@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { decrypt, isEncryptedEnvelope } from '../utils/crypto.util';
 
 interface TelegramConfig {
   enabled: boolean;
@@ -23,12 +24,30 @@ export class TelegramService {
 
   private reload() {
     try {
-      const configPath = 'E:\\EpsayAccounting\\tools\\telegram.config.json';
-      if (!fs.existsSync(configPath)) {
+      // اول فایل رمزنگاری‌شده
+      const encPath = 'E:\\EpsayAccounting\\tools\\telegram.config.enc.json';
+      const plainPath = 'E:\\EpsayAccounting\\tools\\telegram.config.json';
+
+      if (fs.existsSync(encPath)) {
+        const raw = fs.readFileSync(encPath, 'utf8');
+        const envelope = JSON.parse(raw);
+
+        if (isEncryptedEnvelope(envelope)) {
+          const decrypted = decrypt(envelope);
+          this.config = JSON.parse(decrypted);
+          this.loadedAt = Date.now();
+          return;
+        }
+
+        this.logger.warn('telegram.config.enc.json envelope معتبر نداره — fallback به plaintext');
+      }
+
+      // fallback: plaintext
+      if (!fs.existsSync(plainPath)) {
         this.config = null;
         return;
       }
-      const raw = fs.readFileSync(configPath, 'utf8');
+      const raw = fs.readFileSync(plainPath, 'utf8');
       this.config = JSON.parse(raw);
       this.loadedAt = Date.now();
     } catch (e) {
