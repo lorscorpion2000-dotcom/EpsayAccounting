@@ -29,17 +29,43 @@ export interface Permission {
   action: string;
 }
 
+export interface LoginUser {
+  id: string;
+  username: string;
+  fullName: string;
+  email?: string | null;
+  mobile?: string | null;
+  roles: string[];
+  permissions: string[];
+  mustChangePassword?: boolean;
+}
+
 export interface LoginResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  user?: LoginUser;
+  requiresTwoFactor?: boolean;
+  totpToken?: string;
+}
+
+export interface TwoFactorSetupResponse {
+  otpauth: string;
+  qrDataUrl: string;
+  secret: string;
+}
+
+export interface TwoFactorEnableResponse {
+  success: boolean;
+  recoveryCodes: string[];
+}
+
+export interface TwoFactorStatusResponse {
+  enabled: boolean;
+  enabledAt: string | null;
+}
+
+export interface TwoFactorVerifyResponse {
   accessToken: string;
   refreshToken: string;
-  user: {
-    id: string;
-    username: string;
-    fullName: string;
-    email?: string | null;
-    mobile?: string | null;
-    roles: string[];
-    permissions: string[];
-    mustChangePassword?: boolean;
-  };
+  user: LoginUser;
 }
