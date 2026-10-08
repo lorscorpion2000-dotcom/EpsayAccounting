@@ -26,7 +26,7 @@ foreach ($svc in @("Epsay-Backend", "Epsay-Frontend")) {
 
 # ─── Backend service ───
 Write-Host "Installing Epsay-Backend..." -ForegroundColor Cyan
-& $NSSM install Epsay-Backend "node.exe" "E:\EpsayAccounting\backend\dist\main.js"
+& $NSSM install Epsay-Backend "node.exe" "E:\EpsayAccounting\backend\dist\src\main.js"
 & $NSSM set Epsay-Backend AppDirectory "E:\EpsayAccounting\backend"
 & $NSSM set Epsay-Backend AppEnvironmentExtra "NODE_ENV=production" "PORT=3000"
 & $NSSM set Epsay-Backend AppStdout "E:\EpsayAccounting\logs\backend-out.log"
