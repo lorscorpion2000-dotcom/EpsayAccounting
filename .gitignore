@@ -151,3 +151,5 @@ scripts/_pii.txt
 tools/telegram.config.enc.json
 tools/*.UNUSED
 tools/telegram.config.json.bak-*
+
+backups/
