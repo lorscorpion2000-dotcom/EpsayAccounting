@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -17,8 +17,13 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: any) {
+    const ip =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket?.remoteAddress;
+    const ua = req.headers['user-agent'];
+    return this.auth.login(dto, { ip, ua });
   }
 
   @Public()

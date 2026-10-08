@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { validatePassword } from '../../common/validators/password.validator';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private audit: AuditService,
   ) {}
   // ─── helper ها برای صدور توکن ───
   private signAccessToken(user: { id: string; username: string }): string {
@@ -36,7 +38,7 @@ export class AuthService {
 
 
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, meta?: { ip?: string; ua?: string }) {
     const MAX_ATTEMPTS = 5;
     const LOCK_MINUTES = 5;
 
@@ -59,6 +61,14 @@ export class AuthService {
     const GENERIC_ERROR = 'نام کاربری یا رمز عبور اشتباه است';
 
     if (!user) {
+      await this.audit.log({
+        action: 'LOGIN_FAILED',
+        entity: 'Auth',
+        entityId: dto.username,
+        payload: { reason: 'user_not_found', username: dto.username },
+        ipAddress: meta?.ip,
+        userAgent: meta?.ua,
+      }).catch(() => {});
       throw new UnauthorizedException(GENERIC_ERROR);
     }
 
@@ -66,6 +76,15 @@ export class AuthService {
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const remainingMs = user.lockedUntil.getTime() - Date.now();
       const remainingMin = Math.ceil(remainingMs / 60_000);
+      await this.audit.log({
+        userId: user.id,
+        action: 'LOGIN_BLOCKED_LOCKED',
+        entity: 'Auth',
+        entityId: user.username,
+        payload: { remainingMin },
+        ipAddress: meta?.ip,
+        userAgent: meta?.ua,
+      }).catch(() => {});
       throw new UnauthorizedException(
         `حساب به‌دلیل تلاش‌های ناموفق موقتاً قفل است. ${remainingMin} دقیقه دیگر تلاش کنید`,
       );
@@ -96,7 +115,26 @@ export class AuthService {
         },
       });
 
+      await this.audit.log({
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+        entity: 'Auth',
+        entityId: user.username,
+        payload: { reason: 'wrong_password', attempts },
+        ipAddress: meta?.ip,
+        userAgent: meta?.ua,
+      }).catch(() => {});
+
       if (shouldLock) {
+        await this.audit.log({
+          userId: user.id,
+          action: 'ACCOUNT_LOCKED',
+          entity: 'Auth',
+          entityId: user.username,
+          payload: { attempts, lockMinutes: LOCK_MINUTES },
+          ipAddress: meta?.ip,
+          userAgent: meta?.ua,
+        }).catch(() => {});
         throw new UnauthorizedException(
           `حساب به‌دلیل ${MAX_ATTEMPTS} تلاش ناموفق، ${LOCK_MINUTES} دقیقه قفل شد`,
         );
@@ -121,6 +159,16 @@ export class AuthService {
 
     const accessToken = this.signAccessToken(user);
     const refreshToken = this.signRefreshToken(user.id);
+
+    await this.audit.log({
+      userId: user.id,
+      action: 'LOGIN_SUCCESS',
+      entity: 'Auth',
+      entityId: user.username,
+      payload: { username: user.username },
+      ipAddress: meta?.ip,
+      userAgent: meta?.ua,
+    }).catch(() => {});
 
     return {
       accessToken,
