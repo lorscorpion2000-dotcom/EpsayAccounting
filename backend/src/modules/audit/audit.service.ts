@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { TelegramService } from '../../common/services/telegram.service';
+import { sanitize } from '../../common/utils/sanitize.util';
 
 // رویدادهای حساس امنیتی — برای گزارش امنیتی
 const SECURITY_ACTIONS = [
@@ -40,13 +41,15 @@ export class AuditService {
     userAgent?: string;
   }) {
     try {
+      const safePayload = data.payload ? sanitize(data.payload) : undefined;
+
       const created = await this.prisma.auditLog.create({
         data: {
           userId: data.userId,
           action: data.action,
           entity: data.entity,
           entityId: data.entityId,
-          payload: data.payload || undefined,
+          payload: safePayload,
           ipAddress: data.ipAddress,
           userAgent: data.userAgent,
         },

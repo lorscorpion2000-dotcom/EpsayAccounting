@@ -2,6 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from './audit.service';
+import { sanitize as sanitizeUtil } from '../../common/utils/sanitize.util';
 
 const EXCLUDED = ['/api/auth/login', '/api/auth/me', '/api/auth/preferences', '/api/dashboard', '/api/audit', '/api/upload', '/api/attachments'];
 
@@ -29,7 +30,7 @@ export class AuditInterceptor implements NestInterceptor {
             action: method,
             entity,
             entityId,
-            payload: { url: req.url, body: this.sanitize(req.body), responseId: response ? response.id : null },
+            payload: { url: req.url, body: sanitizeUtil(req.body), responseId: response ? response.id : null },
             ipAddress: req.ip || (req.connection ? req.connection.remoteAddress : undefined),
             userAgent: req.headers && req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 500) : undefined,
           });

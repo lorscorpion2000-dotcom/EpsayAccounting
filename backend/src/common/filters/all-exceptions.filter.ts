@@ -2,6 +2,7 @@ import {
   ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger,
 } from '@nestjs/common';
 import { TelegramService } from '../services/telegram.service';
+import { sanitizeString } from '../utils/sanitize.util';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -25,8 +26,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    // لاگ
-    const errMsg = typeof message === 'string' ? message : JSON.stringify(message);
+    // لاگ (sanitize شده — بدون رمز/توکن)
+    const rawMsg = typeof message === 'string' ? message : JSON.stringify(message);
+    const errMsg = sanitizeString(rawMsg);
     const method = request.method || '?';
     const url = request.url || '?';
     this.logger.error(method + ' ' + url + ' \u2192 ' + status + ': ' + errMsg, exception instanceof Error ? exception.stack : '');
