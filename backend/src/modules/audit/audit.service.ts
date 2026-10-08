@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { TelegramService } from '../../common/services/telegram.service';
 
 // رویدادهای حساس امنیتی — برای گزارش امنیتی
 const SECURITY_ACTIONS = [
@@ -9,9 +10,25 @@ const SECURITY_ACTIONS = [
   'ACCOUNT_LOCKED',
 ];
 
+const FAILED_ACTIONS = new Set([
+  'LOGIN_FAILED',
+  'LOGIN_BLOCKED_LOCKED',
+  'ACCOUNT_LOCKED',
+]);
+
+// آستانه‌ها
+const SUSPICIOUS_THRESHOLD = 5; // تعداد خطا
+const SUSPICIOUS_WINDOW_MIN = 10; // در ۱۰ دقیقه
+const ALERT_COOLDOWN_MIN = 30; // هر IP فقط ۱ بار در ۳۰ دقیقه
+
 @Injectable()
 export class AuditService {
-  constructor(private prisma: PrismaService) {}
+  private readonly alertCooldown = new Map<string, number>();
+
+  constructor(
+    private prisma: PrismaService,
+    private telegram: TelegramService,
+  ) {}
 
   async log(data: {
     userId?: string;
@@ -23,7 +40,7 @@ export class AuditService {
     userAgent?: string;
   }) {
     try {
-      return await this.prisma.auditLog.create({
+      const created = await this.prisma.auditLog.create({
         data: {
           userId: data.userId,
           action: data.action,
@@ -34,6 +51,11 @@ export class AuditService {
           userAgent: data.userAgent,
         },
       });
+
+      // async — آگاهانه await نمی‌کنیم که log سریع باشه
+      this.checkSuspiciousLogin(data.ipAddress, data.action, data.entityId).catch(() => {});
+
+      return created;
     } catch (e) {
       return null;
     }
@@ -225,5 +247,49 @@ export class AuditService {
       failedRecent,
       topIps: topIps.map((ip) => ({ ip: ip.ipAddress, count: ip._count })),
     };
+  }
+
+  /**
+   * بررسی login مشکوک: اگه از یه IP بیش از حد خطا اومده، هشدار تلگرام
+   */
+  private async checkSuspiciousLogin(
+    ip: string | undefined,
+    action: string,
+    username: string | undefined,
+  ) {
+    if (!ip || !FAILED_ACTIONS.has(action)) return;
+
+    // cooldown
+    const now = Date.now();
+    const last = this.alertCooldown.get(ip) || 0;
+    if ((now - last) < ALERT_COOLDOWN_MIN * 60_000) return;
+
+    try {
+      const since = new Date(now - SUSPICIOUS_WINDOW_MIN * 60_000);
+      const count = await this.prisma.auditLog.count({
+        where: {
+          action: { in: ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'] },
+          ipAddress: ip,
+          createdAt: { gte: since },
+        },
+      });
+
+      if (count < SUSPICIOUS_THRESHOLD) return;
+
+      // ثبت cooldown قبل از ارسال (ضد spam حتی در صورت خطا)
+      this.alertCooldown.set(ip, now);
+
+      const lines = [
+        'هشدار امنیتی: تلاش‌های ورود مشکوک',
+        'IP: ' + ip,
+        'تعداد خطا: ' + count + ' بار در ' + SUSPICIOUS_WINDOW_MIN + ' دقیقه اخیر',
+        'آخرین کاربر هدف: ' + (username || '—'),
+        'آخرین رویداد: ' + action,
+      ];
+
+      await this.telegram.send('ERROR', lines.join('\n'));
+    } catch {
+      // silent — نمی‌خوایم خطای audit کل درخواست رو خراب کنه
+    }
   }
 }
