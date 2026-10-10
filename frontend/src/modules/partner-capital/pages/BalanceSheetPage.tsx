@@ -6,6 +6,7 @@ import { formatNumber } from '@/utils/format';
 import PrintHeader from '@/components/PrintHeader';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function BalanceSheetPage() {
   const [data, setData] = useState<BalanceSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function BalanceSheetPage() {
       'مانده (ریال)': data.totals.net,
     });
     void exportToExcel({
-      filename: 'PartnerBalanceSheet-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'PartnerBalanceSheet-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'BalanceSheet',
         rows,

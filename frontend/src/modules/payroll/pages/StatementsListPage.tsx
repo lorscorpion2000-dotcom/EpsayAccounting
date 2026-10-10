@@ -15,6 +15,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function StatementsListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<SubcontractorStatement[]>([]);
@@ -96,7 +97,7 @@ export default function StatementsListPage() {
       'وضعیت': STATEMENT_STATUS_LABELS[s.status],
     }));
     void exportToExcel({
-      filename: 'Statements-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Statements-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Statements',
         rows,

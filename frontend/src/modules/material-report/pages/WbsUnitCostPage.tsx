@@ -9,6 +9,7 @@ import { materialReportApi } from '../services/material-report.api';
 import { api } from '@/services/api';
 import type { WbsUnitCostResult } from '@/types/material-report';
 import { toPersianDigits } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 export default function WbsUnitCostPage() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -56,7 +57,7 @@ export default function WbsUnitCostPage() {
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'UnitCost');
-    XLSX.writeFile(wb, 'wbs-unit-cost-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, 'wbs-unit-cost-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PriceListService } from './price-list.service';
 import {
@@ -9,12 +7,14 @@ import {
   ImportItemsDto, LinkWbsDto,
 } from './dto/price-list.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
 @ApiBearerAuth()
 @Controller('price-lists')
 export class PriceListController {
-  constructor(private svc: PriceListService) {}
+  constructor(private svc: PriceListService,
+    private softDelete: SoftDeleteService,) {}
 
   // â•â•â• Price Lists â•â•â•
   @Get()
@@ -113,4 +113,57 @@ export class PriceListController {
   linkWbs(@Param('wbsItemId') wbsItemId: string, @Body() dto: LinkWbsDto) {
     return this.svc.linkWbs(wbsItemId, dto.priceListItemId);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('price-lists.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'priceList',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('price-lists.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'priceList',
+      id,
+      user,
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('price-lists.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'priceList',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

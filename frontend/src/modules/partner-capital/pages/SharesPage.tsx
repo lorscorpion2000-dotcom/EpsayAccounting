@@ -9,6 +9,7 @@ import ShareFormModal from '../components/ShareFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function SharesPage() {
   const [items, setItems] = useState<PartnerShare[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export default function SharesPage() {
       'یادداشت': s.notes || '',
     }));
     void exportToExcel({
-      filename: 'PartnerShares-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'PartnerShares-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Shares',
         rows,

@@ -16,6 +16,7 @@ import PrintHeader from '@/components/PrintHeader';
 import PrintButton from '@/components/PrintButton';
 import { exportToExcel } from '@/utils/export-excel';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899'];
 
@@ -87,7 +88,7 @@ export default function ReportsHubPage() {
     });
 
     void exportToExcel({
-      filename: 'ReportsHub-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'ReportsHub-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'ReportsHub',
         rows,

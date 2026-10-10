@@ -1,15 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { GuaranteesService } from './guarantees.service';
 import { CreateGuaranteeDto, UpdateGuaranteeDto } from './dto/guarantee.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Timeline Guarantees - تضامین')
 @ApiBearerAuth()
 @Controller('timeline/guarantees')
 export class GuaranteesController {
-  constructor(private s: GuaranteesService) {}
+  constructor(private s: GuaranteesService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('timeline.read')
@@ -50,4 +52,57 @@ export class GuaranteesController {
   remove(@Param('id') id: string, @CurrentUser() _user: any) {
     return this.s.remove(id, { force: true });
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('timeline.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'guarantee',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('timeline.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'guarantee',
+      id,
+      user,
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('timeline.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'guarantee',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

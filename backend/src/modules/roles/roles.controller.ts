@@ -1,18 +1,18 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Roles - نقش‌ها و مجوزها')
 @ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
-  constructor(private roles: RolesService) {}
+  constructor(private roles: RolesService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('settings.read')
@@ -49,4 +49,51 @@ export class RolesController {
   remove(@Param('id') id: string) {
     return this.roles.remove(id);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('roles.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'role',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('roles.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'role',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('roles.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'role',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

@@ -165,7 +165,7 @@ export default function RFQDetailPage() {
 
       {/* Admin delete (super admin only) */}
       <div className="flex justify-end no-print">
-        <AdminDeleteButton endpoint="/procurement/rfqs" id={rfq.id} itemLabel={rfq.code} onSuccess={() => navigate('/procurement/rfqs')} variant="button" />
+        <AdminDeleteButton endpoint="/procurement/rfqs" id={rfq.id} itemLabel={(rfq as any).code} onSuccess={() => navigate('/procurement/rfqs')} variant="button" />
       </div>
 
       {/* Comparison Table */}

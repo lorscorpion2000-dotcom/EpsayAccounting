@@ -11,7 +11,7 @@ import { WAREHOUSE_TYPE_LABELS } from '@/types/warehouse';
 import { formatNumber, toPersianDigits } from '@/utils/format';
 import WarehouseFormModal from '../components/WarehouseFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function WarehousesListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Warehouse[]>([]);
@@ -75,7 +75,7 @@ export default function WarehousesListPage() {
           <p className="text-sm text-slate-500 mt-1">مدیریت انبارهای مرکزی و کارگاهی</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
+                        <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
           <button className="btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
             <Plus className="w-4 h-4" /> انبار جدید
           </button>
@@ -126,6 +126,12 @@ export default function WarehousesListPage() {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+                        <AdminDeleteButton
+                          endpoint="/warehouse/warehouses"
+                          id={wh.id}
+                          itemLabel={(wh as any).code || (wh as any).name || (wh as any).title || ''}
+                          onSuccess={load}
+                        />
               </div>
 
               <div onClick={() => { setEditing(wh); setShowModal(true); }} className="cursor-pointer">

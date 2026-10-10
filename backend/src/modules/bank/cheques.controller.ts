@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ChequesService } from './cheques.service';
 import { CreateChequeDto } from './dto/create-cheque.dto';
@@ -6,12 +6,14 @@ import { UpdateChequeDto } from './dto/update-cheque.dto';
 import { ChequeActionDto } from './dto/cheque-action.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Cheques - چک‌ها')
 @ApiBearerAuth()
 @Controller('cheques')
 export class ChequesController {
-  constructor(private service: ChequesService) {}
+  constructor(private service: ChequesService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('accounting.read')
@@ -78,4 +80,57 @@ export class ChequesController {
   cancel(@Param('id') id: string, @Body() dto: ChequeActionDto, @CurrentUser('id') userId: string) {
     return this.service.cancel(id, dto.note, userId);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('bank.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'cheque',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('bank.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'cheque',
+      id,
+      user,
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('bank.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'cheque',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

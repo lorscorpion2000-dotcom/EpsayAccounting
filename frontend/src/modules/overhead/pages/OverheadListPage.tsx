@@ -14,7 +14,7 @@ import {
 } from '@/types/overhead';
 import { toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function OverheadListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<OverheadAllocation[]>([]);
@@ -173,6 +173,12 @@ export default function OverheadListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/overhead"
+                          id={a.id}
+                          itemLabel={(a as any).code || (a as any).name || (a as any).title || (a as any).fullName || (a as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => navigate('/overhead-allocations/' + a.id)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />

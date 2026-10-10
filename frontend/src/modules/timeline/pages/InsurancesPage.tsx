@@ -11,6 +11,8 @@ import InsuranceFormModal from '../components/InsuranceFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_LABELS: Record<InsuranceType, string> = {
   THIRD_PARTY: 'مسئولیت مدنی', ACCIDENT: 'حوادث', FIRE: 'آتش‌سوزی',
   EQUIPMENT: 'ماشین‌آلات', OTHER: 'سایر',
@@ -65,7 +67,7 @@ export default function InsurancesPage() {
       'انقضا': i.expiryDate ? new Date(i.expiryDate).toLocaleDateString('fa-IR') : '',
     }));
     void exportToExcel({
-      filename: 'Insurances-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Insurances-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Insurances',
         rows,
@@ -163,7 +165,13 @@ export default function InsurancesPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => { setEditing(i); setShowModal(true); }}
+                        <AdminDeleteButton
+                          endpoint="/timeline/insurances"
+                          id={i.id}
+                          itemLabel={(i as any).code || (i as any).name || (i as any).title || (i as any).fullName || (i as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        <button onClick={() => { setEditing(i); setShowModal(true); }}
                             className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                             <Edit className="w-4 h-4" />
                           </button>

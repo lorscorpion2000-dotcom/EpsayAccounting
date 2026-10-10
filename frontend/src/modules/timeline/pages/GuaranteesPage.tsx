@@ -11,6 +11,8 @@ import GuaranteeFormModal from '../components/GuaranteeFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_LABELS: Record<GuaranteeType, string> = {
   BANK_GUARANTEE: 'ضمانت‌نامه بانکی', CHECK: 'چک تضمین',
   DEPOSIT: 'وجه‌الضمان نقدی', OTHER: 'سایر',
@@ -63,7 +65,7 @@ export default function GuaranteesPage() {
       'انقضا': g.expiryDate ? new Date(g.expiryDate).toLocaleDateString('fa-IR') : '',
     }));
     void exportToExcel({
-      filename: 'Guarantees-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Guarantees-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Guarantees',
         rows,
@@ -181,7 +183,13 @@ export default function GuaranteesPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => { setEditing(g); setShowModal(true); }}
+                        <AdminDeleteButton
+                          endpoint="/timeline/guarantees"
+                          id={g.id}
+                          itemLabel={(g as any).code || (g as any).name || (g as any).title || (g as any).fullName || (g as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        <button onClick={() => { setEditing(g); setShowModal(true); }}
                             className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                             <Edit className="w-4 h-4" />
                           </button>

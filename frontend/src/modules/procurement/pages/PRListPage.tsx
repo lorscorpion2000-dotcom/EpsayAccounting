@@ -11,8 +11,10 @@ import type { PurchaseRequest, PRStatus } from '@/types/procurement';
 import { PR_STATUS_LABELS, PR_STATUS_COLORS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function PRListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<PurchaseRequest[]>([]);
@@ -94,7 +96,7 @@ export default function PRListPage() {
       'وضعیت': PR_STATUS_LABELS[p.status],
     }));
     void exportToExcel({
-      filename: `PurchaseRequests-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `PurchaseRequests-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'PRs',
         rows,
@@ -194,6 +196,12 @@ export default function PRListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/procurement/requests"
+                          id={pr.id}
+                          itemLabel={(pr as any).code}
+                          onSuccess={loadData}
+                        />
                         <button
                           onClick={() => navigate('/procurement/requests/' + pr.id)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600"

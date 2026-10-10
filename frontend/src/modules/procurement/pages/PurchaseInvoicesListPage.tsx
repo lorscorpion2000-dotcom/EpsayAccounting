@@ -190,7 +190,7 @@ export default function PurchaseInvoicesListPage() {
                     className="inline-flex p-1.5 rounded hover:bg-slate-100 text-slate-600" title="مشاهده">
                     <Eye size={14} />
                   </Link>
-                  <AdminDeleteButton endpoint="/purchase-invoices" id={x.id} itemLabel={x.code} onSuccess={load} />
+                  <AdminDeleteButton endpoint="/purchase-invoices" id={x.id} itemLabel={(x as any).code} onSuccess={load} />
                 </td>
               </tr>
             ))}

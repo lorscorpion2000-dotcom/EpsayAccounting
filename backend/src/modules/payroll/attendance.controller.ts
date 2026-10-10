@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, Req, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
-import { CreateAttendanceDto } from './dto/attendance.dto';
+import { CreateAttendanceDto, BulkAttendanceDto } from './dto/attendance.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -37,6 +37,25 @@ export class AttendanceController {
     @Query('toDate') toDate: string,
   ) {
     return this.s.summary(employeeId, fromDate, toDate);
+  }
+
+  @Get('grid')
+  @RequirePermissions('payroll.read')
+  @ApiQuery({ name: 'year', required: true })
+  @ApiQuery({ name: 'month', required: true })
+  @ApiQuery({ name: 'projectId', required: false })
+  getGrid(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.s.getGrid(Number(year), Number(month), projectId);
+  }
+
+  @Post('bulk')
+  @RequirePermissions('payroll.create')
+  bulkUpsert(@Body() dto: BulkAttendanceDto, @CurrentUser('id') userId: string) {
+    return this.s.bulkUpsert(dto.items, userId);
   }
 
   @Get(':id')

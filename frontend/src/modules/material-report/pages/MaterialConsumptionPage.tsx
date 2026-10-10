@@ -10,6 +10,7 @@ import type { ConsumptionResult } from '@/types/material-report';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
+import { todayLocalISO } from '@/utils/local-date';
 
 export default function MaterialConsumptionPage() {
   const [data, setData] = useState<ConsumptionResult | null>(null);
@@ -58,7 +59,7 @@ export default function MaterialConsumptionPage() {
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Consumption');
-    XLSX.writeFile(wb, 'material-consumption-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, 'material-consumption-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

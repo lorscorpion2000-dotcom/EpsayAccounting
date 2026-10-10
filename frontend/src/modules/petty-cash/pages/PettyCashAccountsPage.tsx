@@ -14,6 +14,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function PettyCashAccountsPage() {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<PettyCashAccount[]>([]);
@@ -71,7 +72,7 @@ export default function PettyCashAccountsPage() {
       'وضعیت': a.isActive ? 'فعال' : 'غیرفعال',
     }));
     void exportToExcel({
-      filename: `PettyCash-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `PettyCash-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'PettyCash',
         rows,
@@ -197,7 +198,7 @@ export default function PettyCashAccountsPage() {
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </button>
-                <AdminDeleteButton endpoint="/petty-cash/accounts" id={a.id} itemLabel={a.name || a.code} />
+                <AdminDeleteButton endpoint="/petty-cash/accounts" id={a.id} itemLabel={(a as any).name || a.code} />
               </div>
 
               <div onClick={() => navigate('/petty-cash/' + a.id)} className="cursor-pointer">

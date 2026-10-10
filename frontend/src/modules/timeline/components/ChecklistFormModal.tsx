@@ -6,6 +6,7 @@ import { timelineApi, PhaseChecklist, ChecklistType, ChecklistItem } from '../se
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { api } from '@/services/api';
 import type { Project } from '@/types/project';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export default function ChecklistFormModal({ isOpen, editing, onClose, onSaved }
   const { register, handleSubmit, reset, control, watch } = useForm<FormData>({
     defaultValues: {
       type: 'REBAR_BEFORE_CONCRETE',
-      checklistDate: new Date().toISOString().slice(0, 10),
+      checklistDate: todayLocalISO(),
       items: [{ title: '', isChecked: false }],
     },
   });
@@ -72,7 +73,7 @@ export default function ChecklistFormModal({ isOpen, editing, onClose, onSaved }
         projectId: '',
         type: 'REBAR_BEFORE_CONCRETE',
         title: '',
-        checklistDate: new Date().toISOString().slice(0, 10),
+        checklistDate: todayLocalISO(),
         items: [{ title: '', isChecked: false }],
       });
     }
@@ -104,7 +105,7 @@ export default function ChecklistFormModal({ isOpen, editing, onClose, onSaved }
       const payload = {
         ...data,
         wbsItemId: data.wbsItemId || undefined,
-        checklistDate: data.checklistDate || new Date().toISOString().slice(0, 10),
+        checklistDate: data.checklistDate || todayLocalISO(),
         inspectorName: data.inspectorName || undefined,
         supervisorName: data.supervisorName || undefined,
         notes: data.notes || undefined,

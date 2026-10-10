@@ -11,6 +11,7 @@ import type { PurchaseOrder, POStatus } from '@/types/procurement';
 import { PO_STATUS_LABELS, PO_STATUS_COLORS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function POListPage() {
   const navigate = useNavigate();
@@ -145,6 +146,12 @@ export default function POListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/procurement/orders"
+                          id={po.id}
+                          itemLabel={(po as any).code}
+                          onSuccess={loadData}
+                        />
                         <button
                           onClick={() => navigate('/procurement/orders/' + po.id)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600"

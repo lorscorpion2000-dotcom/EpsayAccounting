@@ -8,6 +8,7 @@ import type { AuditListResponse, AuditStats, AuditLogItem, SecurityStats } from 
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { SecurityView } from '../components/SecurityView';
+import { todayLocalISO } from '@/utils/local-date';
 
 const ACTION_LABELS: Record<string, string> = {
   POST: 'ایجاد', PATCH: 'ویرایش', PUT: 'ویرایش', DELETE: 'حذف',
@@ -105,7 +106,7 @@ export default function AuditTrailPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'AuditTrail');
-    XLSX.writeFile(wb, 'audit-trail-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, 'audit-trail-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

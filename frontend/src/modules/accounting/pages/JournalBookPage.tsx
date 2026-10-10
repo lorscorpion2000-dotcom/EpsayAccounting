@@ -10,6 +10,7 @@ import type { JournalEntry, FiscalYear } from '@/types/accounting';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function JournalBookPage() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [currentFy, setCurrentFy] = useState('');
@@ -65,7 +66,7 @@ export default function JournalBookPage() {
       });
     });
     void exportToExcel({
-      filename: `JournalBook-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `JournalBook-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'JournalBook',
         rows,

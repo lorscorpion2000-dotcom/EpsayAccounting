@@ -22,6 +22,7 @@ import {
   WeatherCondition, AttendanceStatus, EquipmentStatus,
   EntryExitKind, RequestType, EventType,
 } from '@/types/site-ops';
+import { toPersianDigits } from '@/utils/format';
 
 type Tab =
   | 'general' | 'workers' | 'equipment' | 'materials' | 'progress'
@@ -87,6 +88,7 @@ export default function DailyReportFormPage() {
   const [itemList, setItemList] = useState<any[]>([]);
   const [warehouseList, setWarehouseList] = useState<any[]>([]);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
+  const [contractorList, setContractorList] = useState<any[]>([]);
   const [pettyCashAccountList, setPettyCashAccountList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -112,6 +114,25 @@ export default function DailyReportFormPage() {
   useEffect(() => {
     api.get('/projects').then((r) => setProjects(r.data)).catch(() => []);
     api.get('/equipment', { params: { isActive: true } }).then((r) => setEquipmentList(r.data)).catch(() => []);
+    // لیست پرسنل فعال (EmployeeProfile)
+    api.get('/payroll/employees', { params: { active: true } }).then((r) => {
+      const emps = (r.data || []).map((e: any) => ({
+        id: e.partnerId,
+        profileId: e.id,
+        name: e.partner?.name || '—',
+        code: e.employeeCode,
+        position: e.position,
+        projectId: e.projectId,
+        projectName: e.project?.name || null,
+      }));
+      setEmployeeList(emps);
+    }).catch(() => []);
+    // لیست پیمانکاران
+    import('@/modules/partners/services/partners.api').then((m) =>
+      m.partnersApi.list({ type: 'CONTRACTOR' })
+    ).then((list: any) => {
+      setContractorList(Array.isArray(list) ? list : []);
+    }).catch(() => []);
 
     if (isEdit && id) {
       siteOpsApi.reports.get(id).then((r: any) => {
@@ -328,77 +349,160 @@ export default function DailyReportFormPage() {
 
         {/* ═══ Workers ═══ */}
         {tab === 'workers' && (
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-600" /> نیروی انسانی
-              </h2>
-              <button type="button" onClick={() => workersFA.append({
-                teamName: '', foreman: '', workerCount: 1, workHours: 8, overtime: 0, status: 'PRESENT',
-              })} className="btn-secondary text-sm">
-                <Plus className="w-4 h-4" /> افزودن
-              </button>
-            </div>
-            {workersFA.fields.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-sm">هیچ اکیپی ثبت نشده</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[900px]">
-                  <thead className="bg-slate-50 border-b">
-                    <tr>
-                      <th className="text-center px-2 py-2 w-10">#</th>
-                      <th className="text-right px-2 py-2 min-w-[160px]">پرسنل</th>
-                      <th className="text-right px-2 py-2 min-w-[140px]">نام اکیپ *</th>
-                      <th className="text-right px-2 py-2 w-32">سرپرست</th>
-                      <th className="text-center px-2 py-2 w-20">نفرات</th>
-                      <th className="text-center px-2 py-2 w-20">ساعت</th>
-                      <th className="text-center px-2 py-2 w-20">اضافه‌کار</th>
-                      <th className="text-center px-2 py-2 w-28">وضعیت</th>
-                      <th className="text-center px-2 py-2 w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {workersFA.fields.map((f, idx) => (
-                      <tr key={f.id}>
-                        <td className="px-2 py-2 text-center text-slate-500 num text-xs align-top">{idx + 1}</td>
-                        <td className="px-2 py-2 space-y-1">
-                          <select
-                            value={(f as any).employeeId || ''}
-                            onChange={(e) => {
-                              const empId = e.target.value;
-                              const sel = employeeList.find((x: any) => x.id === empId);
-                              setValue(`workers.${idx}.employeeId`, empId);
-                              if (sel) setValue(`workers.${idx}.teamName`, sel.name);
-                            }}
-                            className="input text-xs py-1.5"
-                          >
-                            <option value="">— پرسنل —</option>
-                            {employeeList.map((emp: any) => (
-                              <option key={emp.id} value={emp.id}>{emp.name} ({emp.code})</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-2 py-2"><input type="text" {...register(`workers.${idx}.teamName`)} className="input text-xs py-1.5" /></td>
-                        <td className="px-2 py-2"><input type="text" {...register(`workers.${idx}.foreman`)} className="input text-xs py-1.5" /></td>
-                        <td className="px-2 py-2"><input type="number" {...register(`workers.${idx}.workerCount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.5" {...register(`workers.${idx}.workHours`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.5" {...register(`workers.${idx}.overtime`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
-                        <td className="px-2 py-2">
-                          <select {...register(`workers.${idx}.status`)} className="input text-xs py-1.5">
-                            {Object.entries(ATTENDANCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-2 py-2 text-center">
-                          <button type="button" onClick={() => workersFA.remove(idx)} className="p-1.5 rounded hover:bg-red-50 text-red-600">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="space-y-6">
+            {/* ═══ پرسنل خودمان ═══ */}
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-600" /> پرسنل خودمان
+                </h2>
+                <button type="button" onClick={() => workersFA.append({
+                  kind: 'OWN', teamName: '', foreman: '', workerCount: 1, workHours: 8, overtime: 0, status: 'PRESENT',
+                })} className="btn-secondary text-sm">
+                  <Plus className="w-4 h-4" /> افزودن پرسنل خودمان
+                </button>
               </div>
-            )}
+              {workersFA.fields.filter((f: any) => (f.kind || 'OWN') === 'OWN').length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-sm">هیچ ردیفی برای پرسنل خودمان ثبت نشده</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[900px]">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        <th className="text-center px-2 py-2 w-10">#</th>
+                        <th className="text-right px-2 py-2 min-w-[160px]">پرسنل</th>
+                        <th className="text-right px-2 py-2 min-w-[140px]">نام اکیپ *</th>
+                        <th className="text-right px-2 py-2 w-32">سرپرست</th>
+                        <th className="text-center px-2 py-2 w-20">نفرات</th>
+                        <th className="text-center px-2 py-2 w-20">ساعت</th>
+                        <th className="text-center px-2 py-2 w-20">اضافه‌کار</th>
+                        <th className="text-center px-2 py-2 w-28">وضعیت</th>
+                        <th className="text-center px-2 py-2 w-12"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {workersFA.fields.map((f: any, idx: number) => {
+                        if ((f.kind || 'OWN') !== 'OWN') return null;
+                        return (
+                          <tr key={f.id}>
+                            <td className="px-2 py-2 text-center text-slate-500 num text-xs align-top">{idx + 1}</td>
+                            <td className="px-2 py-2">
+                              <select
+                                value={f.employeeId || ''}
+                                onChange={(e) => {
+                                  const empId = e.target.value;
+                                  const sel = employeeList.find((x: any) => x.id === empId);
+                                  setValue(`workers.${idx}.employeeId`, empId);
+                                  if (sel) setValue(`workers.${idx}.teamName`, sel.name);
+                                }}
+                                className="input text-xs py-1.5"
+                              >
+                                <option value="">— پرسنل —</option>
+                                {employeeList.map((emp: any) => (
+                                  <option key={emp.id} value={emp.id}>{emp.name} ({emp.code})</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2"><input type="text" {...register(`workers.${idx}.teamName`)} className="input text-xs py-1.5" /></td>
+                            <td className="px-2 py-2"><input type="text" {...register(`workers.${idx}.foreman`)} className="input text-xs py-1.5" /></td>
+                            <td className="px-2 py-2"><input type="number" {...register(`workers.${idx}.workerCount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
+                            <td className="px-2 py-2"><input type="number" step="0.5" {...register(`workers.${idx}.workHours`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
+                            <td className="px-2 py-2"><input type="number" step="0.5" {...register(`workers.${idx}.overtime`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
+                            <td className="px-2 py-2">
+                              <select {...register(`workers.${idx}.status`)} className="input text-xs py-1.5">
+                                {Object.entries(ATTENDANCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <button type="button" onClick={() => workersFA.remove(idx)} className="p-1.5 rounded hover:bg-red-50 text-red-600">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* ═══ پرسنل پیمانکار ═══ */}
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" /> پرسنل پیمانکار
+                </h2>
+                <button type="button" onClick={() => workersFA.append({
+                  kind: 'CONTRACTOR', teamName: '', contractorId: '', contractorRate: 0,
+                  workerCount: 1, workHours: 8, overtime: 0, status: 'PRESENT',
+                })} className="btn-secondary text-sm">
+                  <Plus className="w-4 h-4" /> افزودن پرسنل پیمانکار
+                </button>
+              </div>
+              {workersFA.fields.filter((f: any) => f.kind === 'CONTRACTOR').length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-sm">هیچ ردیفی برای پرسنل پیمانکار ثبت نشده</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[900px]">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        <th className="text-center px-2 py-2 w-10">#</th>
+                        <th className="text-right px-2 py-2 min-w-[180px]">پیمانکار *</th>
+                        <th className="text-right px-2 py-2 min-w-[180px]">شرح کار</th>
+                        <th className="text-center px-2 py-2 w-20">نفرات</th>
+                        <th className="text-center px-2 py-2 w-20">ساعت/نفر</th>
+                        <th className="text-center px-2 py-2 w-20">نفر-ساعت</th>
+                        <th className="text-center px-2 py-2 w-32">نرخ (ریال)</th>
+                        <th className="text-center px-2 py-2 w-32">جمع (ریال)</th>
+                        <th className="text-center px-2 py-2 w-12"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {workersFA.fields.map((f: any, idx: number) => {
+                        if (f.kind !== 'CONTRACTOR') return null;
+                        const wc = Number(f.workerCount) || 0;
+                        const wh = Number(f.workHours) || 0;
+                        const rate = Number(f.contractorRate) || 0;
+                        const total = wc * wh * rate;
+                        return (
+                          <tr key={f.id}>
+                            <td className="px-2 py-2 text-center text-slate-500 num text-xs align-top">{idx + 1}</td>
+                            <td className="px-2 py-2">
+                              <select
+                                value={f.contractorId || ''}
+                                onChange={(e) => setValue(`workers.${idx}.contractorId`, e.target.value)}
+                                className="input text-xs py-1.5"
+                              >
+                                <option value="">— پیمانکار —</option>
+                                {contractorList.map((c: any) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2"><input type="text" {...register(`workers.${idx}.teamName`)} className="input text-xs py-1.5" placeholder="مثال: جوشکاری اسکلت" /></td>
+                            <td className="px-2 py-2"><input type="number" {...register(`workers.${idx}.workerCount`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
+                            <td className="px-2 py-2"><input type="number" step="0.5" {...register(`workers.${idx}.workHours`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-center" dir="ltr" /></td>
+                            <td className="px-2 py-2 text-center num text-xs font-medium">
+                              {toPersianDigits((wc * wh).toFixed(1))}
+                            </td>
+                            <td className="px-2 py-2"><input type="number" step="1000" {...register(`workers.${idx}.contractorRate`, { valueAsNumber: true })} className="input num text-xs py-1.5 text-left" dir="ltr" /></td>
+                            <td className="px-2 py-2 text-center num text-xs font-bold text-emerald-700" dir="ltr">
+                              {total.toLocaleString('en-US')}
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <button type="button" onClick={() => workersFA.remove(idx)} className="p-1.5 rounded hover:bg-red-50 text-red-600">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

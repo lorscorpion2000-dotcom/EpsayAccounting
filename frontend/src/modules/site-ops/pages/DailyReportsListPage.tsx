@@ -15,6 +15,7 @@ import {
 import type { Project } from '@/types/project';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const WEATHER_ICONS: Record<WeatherCondition, any> = {
   SUNNY: Sun, CLOUDY: Cloud, RAINY: CloudRain, SNOWY: Snowflake, WINDY: Wind, STORM: CloudRain,
@@ -186,10 +187,16 @@ export default function DailyReportsListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => navigate('/site-ops/daily-reports/' + r.id)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
+                        <AdminDeleteButton
+                          endpoint="/site-ops/daily-reports"
+                          id={r.id}
+                          itemLabel={(r as any).code || (r as any).name || (r as any).title || (r as any).fullName || (r as any).username || ''}
+                          onSuccess={load}
+                        />
+                        <button onClick={() => navigate('/site-ops/daily-reports/' + r.id)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                             <Eye className="w-4 h-4" />
                           </button>
-                          {r.status === 'DRAFT' && (
+                          {(r.status === 'DRAFT' || r.status === 'REJECTED') && (
                             <>
                               <button onClick={() => navigate('/site-ops/daily-reports/' + r.id + '/edit')} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش">
                                 <Edit className="w-4 h-4" />

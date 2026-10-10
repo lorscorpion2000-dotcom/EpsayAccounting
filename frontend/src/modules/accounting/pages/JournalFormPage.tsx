@@ -16,6 +16,7 @@ import TemplatePicker from '../components/TemplatePicker';
 import PasteDialog from '../components/PasteDialog';
 import type { Account, FiscalYear } from '@/types/accounting';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface LineForm {
   accountId: string;
@@ -71,7 +72,7 @@ export default function JournalFormPage() {
 
   const { register, control, handleSubmit, reset, setValue, getValues } = useForm<FormData>({
     defaultValues: {
-      entryDate: new Date().toISOString().slice(0, 10),
+      entryDate: todayLocalISO(),
       fiscalYearId: '',
       description: '',
       reference: '',

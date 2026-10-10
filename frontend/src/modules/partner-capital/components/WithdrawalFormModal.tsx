@@ -8,6 +8,7 @@ import { api } from '@/services/api';
 import type { CapitalAccount, Withdrawal } from '../services/partner-capital.api';
 import type { Project } from '@/types/project';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export default function WithdrawalFormModal({ isOpen, editing, onClose, onSaved 
 
   const { register, handleSubmit, reset, control, watch } = useForm<FormData>({
     defaultValues: {
-      withdrawalDate: new Date().toISOString().slice(0, 10),
+      withdrawalDate: todayLocalISO(),
       transferToContribution: false,
     },
   });
@@ -64,7 +65,7 @@ export default function WithdrawalFormModal({ isOpen, editing, onClose, onSaved 
       reset({
         accountId: '',
         amount: 0,
-        withdrawalDate: new Date().toISOString().slice(0, 10),
+        withdrawalDate: todayLocalISO(),
         reason: '',
         targetProjectId: undefined,
         transferToContribution: false,

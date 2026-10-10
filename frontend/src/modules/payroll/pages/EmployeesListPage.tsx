@@ -14,6 +14,8 @@ import EmployeeFormModal from '../components/EmployeeFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_COLORS: Record<string, string> = {
   FULL_TIME: 'bg-emerald-50 text-emerald-700',
   PART_TIME: 'bg-blue-50 text-blue-700',
@@ -92,7 +94,7 @@ export default function EmployeesListPage() {
       'وضعیت': e.isActive ? 'فعال' : 'غیرفعال',
     }));
     void exportToExcel({
-      filename: `Employees-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `Employees-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'Employees',
         rows,
@@ -258,7 +260,13 @@ export default function EmployeesListPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button
+                        <AdminDeleteButton
+                          endpoint="/payroll/employees"
+                          id={e.id}
+                          itemLabel={(e as any).code || (e as any).name || (e as any).title || (e as any).fullName || (e as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        <button
                             onClick={() => navigate('/payroll/employees/' + e.id)}
                             className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600"
                             title="مشاهده"

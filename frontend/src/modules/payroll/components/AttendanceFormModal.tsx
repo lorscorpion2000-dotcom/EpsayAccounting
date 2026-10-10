@@ -6,6 +6,7 @@ import { payrollApi } from '../services/payroll.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { AttendanceRecord, Employee, AttendanceStatus } from '@/types/payroll';
 import { ATTENDANCE_LABELS } from '@/types/payroll';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -18,7 +19,7 @@ interface Props {
 export default function AttendanceFormModal({ isOpen, editing, employees, onClose, onSaved }: Props) {
   const { register, handleSubmit, reset, control, watch } = useForm<any>({
     defaultValues: {
-      attendanceDate: new Date().toISOString().slice(0, 10),
+      attendanceDate: todayLocalISO(),
       workHours: 8,
       overtimeHours: 0,
       status: 'PRESENT',
@@ -43,7 +44,7 @@ export default function AttendanceFormModal({ isOpen, editing, employees, onClos
     } else {
       reset({
         employeeId: '',
-        attendanceDate: new Date().toISOString().slice(0, 10),
+        attendanceDate: todayLocalISO(),
         checkIn: '', checkOut: '',
         workHours: 8, overtimeHours: 0,
         status: 'PRESENT', notes: '',

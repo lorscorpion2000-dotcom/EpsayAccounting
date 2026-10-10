@@ -10,6 +10,7 @@ import type { Warehouse, Item } from '@/types/warehouse';
 import { ITEM_UNIT_LABELS } from '@/types/warehouse';
 import type { Project, Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm {
   itemId: string;
@@ -92,7 +93,7 @@ export default function ReceiptFormPage() {
 
   const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      receiptDate: new Date().toISOString().slice(0, 10),
+      receiptDate: todayLocalISO(),
       items: [emptyItem()],
     },
   });

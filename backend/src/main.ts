@@ -53,9 +53,6 @@ async function bootstrap() {
   );
   app.setGlobalPrefix(config.get<string>('app.apiPrefix') || 'api');
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/api/uploads/',
-  });
   app.enableCors({
     origin: config.get<string[]>('cors.origin'),
     credentials: true,
@@ -81,18 +78,22 @@ async function bootstrap() {
   const telegram = new TelegramService();
   app.useGlobalFilters(new AllExceptionsFilter(telegram));
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Epsay Accounting API')
-    .setDescription('مستندات API پروژه Epsay Accounting')
-    .setVersion('0.0.1')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Epsay Accounting API')
+      .setDescription('مستندات API پروژه Epsay Accounting')
+      .setVersion('0.0.1')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = config.get<number>('app.port') || 3000;
   await app.listen(port);
   logger.log('Server running on http://localhost:' + port + '/api');
-  logger.log('Swagger docs at http://localhost:' + port + '/api/docs');
+  if (process.env.NODE_ENV !== 'production') {
+    logger.log('Swagger docs at http://localhost:' + port + '/api/docs');
+  }
 }
 bootstrap();

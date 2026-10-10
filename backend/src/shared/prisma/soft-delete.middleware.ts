@@ -1,61 +1,80 @@
-import { Prisma } from '@prisma/client';
-
 /**
- * List of Prisma models that support soft delete (have deletedAt field).
- * These models will be auto-filtered so soft-deleted rows do not appear
- * in any query result.
+ * Prisma Soft-Delete Middleware
+ *
+ * ⚠️ نکته: `params.model` توی Prisma دقیقاً اسم مدل توی schema (PascalCase).
+ *    مثال: DailyReport, SalesInvoice, RFQ
  */
-const SOFT_DELETE_MODELS = new Set<string>([
-  'AdjustmentCalculation',
-  'Attachment',
-  'Attendance',
-  'JournalDeletionLog',
-  'JournalEntry',
-  'MaterialPriceDiff',
+
+const SOFT_DELETE_MODELS = new Set([
+  'User', 'Role', 'Partner', 'Project', 'Contract', 'Unit', 'FiscalYear',
+  'JournalEntry', 'Cheque', 'PettyCashAccount', 'PettyCashRequest',
+  'PurchaseRequest', 'RFQ', 'PurchaseOrder',
+  'Warehouse', 'ItemCategory', 'Item', 'GoodsReceipt', 'GoodsIssue',
+  'DailyReport',
+  'EmployeeProfile', 'PayrollPeriod', 'PayrollRecord', 'Attendance',
+  'DailyWorkLog', 'LeaveRequest', 'AdvanceRequest',
   'PartnerCapitalAccount',
-  'PettyCashRequest',
-  'PurchaseInvoice',
-  'PurchaseOrder',
-  'PurchaseRequest',
-  'RFQ',
-  'SalesReceipt',
-  'SupplierPayment',
+  'Permit', 'Insurance', 'Guarantee', 'TechnicalDocument', 'PhaseChecklist',
+  'SalesUnit', 'SalesCustomer', 'SalesContract',
+  'Attachment', 'FixedAsset', 'PurchaseInvoice', 'SupplierPayment',
+  'SalesInvoice', 'SalesReceipt',
+  'Equipment', 'EquipmentDailyLog', 'EquipmentMaintenance',
+  'PriceList', 'OverheadAllocation',
+  'AdjustmentIndex', 'AdjustmentCalculation', 'MaterialPriceDiff',
+  'WorkerStatement', 'WorkerStatementItem',
 ]);
 
-/**
- * Actions that should auto-filter soft-deleted records.
- */
-const FILTER_ACTIONS = new Set<string>([
-  'findFirst',
-  'findFirstOrThrow',
-  'findMany',
-  'count',
-  'aggregate',
-  'groupBy',
+const READ_ACTIONS = new Set([
+  'findMany', 'findFirst', 'findFirstOrThrow',
+  'count', 'aggregate', 'groupBy',
 ]);
 
-export const softDeleteMiddleware: Prisma.Middleware = async (params, next) => {
-  // Always ensure args exists
-  params.args = params.args || {};
+const UNIQUE_ACTIONS = new Set(['findUnique', 'findUniqueOrThrow']);
 
-  // ALWAYS strip __withDeleted — it's a custom flag Prisma doesn't know about
-  const withDeleted = params.args.__withDeleted === true;
-  if ('__withDeleted' in params.args) {
-    delete params.args.__withDeleted;
-  }
-
-  if (!SOFT_DELETE_MODELS.has(params.model || '')) return next(params);
-  if (!FILTER_ACTIONS.has(params.action)) return next(params);
-  if (withDeleted) return next(params);
-
-  // If caller already provides an explicit deletedAt filter → respect it
-  const where = params.args.where || {};
-  if (Object.prototype.hasOwnProperty.call(where, 'deletedAt')) {
+export async function softDeleteMiddleware(params: any, next: any) {
+  // ۱. Bypass
+  if ((globalThis as any).__BYPASS_SOFT_DELETE) {
     return next(params);
   }
 
-  // Add filter
-  params.args.where = { ...where, deletedAt: null };
+  // ۱.۵. پشتیبانی از flag قدیمی `__withDeleted` (backward compat)
+  // اگه true → bypass کامل (ببین همه رکوردها)
+  // اگه false یا undefined → عادی
+  if (params.args && '__withDeleted' in params.args) {
+    const withDeleted = params.args.__withDeleted;
+    // strip کن که Prisma نبینه
+    delete params.args.__withDeleted;
+    if (withDeleted === true) {
+      return next(params);
+    }
+  }
 
+  // ۲. اگه model تو لیست نیست، skip
+  if (!params.model || !SOFT_DELETE_MODELS.has(params.model)) {
+    return next(params);
+  }
+
+  // ۳. findMany/findFirst/count/... → اضافه deletedAt: null
+  if (READ_ACTIONS.has(params.action)) {
+    params.args = params.args || {};
+    if (!params.args.where) params.args.where = {};
+    if (params.args.where.deletedAt === undefined) {
+      params.args.where.deletedAt = null;
+    }
+    return next(params);
+  }
+
+  // ۴. findUnique → تبدیل به findFirst
+  if (UNIQUE_ACTIONS.has(params.action)) {
+    params.action = params.action === 'findUnique' ? 'findFirst' : 'findFirstOrThrow';
+    params.args = params.args || {};
+    if (!params.args.where) params.args.where = {};
+    if (params.args.where.deletedAt === undefined) {
+      params.args.where.deletedAt = null;
+    }
+    return next(params);
+  }
+
+  // ۵. سایر actions (create/update/delete) → دست نخورده
   return next(params);
-};
+}

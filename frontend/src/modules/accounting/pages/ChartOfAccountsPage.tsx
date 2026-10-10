@@ -14,6 +14,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AccountFormModal from '../components/AccountFormModal';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function ChartOfAccountsPage() {
   const [tree, setTree] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ export default function ChartOfAccountsPage() {
     };
     flatten(tree, 0);
     void exportToExcel({
-      filename: `ChartOfAccounts-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `ChartOfAccounts-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'ChartOfAccounts',
         rows,

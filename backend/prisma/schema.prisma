@@ -93,6 +93,9 @@ model User {
 
   @@index([isActive])
   @@map("users")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model Role {
@@ -108,6 +111,9 @@ model Role {
   permissions RolePermission[]
 
   @@map("roles")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model Permission {
@@ -226,6 +232,10 @@ model Partner {
 
   @@index([type])
   @@map("partners")
+  workerContractorReports DailyReportWorker[] @relation("WorkerContractor")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -331,6 +341,10 @@ model Project {
   @@index([status])
   @@index([clientId])
   @@map("projects")
+  employees EmployeeProfile[] @relation("EmployeeProject")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -390,6 +404,9 @@ model Contract {
   @@index([projectId])
   @@index([status])
   @@map("contracts")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -412,6 +429,9 @@ model Unit {
 
   @@index([isActive])
   @@map("units")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum WbsLevel {
@@ -582,6 +602,9 @@ model FiscalYear {
   overheadAllocations OverheadAllocation[] @relation("OverheadFiscalYear")
 
   @@map("fiscal_years")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum JournalStatus {
@@ -730,6 +753,9 @@ model Cheque {
   @@index([dueDate])
   @@index([partnerId])
   @@map("cheques")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model CostCenter {
@@ -864,6 +890,9 @@ model PettyCashAccount {
   @@index([holderId])
   @@index([projectId])
   @@map("petty_cash_accounts")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model PettyCashTransaction {
@@ -1230,6 +1259,9 @@ model Warehouse {
 
   @@index([isActive])
   @@map("warehouses")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model ItemCategory {
@@ -1247,6 +1279,9 @@ model ItemCategory {
   items Item[]
 
   @@map("item_categories")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model Item {
@@ -1275,6 +1310,9 @@ model Item {
   @@index([type])
   @@index([categoryId])
   @@map("items")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model Stock {
@@ -1353,6 +1391,7 @@ model GoodsReceipt {
 
   createdById String?  @map("created_by_id") @db.Uuid
   createdBy   User?    @relation(fields: [createdById], references: [id])
+
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -1362,6 +1401,9 @@ model GoodsReceipt {
   @@index([warehouseId])
   @@index([status])
   @@map("goods_receipts")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model GoodsReceiptItem {
@@ -1424,6 +1466,9 @@ model GoodsIssue {
   @@index([warehouseId])
   @@index([status])
   @@map("goods_issues")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model GoodsIssueItem {
@@ -1524,6 +1569,9 @@ model DailyReport {
   @@index([reportDate])
   @@index([status])
   @@map("daily_reports")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -1652,7 +1700,15 @@ model DailyReportWorker {
   rowNumber Int    @map("row_number")
   teamName  String @map("team_name") @db.VarChar(200)
 
-  // اتصال به پرسنل (برای فوروارد به حضور و غیاب)
+  // نوع: OWN (پرسنل خودمان) | CONTRACTOR (پرسنل پیمانکار)
+  kind String @default("OWN") @db.VarChar(20)
+
+  // اتصال به پیمانکار (برای پرسنل پیمانکار)
+  contractorId   String?  @map("contractor_id") @db.Uuid
+  contractor     Partner? @relation("WorkerContractor", fields: [contractorId], references: [id], onDelete: SetNull)
+  contractorRate Decimal? @map("contractor_rate") @db.Decimal(20, 2)
+
+  // اتصال به پرسنل خودمان (برای فوروارد به حضور و غیاب)
   employeeId  String?          @map("employee_id") @db.Uuid
   foreman     String?          @db.VarChar(200)
   workerCount Int              @map("worker_count")
@@ -1907,6 +1963,9 @@ model EmployeeProfile {
   partnerId String  @unique @map("partner_id") @db.Uuid
   partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("EmployeeProject", fields: [projectId], references: [id], onDelete: SetNull)
+
   employeeCode String       @unique @map("employee_code") @db.VarChar(32)
   employeeType EmployeeType @default(FULL_TIME) @map("employee_type")
   position     String?      @db.VarChar(128)
@@ -1950,6 +2009,9 @@ model EmployeeProfile {
   @@index([isActive])
   @@index([employeeType])
   @@map("employee_profiles")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model PayrollPeriod {
@@ -1988,6 +2050,9 @@ model PayrollPeriod {
   @@unique([year, month, projectId])
   @@index([status])
   @@map("payroll_periods")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model PayrollRecord {
@@ -2042,6 +2107,9 @@ model PayrollRecord {
   @@index([periodId])
   @@index([employeeId])
   @@map("payroll_records")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model Attendance {
@@ -2090,6 +2158,9 @@ model DailyWorkLog {
   @@index([employeeId, workDate])
   @@index([workDate])
   @@map("daily_work_logs")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model LeaveRequest {
@@ -2117,6 +2188,9 @@ model LeaveRequest {
   @@index([employeeId])
   @@index([status])
   @@map("leave_requests")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model AdvanceRequest {
@@ -2144,6 +2218,9 @@ model AdvanceRequest {
   @@index([employeeId])
   @@index([status])
   @@map("advance_requests")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model SubcontractorStatement {
@@ -2426,6 +2503,9 @@ model Permit {
   @@index([status])
   @@index([expiryDate])
   @@map("permits")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum InsuranceType {
@@ -2463,6 +2543,9 @@ model Insurance {
   @@index([projectId])
   @@index([expiryDate])
   @@map("insurances")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum GuaranteeType {
@@ -2497,6 +2580,9 @@ model Guarantee {
   @@index([projectId])
   @@index([expiryDate])
   @@map("guarantees")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum DocumentType {
@@ -2536,6 +2622,9 @@ model TechnicalDocument {
   @@index([projectId])
   @@index([type])
   @@map("technical_documents")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 enum ChecklistType {
@@ -2584,6 +2673,9 @@ model PhaseChecklist {
   @@index([status])
   @@index([checklistDate])
   @@map("phase_checklists")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2788,6 +2880,9 @@ model SalesUnit {
   @@unique([projectId, unitNumber, block])
   @@index([projectId])
   @@index([status])
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model SalesCustomer {
@@ -2811,6 +2906,9 @@ model SalesCustomer {
   salesReceipts SalesReceipt[] @relation("SRFromCustomer")
 
   @@index([fullName])
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model SalesContract {
@@ -2849,6 +2947,9 @@ model SalesContract {
   @@index([status])
   @@index([customerId])
   @@index([unitId])
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model SalesInstallment {
@@ -2896,7 +2997,7 @@ model SalesPayment {
 model Attachment {
   id         String @id @default(uuid()) @db.Uuid
   entityType String @map("entity_type") @db.VarChar(32)
-  entityId   String @map("entity_id") @db.Uuid
+  entityId   String @map("entity_id") @db.VarChar(64)
 
   filename    String  @db.VarChar(255)
   url         String  @db.VarChar(500)
@@ -2996,6 +3097,9 @@ model FixedAsset {
   @@index([projectId])
   @@index([acquisitionDate])
   @@map("fixed_assets")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model DepreciationEntry {
@@ -3210,6 +3314,9 @@ model SalesInvoice {
   @@index([contractId])
   @@index([status])
   @@map("sales_invoices")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model SalesInvoiceItem {
@@ -3334,6 +3441,9 @@ model Equipment {
   @@index([status])
   @@index([currentProjectId])
   @@map("equipment")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model EquipmentDailyLog {
@@ -3382,6 +3492,9 @@ model EquipmentDailyLog {
   @@index([projectId])
   @@index([status])
   @@map("equipment_daily_logs")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model EquipmentMaintenance {
@@ -3414,6 +3527,9 @@ model EquipmentMaintenance {
   @@index([equipmentId])
   @@index([maintenanceDate])
   @@map("equipment_maintenances")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -3444,6 +3560,9 @@ model PriceList {
   @@index([year])
   @@index([status])
   @@map("price_lists")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model PriceListItem {
@@ -3510,6 +3629,9 @@ model OverheadAllocation {
   @@unique([fiscalYearId, periodMonth])
   @@index([status])
   @@map("overhead_allocations")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model OverheadAllocationItem {
@@ -3872,6 +3994,9 @@ model AdjustmentIndex {
   @@unique([year, month, category])
   @@index([category])
   @@map("adjustment_indices")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model AdjustmentCalculation {
@@ -4012,6 +4137,9 @@ model WorkerStatement {
   @@index([status])
   @@index([partnerId])
   @@map("worker_statements")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 model WorkerStatementItem {
@@ -4034,6 +4162,9 @@ model WorkerStatementItem {
 
   @@index([statementId])
   @@map("worker_statement_items")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================

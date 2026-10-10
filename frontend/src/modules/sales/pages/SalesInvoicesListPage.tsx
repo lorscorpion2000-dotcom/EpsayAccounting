@@ -7,7 +7,7 @@ import {
   type SalesCustomerRef, type ProjectRef,
 } from '../services/sales-invoices.api';
 import { api } from '@/services/api';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 const fmt = (n: number | string | undefined) => new Intl.NumberFormat('fa-IR').format(Number(n ?? 0));
 const fromISO = (iso?: string | null) => {
   if (!iso) return '';
@@ -82,7 +82,7 @@ export default function SalesInvoicesListPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading}
+                        <button onClick={load} disabled={loading}
             className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -168,6 +168,12 @@ export default function SalesInvoicesListPage() {
                     className="inline-flex p-1.5 rounded hover:bg-slate-100 text-slate-600">
                     <Eye size={14} />
                   </Link>
+                  <AdminDeleteButton
+                    endpoint="/sales-invoices"
+                    id={x.id}
+                    itemLabel={x.code || x.invoiceNumber || ''}
+                    onSuccess={load}
+                  />
                 </td>
               </tr>
             ))}
@@ -187,7 +193,8 @@ function KPI({ label, value, tone, icon }: { label: string; value: string; tone:
   }[tone];
   return (
     <div className={`border rounded-xl p-4 ${c}`}>
-      <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1">{icon}{label}</div>
+      <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1">
+                        {icon}{label}</div>
       <div className="text-lg font-bold font-mono">{value}</div>
     </div>
   );

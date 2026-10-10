@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { OverheadService } from './overhead.service';
 import {
@@ -8,12 +6,14 @@ import {
 } from './dto/overhead.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Overhead - تسهیم سربار ستاد')
 @ApiBearerAuth()
 @Controller('overhead-allocations')
 export class OverheadController {
-  constructor(private service: OverheadService) {}
+  constructor(private service: OverheadService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('overhead.read')
@@ -59,4 +59,57 @@ export class OverheadController {
   @Post(':id/cancel')
   @RequirePermissions('overhead.manage')
   cancel(@Param('id') id: string) { return this.service.cancel(id); }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('overhead.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'overheadAllocation',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('overhead.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'overheadAllocation',
+      id,
+      user,
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('overhead.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'overheadAllocation',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

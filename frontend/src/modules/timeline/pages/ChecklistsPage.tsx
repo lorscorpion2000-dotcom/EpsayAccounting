@@ -11,6 +11,8 @@ import ChecklistFormModal from '../components/ChecklistFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_LABELS: Record<ChecklistType, string> = {
   REBAR_BEFORE_CONCRETE: 'آرماتوربندی قبل از بتن‌ریزی',
   FORMWORK: 'قالب‌بندی', ELECTRICAL: 'تاسیسات برقی',
@@ -91,7 +93,7 @@ export default function ChecklistsPage() {
       };
     });
     void exportToExcel({
-      filename: 'Checklists-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Checklists-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Checklists',
         rows,
@@ -186,7 +188,13 @@ export default function ChecklistsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          {(c.status === 'DRAFT' || c.status === 'REJECTED') && (
+                        <AdminDeleteButton
+                          endpoint="/timeline/checklists"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || (c as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        {(c.status === 'DRAFT' || c.status === 'REJECTED') && (
                             <>
                               <button onClick={() => { setEditing(c); setShowModal(true); }}
                                 className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش">

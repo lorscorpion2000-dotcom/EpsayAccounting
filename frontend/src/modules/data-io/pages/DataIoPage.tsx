@@ -11,6 +11,7 @@ import { api } from '@/services/api';
 import type { ImportResult, DataType } from '@/types/data-io';
 import { DATA_TYPE_LABELS } from '@/types/data-io';
 import { toPersianDigits } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 const TYPE_ICONS: Record<DataType, any> = {
   partners: Users, items: Package, wbs: Layers, accounts: FolderTree,
@@ -67,7 +68,7 @@ export default function DataIoPage() {
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Data');
-      const fname = activeType + '-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+      const fname = activeType + '-' + todayLocalISO() + '.xlsx';
       XLSX.writeFile(wb, fname);
       toast.success('فایل خروجی دانلود شد');
     } catch (e: any) {

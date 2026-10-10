@@ -10,6 +10,7 @@ import type { Project, WbsItem } from '@/types/project';
 import { formatNumber } from '@/utils/format';
 import AttachmentsManager from '@/components/AttachmentsManager';
 import { attachmentsApi, AttachmentInput } from '@/services/attachments.api';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -52,7 +53,7 @@ export default function TransactionFormModal({
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       type: 'EXPENSE',
-      txDate: new Date().toISOString().slice(0, 10),
+      txDate: todayLocalISO(),
       amount: 0,
       description: '',
     },
@@ -69,7 +70,7 @@ export default function TransactionFormModal({
 
     reset({
       type: 'EXPENSE',
-      txDate: new Date().toISOString().slice(0, 10),
+      txDate: todayLocalISO(),
       amount: 0,
       description: '',
       recipient: '',

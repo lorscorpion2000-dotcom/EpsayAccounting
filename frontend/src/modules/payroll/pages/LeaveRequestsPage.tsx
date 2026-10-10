@@ -8,6 +8,7 @@ import { LEAVE_TYPE_LABELS, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS } from 
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import LeaveFormModal from '../components/LeaveFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function LeaveRequestsPage() {
   const [items, setItems] = useState<LeaveRequest[]>([]);
@@ -111,6 +112,12 @@ export default function LeaveRequestsPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/payroll/leave-requests"
+                          id={l.id}
+                          itemLabel={(l as any).code || (l as any).name || (l as any).title || (l as any).fullName || (l as any).username || ''}
+                          onSuccess={load}
+                        />
                         {l.status === 'PENDING' && (
                           <>
                             <button onClick={() => setActionItem({ item: l, action: 'approve' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="تایید">

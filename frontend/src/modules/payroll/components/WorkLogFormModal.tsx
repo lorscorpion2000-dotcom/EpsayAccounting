@@ -8,6 +8,7 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { WorkLog, Employee } from '@/types/payroll';
 import { ATTENDANCE_LABELS } from '@/types/payroll';
 import type { Project } from '@/types/project';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export default function WorkLogFormModal({ isOpen, editing, employees, onClose, 
 
   const { register, handleSubmit, reset, control, watch } = useForm<any>({
     defaultValues: {
-      workDate: new Date().toISOString().slice(0, 10),
+      workDate: todayLocalISO(),
       regularHours: 8,
       overtimeHours: 0,
       holidayHours: 0,
@@ -50,7 +51,7 @@ export default function WorkLogFormModal({ isOpen, editing, employees, onClose, 
       });
     } else {
       reset({
-        employeeId: '', workDate: new Date().toISOString().slice(0, 10),
+        employeeId: '', workDate: todayLocalISO(),
         projectId: '', wbsItemId: '',
         regularHours: 8, overtimeHours: 0, holidayHours: 0,
         status: 'PRESENT', description: '',

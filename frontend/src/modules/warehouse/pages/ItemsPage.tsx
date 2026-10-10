@@ -12,6 +12,8 @@ import ItemFormModal from '../components/ItemFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ export default function ItemsPage() {
       'ارزش موجودی': it.totalValue || 0,
     }));
     void exportToExcel({
-      filename: `Items-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `Items-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'Items',
         rows,
@@ -176,6 +178,12 @@ export default function ItemsPage() {
                     </td>
                     <td className="px-4 py-3 text-center sticky left-0 bg-white group-hover:bg-slate-50/50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/warehouse/items"
+                          id={it.id}
+                          itemLabel={(it as any).code || (it as any).name || (it as any).title || (it as any).fullName || (it as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => { setEditing(it); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
                         </button>

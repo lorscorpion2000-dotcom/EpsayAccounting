@@ -12,6 +12,7 @@ import { partnersApi } from '@/modules/partners/services/partners.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project, Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm {
   wbsItemId?: string;
@@ -58,8 +59,8 @@ export default function StatementFormPage() {
   const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       statementNumber: 1,
-      periodStart: new Date().toISOString().slice(0, 10),
-      periodEnd: new Date().toISOString().slice(0, 10),
+      periodStart: todayLocalISO(),
+      periodEnd: todayLocalISO(),
       prepaymentPercent: 0,
       prepaymentDepreciation: 0,
       insurancePercent: 7,

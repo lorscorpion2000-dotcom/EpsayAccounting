@@ -12,6 +12,7 @@ import AdminDeleteButton from '@/components/AdminDeleteButton';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function AttendancePage() {
   const [items, setItems] = useState<AttendanceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -78,7 +79,7 @@ export default function AttendancePage() {
       'وضعیت': ATTENDANCE_LABELS[a.status],
     }));
     void exportToExcel({
-      filename: 'Attendance-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Attendance-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Attendance',
         rows,
@@ -174,7 +175,7 @@ export default function AttendancePage() {
                         <button onClick={() => { setEditing(a); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <AdminDeleteButton endpoint="/payroll/attendance" id={a.id} itemLabel={a.id} onSuccess={load} />
+                        <AdminDeleteButton endpoint="/payroll/attendance" id={a.id} itemLabel={(a as any).id} onSuccess={load} />
                       </div>
                     </td>
                   </tr>

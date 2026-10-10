@@ -1,7 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import MainLayout from '@/layouts/MainLayout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { RequirePermission } from '@/components/RequirePermission';
+import { getRoutePermission } from '@/config/route-permissions';
 const ExecutiveDashboardPage = lazy(() => import('@/modules/dashboard/pages/ExecutiveDashboardPage'));
 import WarehouseFormModal from '@/modules/warehouse/components/WarehouseFormModal';
 
@@ -63,6 +66,7 @@ const EmployeeCardPage = lazy(() => import('@/modules/payroll/pages/EmployeeCard
 const PayrollPeriodsPage = lazy(() => import('@/modules/payroll/pages/PayrollPeriodsPage'));
 const PayrollPeriodDetailPage = lazy(() => import('@/modules/payroll/pages/PayrollPeriodDetailPage'));
 const AttendancePage = lazy(() => import('@/modules/payroll/pages/AttendancePage'));
+const AttendanceGridPage = lazy(() => import('@/modules/payroll/pages/AttendanceGridPage'));
 const WorkLogsPage = lazy(() => import('@/modules/payroll/pages/WorkLogsPage'));
 const LeaveRequestsPage = lazy(() => import('@/modules/payroll/pages/LeaveRequestsPage'));
 const AdvanceRequestsPage = lazy(() => import('@/modules/payroll/pages/AdvanceRequestsPage'));
@@ -188,12 +192,25 @@ const BackupPage = lazy(() => import('@/modules/backup/pages/BackupPage'));
 const NotificationsPage = lazy(() => import('@/modules/notifications/pages/NotificationsPage'));
 const RecycleBinPage = lazy(() => import('@/modules/recycle-bin/pages/RecycleBinPage'));
 
+
+function PermissionGuard() {
+  const location = useLocation();
+  const code = getRoutePermission(location.pathname);
+  if (!code) return <Outlet />;
+  return (
+    <RequirePermission code={code}>
+      <Outlet />
+    </RequirePermission>
+  );
+}
+
 export default function AppRouter() {
   return (
     <Suspense fallback={<div style={{minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>در حال بارگذاری...</div>}>
       <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route element={<MainLayout />}>
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route element={<PermissionGuard />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<ExecutiveDashboardPage />} />
         <Route path="/reports" element={<ReportsHubPage />} />
@@ -315,6 +332,7 @@ export default function AppRouter() {
         <Route path="/payroll/periods" element={<PayrollPeriodsPage />} />
         <Route path="/payroll/periods/:id" element={<PayrollPeriodDetailPage />} />
         <Route path="/payroll/attendance" element={<AttendancePage />} />
+        <Route path="/payroll/attendance-grid" element={<AttendanceGridPage />} />
         <Route path="/payroll/work-logs" element={<WorkLogsPage />} />
         <Route path="/payroll/leave-requests" element={<LeaveRequestsPage />} />
         <Route path="/payroll/advance-requests" element={<AdvanceRequestsPage />} />
@@ -420,6 +438,7 @@ export default function AppRouter() {
         <Route path="/backup" element={<BackupPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/recycle-bin" element={<RecycleBinPage />} />
+        </Route>
       </Route>
 
 

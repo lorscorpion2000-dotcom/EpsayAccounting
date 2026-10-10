@@ -14,6 +14,7 @@ import type {
 } from '@/types/operational-reports';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
+import { todayLocalISO } from '@/utils/local-date';
 
 type Tab = 'equipment' | 'subcontractor' | 'warehouse';
 
@@ -106,7 +107,7 @@ export default function OperationalReportsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, name + '-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, name + '-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

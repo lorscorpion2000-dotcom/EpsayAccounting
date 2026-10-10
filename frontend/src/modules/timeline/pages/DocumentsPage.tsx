@@ -11,6 +11,8 @@ import DocumentFormModal from '../components/DocumentFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_LABELS: Record<DocumentType, string> = {
   ARCHITECTURE: 'معماری', STRUCTURE: 'سازه',
   MEP: 'تاسیسات مکانیکی و برقی', SITE_PLAN: 'پلان سایت', OTHER: 'سایر',
@@ -68,7 +70,7 @@ export default function DocumentsPage() {
       'تاریخ تایید': d.approvedAt ? new Date(d.approvedAt).toLocaleDateString('fa-IR') : '',
     }));
     void exportToExcel({
-      filename: 'Documents-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Documents-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Documents',
         rows,
@@ -163,6 +165,12 @@ export default function DocumentsPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/timeline/documents"
+                          id={d.id}
+                          itemLabel={(d as any).code || (d as any).name || (d as any).title || (d as any).fullName || (d as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => { setEditing(d); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />

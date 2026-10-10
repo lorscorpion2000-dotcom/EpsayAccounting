@@ -139,7 +139,7 @@ export default function PurchaseInvoiceDetailPage() {
               <Edit size={16} /> ویرایش
             </button>
           )}
-          <AdminDeleteButton endpoint="/purchase-invoices" id={inv.id} itemLabel={inv.code} onSuccess={() => navigate('/procurement/invoices')} />
+          <AdminDeleteButton endpoint="/purchase-invoices" id={inv.id} itemLabel={(inv as any).code} onSuccess={() => navigate('/procurement/invoices')} />
           {canApprove && (
             <button onClick={approve} disabled={busy}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium disabled:opacity-50">

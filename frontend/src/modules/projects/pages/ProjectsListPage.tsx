@@ -12,7 +12,7 @@ import {
 } from '@/types/project';
 import { formatNumber, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function ProjectsListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +179,12 @@ export default function ProjectsListPage() {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+                        <AdminDeleteButton
+                          endpoint="/projects"
+                          id={p.id}
+                          itemLabel={(p as any).code || (p as any).name || (p as any).title || ''}
+                          onSuccess={loadData}
+                        />
               </div>
 
               {/* Clickable area */}
@@ -215,7 +221,7 @@ export default function ProjectsListPage() {
                 <div className="space-y-2 text-xs text-slate-600">
                   {p.client && (
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
                       <span className="line-clamp-1">{p.client.name}</span>
                     </div>
                   )}

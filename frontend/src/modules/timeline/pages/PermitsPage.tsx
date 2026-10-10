@@ -11,6 +11,8 @@ import PermitFormModal from '../components/PermitFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const TYPE_LABELS: Record<PermitType, string> = {
   DEMOLITION: 'تخریب', CONSTRUCTION: 'ساخت', NO_VIOLATION: 'عدم خلاف',
   COMPLETION: 'پایان کار', OTHER: 'سایر',
@@ -75,7 +77,7 @@ export default function PermitsPage() {
       'تاریخ انقضا': p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('fa-IR') : '',
     }));
     void exportToExcel({
-      filename: 'Permits-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Permits-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Permits',
         rows,
@@ -180,7 +182,13 @@ export default function PermitsPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => { setEditing(p); setShowModal(true); }}
+                        <AdminDeleteButton
+                          endpoint="/timeline/permits"
+                          id={p.id}
+                          itemLabel={(p as any).code || (p as any).name || (p as any).title || (p as any).fullName || (p as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        <button onClick={() => { setEditing(p); setShowModal(true); }}
                             className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                             <Edit className="w-4 h-4" />
                           </button>

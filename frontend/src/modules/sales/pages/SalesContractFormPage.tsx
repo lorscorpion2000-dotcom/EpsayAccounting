@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, Save, Plus, Trash2 } from 'lucide-react';
 import { salesApi, SalesUnit, SalesCustomer } from '../services/sales.api';
 import { formatNumber } from '@/utils/format';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
+import { todayLocalISO } from '@/utils/local-date';
 
 export default function SalesContractFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +20,7 @@ export default function SalesContractFormPage() {
   const [form, setForm] = useState<any>({
     unitId: '', customerId: '',
     totalPrice: '', discountAmount: '', finalPrice: '', downPayment: '',
-    contractDate: new Date().toISOString().slice(0, 10),
+    contractDate: todayLocalISO(),
     deliveryDate: '', bodyHtml: '', notes: '',
     installments: [] as any[],
   });

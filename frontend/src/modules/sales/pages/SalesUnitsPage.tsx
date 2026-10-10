@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { salesApi, SalesUnit, SalesUnitStatus } from '../services/sales.api';
 import { projectsApi } from '@/modules/projects/services/projects.api';
 import { formatNumber } from '@/utils/format';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const STATUS_LABELS: Record<SalesUnitStatus, string> = {
   AVAILABLE: 'قابل فروش', RESERVED: 'رزرو', SOLD: 'فروخته‌شده',
@@ -130,6 +131,12 @@ export default function SalesUnitsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/sales/units"
+                          id={u.id}
+                          itemLabel={(u as any).code || (u as any).name || (u as any).title || (u as any).fullName || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => { setEditing(u); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
                         </button>

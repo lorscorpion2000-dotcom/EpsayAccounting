@@ -6,7 +6,7 @@ import type { Partner } from '@/types/project';
 import QuickPartnerModal from '../components/QuickPartnerModal';
 import EditPartnerModal from '../components/EditPartnerModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 const TYPE_LABELS: Record<string, string> = {
   CLIENT: 'کارفرما',
   CONSULTANT: 'مشاور / ناظر',
@@ -186,7 +186,13 @@ export default function PartnersListPage() {
                   <td className="px-4 py-3 text-slate-600" dir="ltr">{(p as any).email || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button
+                        <AdminDeleteButton
+                          endpoint="/partners"
+                          id={p.id}
+                          itemLabel={(p as any).code || (p as any).name || (p as any).title || (p as any).fullName || (p as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        <button
                         onClick={() => setEditingPartner(p)}
                         className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600 transition-colors"
                         title="ویرایش"

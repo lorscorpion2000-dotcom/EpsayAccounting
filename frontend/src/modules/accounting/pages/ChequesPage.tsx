@@ -12,7 +12,7 @@ import {
 } from '../services/cheques.api';
 import { bankAccountsApi, type BankAccount } from '../services/bank-accounts.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 interface PartnerRef { id: string; code: string; name: string; type?: string; }
 interface ProjectRef { id: string; code: string; name: string; }
 
@@ -314,7 +314,13 @@ export default function ChequesPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1">
-                    {c.status === 'PENDING' && (
+                        <AdminDeleteButton
+                          endpoint="/bank/cheques"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || (c as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        {c.status === 'PENDING' && (
                       <>
                         <button
                           onClick={() => setActionTarget({ cheque: c, kind: 'pass' })}

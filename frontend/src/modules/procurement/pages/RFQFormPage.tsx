@@ -7,6 +7,7 @@ import { procurementApi } from '../services/procurement.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Partner } from '@/types/project';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface SupplierRow { supplierId: string; }
 
@@ -32,7 +33,7 @@ export default function RFQFormPage() {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       prId: prIdFromQuery,
-      rfqDate: new Date().toISOString().slice(0, 10),
+      rfqDate: todayLocalISO(),
       minSuppliers: 3,
       suppliers: [
         { supplierId: '' },

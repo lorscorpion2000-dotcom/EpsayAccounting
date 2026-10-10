@@ -12,6 +12,7 @@ import BudgetFormModal from '../components/BudgetFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function BudgetsTab() {
   const { project } = useOutletContext<{ project: Project }>();
   const [budgets, setBudgets] = useState<ProjectBudget[]>([]);
@@ -82,7 +83,7 @@ export default function BudgetsTab() {
       'توضیحات': b.description || '',
     }));
     void exportToExcel({
-      filename: `Budgets-${project.code}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `Budgets-${project.code}-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'Budgets',
         rows,

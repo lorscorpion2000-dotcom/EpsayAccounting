@@ -10,6 +10,8 @@ import CancelDialog from '../components/CancelDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 const KIND_LABELS: Record<LegalContractKind, string> = {
   WORKER_EMPLOYMENT: 'قرارداد کارگری',
   CONTRACTOR_AGREEMENT: 'قرارداد پیمانکاری',
@@ -133,13 +135,25 @@ export default function ContractsListPage() {
       'مبلغ کل': c.totalAmount ? Number(c.totalAmount) : '',
     }));
     void exportToExcel({
-      filename: 'Contracts-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Contracts-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Contracts',
         rows,
       }],
     });
     toast.success('Excel دانلود شد');
+  };
+
+
+  const handleEditClick = async (c: LegalContract) => {
+    try {
+      const full = await contractsApi.get(c.id);
+      setEditing(full);
+      setShowModal(true);
+    } catch (e: any) {
+      const m = e?.response?.data?.message;
+      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در بارگذاری قرارداد');
+    }
   };
 
   return (
@@ -220,18 +234,28 @@ export default function ContractsListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/contracts"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || (c as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => nav('/contracts/' + c.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600" title="مشاهده و چاپ">
                           <Printer className="w-4 h-4" />
                         </button>
+                        {c.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleEditClick(c)}
+                            className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
+                            title="ویرایش"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
                         {c.status === 'DRAFT' && (
-                          <>
-                            <button onClick={() => { setEditing(c); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleActivate(c)} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="فعال‌سازی">
-                              <Play className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button onClick={() => handleActivate(c)} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="فعال‌سازی">
+                            <Play className="w-4 h-4" />
+                          </button>
                         )}
                         {c.status === 'ACTIVE' && (
                           <button onClick={() => handleComplete(c)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600" title="خاتمه">

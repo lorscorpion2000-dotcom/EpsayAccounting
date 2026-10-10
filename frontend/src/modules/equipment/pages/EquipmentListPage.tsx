@@ -15,7 +15,7 @@ import { api } from '@/services/api';
 import type { Project } from '@/types/project';
 import { toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function EquipmentListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Equipment[]>([]);
@@ -197,6 +197,12 @@ export default function EquipmentListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/equipment"
+                          id={eq.id}
+                          itemLabel={(eq as any).code || (eq as any).name || (eq as any).title || (eq as any).fullName || (eq as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => navigate(`/equipment/${eq.id}`)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600"

@@ -15,6 +15,7 @@ import type { AdvLedgerResponse } from '@/types/advanced-ledger';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import PrintHeader from '@/components/PrintHeader';
+import { todayLocalISO } from '@/utils/local-date';
 
 function todayISO(): string {
   const d = new Date();
@@ -97,7 +98,7 @@ export default function AdvancedLedgerPage() {
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
-    documentTitle: 'ledger-' + new Date().toISOString().slice(0, 10),
+    documentTitle: 'ledger-' + todayLocalISO(),
   });
 
   const handleExportExcel = () => {
@@ -118,7 +119,7 @@ export default function AdvancedLedgerPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
-    XLSX.writeFile(wb, 'advanced-ledger-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, 'advanced-ledger-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

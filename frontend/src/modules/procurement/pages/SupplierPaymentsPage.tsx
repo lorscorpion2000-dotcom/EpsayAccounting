@@ -142,7 +142,7 @@ export default function SupplierPaymentsPage() {
                 </td>
                 <td className="px-3 py-2 text-left font-mono text-xs font-bold text-emerald-700">{fmt(x.amount)}</td>
                 <td className="px-3 py-2 text-center">
-                  <AdminDeleteButton endpoint="/supplier-payments" id={x.id} itemLabel={x.code} onSuccess={load} />
+                  <AdminDeleteButton endpoint="/supplier-payments" id={x.id} itemLabel={(x as any).code} onSuccess={load} />
                 </td>
               </tr>
             ))}

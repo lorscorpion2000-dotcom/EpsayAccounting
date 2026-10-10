@@ -252,4 +252,218 @@ export class PayrollCalculationService {
 
     return { gross, totalDeductions, net: gross - totalDeductions };
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // محاسبه حقوق بر اساس Attendance (حاضری گرید ماهانه)
+  // ═══════════════════════════════════════════════════════════
+  async calculateFromAttendance(periodId: string, userId: string) {
+    const period = await this.prisma.payrollPeriod.findUnique({
+      where: { id: periodId },
+    });
+    if (!period) throw new NotFoundException('دوره حقوق یافت نشد');
+    if (period.status === 'PAID' || period.status === 'CLOSED') {
+      throw new BadRequestException('این دوره قفل شده است');
+    }
+
+    // حذف رکوردهای قبلی
+    await this.prisma.payrollRecord.deleteMany({ where: { periodId } });
+
+    // پرسنل فعال (فیلتر بر اساس پروژه دوره اگر مشخص باشد)
+    const where: any = { isActive: true };
+    if (period.projectId) where.projectId = period.projectId;
+
+    const employees = await this.prisma.employeeProfile.findMany({
+      where,
+      include: { partner: true },
+      orderBy: { employeeCode: 'asc' },
+    });
+
+    // جدول مالیات فعال
+    let taxSetting: any = null;
+    try {
+      taxSetting = await this.prisma.payrollTaxSetting.findFirst({
+        where: { isActive: true },
+        include: { brackets: { orderBy: { order: 'asc' } } },
+        orderBy: { year: 'desc' },
+      });
+    } catch { /* ignore */ }
+
+    const totalCalendarDays =
+      Math.ceil((period.endDate.getTime() - period.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    let totalGross = 0;
+    let totalNet = 0;
+    let totalTax = 0;
+    let totalInsurance = 0;
+    let totalAdvances = 0;
+    let rowNumber = 0;
+
+    for (const emp of employees) {
+      // حاضری در بازه دوره
+      const attendances = await this.prisma.attendance.findMany({
+        where: {
+          employeeId: emp.partnerId,
+          attendanceDate: { gte: period.startDate, lte: period.endDate },
+          deletedAt: null,
+        } as any,
+      });
+
+      // خلاصه وضعیت‌ها
+      let presentDays = 0, absentDays = 0, leaveDays = 0, sickDays = 0, missionDays = 0, holidayDays = 0;
+      let totalRegularHours = 0, totalOvertimeHours = 0, totalHolidayHours = 0;
+
+      for (const a of attendances) {
+        switch (a.status) {
+          case 'PRESENT': presentDays++; break;
+          case 'ABSENT': absentDays++; break;
+          case 'LEAVE': leaveDays++; break;
+          case 'SICK': sickDays++; break;
+          case 'MISSION': missionDays++; break;
+          case 'HOLIDAY': holidayDays++; break;
+        }
+        totalRegularHours += Number(a.workHours) || 0;
+        totalOvertimeHours += Number(a.overtimeHours) || 0;
+        if (a.status === 'HOLIDAY') totalHolidayHours += Number(a.workHours) || 0;
+      }
+
+      // اگر حاضری ثبت نشده → فرض کل ماه کار کرده
+      const hasAttendance = attendances.length > 0;
+      const effectivePresentDays = hasAttendance
+        ? presentDays
+        : totalCalendarDays;
+      const effectiveWorkDays = hasAttendance
+        ? (presentDays + leaveDays + sickDays + missionDays + holidayDays)
+        : totalCalendarDays;
+
+      const baseSalaryEmp = Number(emp.baseSalary) || 0;
+      const housingEmp = Number(emp.housingAllow) || 0;
+      const foodEmp = Number(emp.foodAllow) || 0;
+      const childEmp = Number(emp.childAllow) || 0;
+      const otherEmp = Number(emp.otherAllow) || 0;
+      const dailyWageEmp = Number(emp.dailyWage) || 0;
+      const hourlyWageEmp = Number(emp.hourlyWage) || 0;
+
+      const ratio = totalCalendarDays > 0 ? effectiveWorkDays / totalCalendarDays : 1;
+      const hourlyRateFromMonthly = baseSalaryEmp / 220;
+
+      let baseSalary = 0, housingAllow = 0, foodAllow = 0, childAllow = 0, otherAllow = 0;
+      let overtimeAmount = 0, holidayAmount = 0;
+
+      const empType = String(emp.employeeType || 'FULL_TIME').toUpperCase();
+
+      if (empType === 'CONTRACTOR') {
+        // پیمانکار مستقل — خارج از حقوق
+        continue;
+      } else if (empType === 'HOURLY') {
+        baseSalary = hourlyWageEmp * totalRegularHours;
+        overtimeAmount = hourlyWageEmp * 1.4 * totalOvertimeHours;
+      } else if (empType === 'DAILY_WAGE') {
+        baseSalary = dailyWageEmp * effectivePresentDays;
+        overtimeAmount = (dailyWageEmp / 8) * 1.4 * totalOvertimeHours;
+      } else {
+        // FULL_TIME / PART_TIME
+        baseSalary = baseSalaryEmp * ratio;
+        housingAllow = housingEmp * ratio;
+        foodAllow = foodEmp * ratio;
+        childAllow = childEmp; // ثابت طبق قانون کار
+        otherAllow = otherEmp * ratio;
+        overtimeAmount = hourlyRateFromMonthly * 1.4 * totalOvertimeHours;
+        holidayAmount = hourlyRateFromMonthly * 2 * totalHolidayHours;
+      }
+
+      const grossSalary =
+        baseSalary + housingAllow + foodAllow + childAllow + otherAllow + overtimeAmount + holidayAmount;
+
+      // بیمه ۷٪ سهم کارگر
+      const insuranceAmount = (grossSalary * 7) / 100;
+
+      // مالیات طبق جدول
+      let taxAmount = 0;
+      let taxPercent = 0;
+      if (taxSetting && Array.isArray(taxSetting.brackets) && taxSetting.brackets.length > 0) {
+        const monthlyExempt = Number(taxSetting.monthlyExemption) || 0;
+        let remaining = Math.max(0, grossSalary - monthlyExempt);
+        for (const br of taxSetting.brackets) {
+          if (remaining <= 0) break;
+          const from = Number(br.fromAmount) || 0;
+          const to = br.toAmount != null ? Number(br.toAmount) : Infinity;
+          const span = Math.max(0, to - from);
+          const portion = Math.min(remaining, span);
+          if (portion > 0) {
+            taxAmount += portion * (Number(br.ratePercent) || 0) / 100;
+            remaining -= portion;
+          }
+        }
+        taxPercent = grossSalary > 0 ? Math.round((taxAmount / grossSalary) * 10000) / 100 : 0;
+      }
+
+      // مساعده‌های پرداخت‌نشده
+      const advances = await this.prisma.advanceRequest.aggregate({
+        where: {
+          employeeId: emp.partnerId,
+          status: { in: ['APPROVED', 'PAID'] },
+          settledAt: null,
+        },
+        _sum: { amount: true },
+      });
+      const advanceAmount = Number(advances._sum.amount) || 0;
+
+      const totalDeductions = insuranceAmount + taxAmount + advanceAmount;
+      const netSalary = grossSalary - totalDeductions;
+
+      rowNumber++;
+
+      await this.prisma.payrollRecord.create({
+        data: {
+          periodId,
+          employeeId: emp.partnerId,
+          employeeProfileId: emp.id,
+          rowNumber,
+          workDays: effectivePresentDays,
+          overtimeHours: totalOvertimeHours,
+          holidayHours: totalHolidayHours,
+          absentDays,
+          leaveDays: leaveDays + sickDays + missionDays,
+          baseSalary,
+          housingAllow,
+          foodAllow,
+          childAllow,
+          otherAllow,
+          overtimeAmount,
+          holidayAmount,
+          bonusAmount: 0,
+          grossSalary,
+          insurancePercent: 7,
+          insuranceAmount,
+          taxPercent,
+          taxAmount,
+          advanceAmount,
+          absentDeduction: 0,
+          otherDeduction: 0,
+          totalDeductions,
+          netSalary,
+        },
+      });
+
+      totalGross += grossSalary;
+      totalNet += netSalary;
+      totalTax += taxAmount;
+      totalInsurance += insuranceAmount;
+      totalAdvances += advanceAmount;
+    }
+
+    return this.prisma.payrollPeriod.update({
+      where: { id: periodId },
+      data: {
+        status: 'CALCULATED',
+        calculatedAt: new Date(),
+        totalGross,
+        totalNet,
+        totalTax,
+        totalInsurance,
+        totalAdvances,
+      },
+    });
+  }
+
 }

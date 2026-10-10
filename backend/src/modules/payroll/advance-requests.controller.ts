@@ -1,16 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AdvanceRequestsService } from './advance-requests.service';
 import { CreateAdvanceRequestDto } from './dto/advance-request.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Advance Requests - مساعده')
 @ApiBearerAuth()
 @Controller('payroll/advance-requests')
 export class AdvanceRequestsController {
-  constructor(private s: AdvanceRequestsService) {}
+  constructor(private s: AdvanceRequestsService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('payroll.read')
@@ -52,4 +54,51 @@ export class AdvanceRequestsController {
   @Delete(':id')
   @RequirePermissions('payroll.delete')
   remove(@Param('id') id: string) { return this.s.remove(id); }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('payroll.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'advanceRequest',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('payroll.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'advanceRequest',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('payroll.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'advanceRequest',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

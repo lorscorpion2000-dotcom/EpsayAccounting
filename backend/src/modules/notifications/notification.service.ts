@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { startOfLocalDay } from '../../common/utils/date.util';
 
 function addDays(d: Date, n: number): Date { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function daysBetween(a: Date, b: Date): number { return Math.ceil((a.getTime() - b.getTime()) / 86400000); }
@@ -44,7 +45,7 @@ export class NotificationService {
   }
 
   async scan() {
-    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const now = startOfLocalDay();
     let created = 0, skipped = 0;
     for (const rule of this.RULES) {
       try {

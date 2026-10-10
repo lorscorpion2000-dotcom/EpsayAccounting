@@ -1,18 +1,45 @@
 import { useEffect, useState } from 'react';
+import { api } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Loader2, CheckCircle2, XCircle, AlertCircle, Inbox,
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Inbox,
   RefreshCw, User, Wallet, FolderOpen, Calendar, Hash,
   FileText, TrendingUp, TrendingDown, Eye, ShoppingCart, Layers,
-  ShoppingBag, ClipboardList,
-} from 'lucide-react';
+  ShoppingBag, ClipboardList, Edit } from 'lucide-react';
 import { PackagePlus } from 'lucide-react';
 import clsx from 'clsx';
 import { approvalsApi, PendingApproval, ApprovalStats } from '../services/approvals.api';
 import AccountPickerModal from '@/modules/petty-cash/components/AccountPickerModal';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { useAuthStore } from '@/store/auth.store';
+
+
+const SECTION_LABELS: Record<string, string> = {
+  HEADER: 'سرصفحه (اطلاعات کلی)',
+  PROGRESS: 'پیشرفت کار',
+  WORKERS: 'پرسنل و نیروی انسانی',
+  EQUIPMENTS: 'ماشین‌آلات',
+  MATERIALS: 'مصالح',
+  ENTRY_EXIT: 'ورود و خروج',
+  REQUESTS: 'درخواست‌ها',
+  EVENTS: 'رویدادها',
+  ATTACHMENTS: 'پیوست‌ها',
+};
+const SECTION_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'در انتظار',
+  APPROVED: 'تأییدشده',
+  REJECTED: 'ردشده',
+  FORWARDED: 'فوروارد شده',
+  FAILED: 'خطا',
+};
+const SECTION_STATUS_COLORS: Record<string, string> = {
+  PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
+  APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  REJECTED: 'bg-red-50 text-red-700 border-red-200',
+  FORWARDED: 'bg-blue-50 text-blue-700 border-blue-200',
+  FAILED: 'bg-red-100 text-red-800 border-red-300',
+};
+const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','ENTRY_EXIT','REQUESTS','EVENTS','ATTACHMENTS'];
 
 type Tab = 'all' | 'pettyCashTransactions' | 'pettyCashRequests' | 'purchaseRequests' | 'purchaseOrders' | 'dailyReports' | 'goodsReceipts' | 'subcontractorStatements' | 'leaveRequests' | 'advanceRequests';
 
@@ -51,6 +78,14 @@ function canSeeTab(tab: string, roles: string[]): boolean {
 
 
 export default function ApprovalsPage() {
+  const { token } = useAuthStore();
+  const withAuthToken = (url?: string | null) => {
+    if (!url) return url || '#';
+    if (!token) return url;
+    const sep = url.includes('?') ? '&' : '?';
+    return url + sep + 't=' + encodeURIComponent(token);
+  };
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingData>({
@@ -67,6 +102,14 @@ export default function ApprovalsPage() {
   const [stats, setStats] = useState<ApprovalStats | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [actionItem, setActionItem] = useState<{ item: PendingApproval; action: 'approve' | 'reject' } | null>(null);
+  const [sectionsModalItem, setSectionsModalItem] = useState<PendingApproval | null>(null);
+  const [sections, setSections] = useState<any[]>([]);
+  const [reportData, setReportData] = useState<any>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [sectionsBusy, setSectionsBusy] = useState<string | null>(null);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [sectionRejectDialog, setSectionRejectDialog] = useState<{ type: string } | null>(null);
+  const [sectionRejectReason, setSectionRejectReason] = useState('');
   const [reason, setReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const { user } = useAuthStore();
@@ -158,6 +201,347 @@ export default function ApprovalsPage() {
     tab === 'subcontractorStatements' ? pending.subcontractorStatements :
     tab === 'leaveRequests' ? pending.leaveRequests :
     pending.advanceRequests;
+  const openSectionsModal = async (item: PendingApproval) => {
+    setSectionsModalItem(item);
+    setSectionsLoading(true);
+    setSections([]);
+    setReportData(null);
+    setExpandedSection(null);
+    try {
+      const [sectionsRes, reportRes] = await Promise.all([
+        api.get('/site-ops/daily-reports/' + item.id + '/sections'),
+        api.get('/site-ops/daily-reports/' + item.id),
+      ]);
+      setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
+      setReportData(reportRes.data);
+    } catch {
+      toast.error('خطا در بارگذاری بخش‌ها');
+    } finally {
+      setSectionsLoading(false);
+    }
+  };
+
+  const reloadSections = async () => {
+    if (!sectionsModalItem) return;
+    try {
+      const { data } = await api.get('/site-ops/daily-reports/' + sectionsModalItem.id + '/sections');
+      setSections(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ }
+  };
+
+  const approveSection = async (type: string) => {
+    if (!sectionsModalItem) return;
+    setSectionsBusy(type);
+    try {
+      await api.patch('/site-ops/daily-reports/' + sectionsModalItem.id + '/sections/' + type + '/approve');
+      toast.success('بخش تایید شد');
+      await reloadSections();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در تایید بخش');
+    } finally { setSectionsBusy(null); }
+  };
+
+  const openSectionReject = (type: string) => {
+    setSectionRejectReason('');
+    setSectionRejectDialog({ type });
+  };
+
+  const confirmSectionReject = async () => {
+    if (!sectionsModalItem || !sectionRejectDialog || !sectionRejectReason.trim()) return;
+    setSectionsBusy(sectionRejectDialog.type);
+    try {
+      await api.patch(
+        '/site-ops/daily-reports/' + sectionsModalItem.id + '/sections/' + sectionRejectDialog.type + '/reject',
+        { reason: sectionRejectReason },
+      );
+      toast.success('بخش رد شد');
+      setSectionRejectDialog(null);
+      setSectionRejectReason('');
+      await reloadSections();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در رد بخش');
+    } finally { setSectionsBusy(null); }
+  };
+
+  // رندر محتوای خلاصه هر بخش
+  const renderSectionContent = (type: string) => {
+    if (!reportData) return <div className="text-xs text-slate-400 p-2">در حال بارگذاری...</div>;
+    const rd = reportData;
+
+    const row = (label: string, value: any) => (
+      <div key={label} className="flex gap-2 py-1 border-b border-slate-100 last:border-0">
+        <span className="text-xs text-slate-500 w-32 shrink-0">{label}:</span>
+        <span className="text-xs text-slate-800 flex-1">{value ?? '—'}</span>
+      </div>
+    );
+
+    if (type === 'HEADER') {
+      return (
+        <div className="bg-slate-50 rounded-lg p-3">
+          {row('پروژه', rd.project?.name)}
+          {row('کد پروژه', rd.project?.code)}
+          {row('تاریخ گزارش', rd.reportDate ? formatJalaliDate(rd.reportDate) : '—')}
+          {row('وضعیت جوی', rd.weather || '—')}
+          {row('دمای حداقل', rd.tempMin != null ? rd.tempMin + '°' : '—')}
+          {row('دمای حداکثر', rd.tempMax != null ? rd.tempMax + '°' : '—')}
+          {row('ساعت شروع', rd.startTime || '—')}
+          {row('ساعت پایان', rd.endTime || '—')}
+          {row('عملیات', rd.operations)}
+          {row('مسائل', rd.issues)}
+          {row('حوادث', rd.incidents)}
+        </div>
+      );
+    }
+
+    if (type === 'WORKERS') {
+      const items = rd.workers || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-right">تیم</th>
+                <th className="p-1.5 text-right">سرپرست</th>
+                <th className="p-1.5 text-center">تعداد</th>
+                <th className="p-1.5 text-center">ساعت</th>
+                <th className="p-1.5 text-center">اضافه‌کار</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((w: any, i: number) => (
+                <tr key={w.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-right">{w.teamName || '—'}</td>
+                  <td className="p-1.5 text-right">{w.foreman || '—'}</td>
+                  <td className="p-1.5 text-center num">{w.workerCount}</td>
+                  <td className="p-1.5 text-center num">{w.workHours}</td>
+                  <td className="p-1.5 text-center num">{w.overtime}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'EQUIPMENTS') {
+      const items = rd.equipments || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-right">نام</th>
+                <th className="p-1.5 text-right">پلاک</th>
+                <th className="p-1.5 text-right">اپراتور</th>
+                <th className="p-1.5 text-center">ساعت</th>
+                <th className="p-1.5 text-center">سوخت</th>
+                <th className="p-1.5 text-center">وضعیت</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((e: any, i: number) => (
+                <tr key={e.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-right">{e.name || '—'}</td>
+                  <td className="p-1.5 text-right num" dir="ltr">{e.plateNumber || '—'}</td>
+                  <td className="p-1.5 text-right">{e.operator || '—'}</td>
+                  <td className="p-1.5 text-center num">{e.hoursWorked}</td>
+                  <td className="p-1.5 text-center num">{e.fuelLiters}</td>
+                  <td className="p-1.5 text-center text-[10px]">{e.status || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'MATERIALS') {
+      const items = rd.materials || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-right">نام کالا</th>
+                <th className="p-1.5 text-center">مقدار</th>
+                <th className="p-1.5 text-center">واحد</th>
+                <th className="p-1.5 text-right">تأمین‌کننده</th>
+                <th className="p-1.5 text-center">قبول/رد</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((m: any, i: number) => (
+                <tr key={m.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-right">{m.itemName || '—'}</td>
+                  <td className="p-1.5 text-center num">{m.quantity}</td>
+                  <td className="p-1.5 text-center">{m.unit || '—'}</td>
+                  <td className="p-1.5 text-right">{m.supplier || '—'}</td>
+                  <td className="p-1.5 text-center">{m.qcResult || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'PROGRESS') {
+      const items = rd.progresses || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-right">شرح</th>
+                <th className="p-1.5 text-center">پیشرفت</th>
+                <th className="p-1.5 text-center">مقدار</th>
+                <th className="p-1.5 text-right">موقعیت</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((p: any, i: number) => (
+                <tr key={p.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-right">{p.description || '—'}</td>
+                  <td className="p-1.5 text-center num">{p.progressPct}%</td>
+                  <td className="p-1.5 text-center num">{p.quantity ?? '—'}</td>
+                  <td className="p-1.5 text-right">{p.location || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'ENTRY_EXIT') {
+      const items = rd.entryExits || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-center">نوع</th>
+                <th className="p-1.5 text-right">نام</th>
+                <th className="p-1.5 text-right">هدف</th>
+                <th className="p-1.5 text-center">ورود</th>
+                <th className="p-1.5 text-center">خروج</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((e: any, i: number) => (
+                <tr key={e.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-center text-[10px]">{e.kind || '—'}</td>
+                  <td className="p-1.5 text-right">{e.personName || e.driverName || '—'}</td>
+                  <td className="p-1.5 text-right">{e.purpose || e.cargo || '—'}</td>
+                  <td className="p-1.5 text-center num" dir="ltr">{e.entryTime || '—'}</td>
+                  <td className="p-1.5 text-center num" dir="ltr">{e.exitTime || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'REQUESTS') {
+      const items = rd.requests || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-center">نوع</th>
+                <th className="p-1.5 text-right">عنوان</th>
+                <th className="p-1.5 text-center">اولویت</th>
+                <th className="p-1.5 text-center">مقدار</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((r: any, i: number) => (
+                <tr key={r.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-center text-[10px]">{r.requestType || '—'}</td>
+                  <td className="p-1.5 text-right">{r.title || '—'}</td>
+                  <td className="p-1.5 text-center text-[10px]">{r.priority || '—'}</td>
+                  <td className="p-1.5 text-center num">{r.quantity ?? '—'} {r.unit || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'EVENTS') {
+      const items = rd.events || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
+      return (
+        <div className="overflow-x-auto bg-slate-50 rounded-lg">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="p-1.5 text-right">#</th>
+                <th className="p-1.5 text-center">نوع</th>
+                <th className="p-1.5 text-right">عنوان</th>
+                <th className="p-1.5 text-center">شروع</th>
+                <th className="p-1.5 text-center">پایان</th>
+                <th className="p-1.5 text-center">شدت</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((e: any, i: number) => (
+                <tr key={e.id || i} className="border-t">
+                  <td className="p-1.5 text-right num">{i + 1}</td>
+                  <td className="p-1.5 text-center text-[10px]">{e.eventType || '—'}</td>
+                  <td className="p-1.5 text-right">{e.title || '—'}</td>
+                  <td className="p-1.5 text-center num" dir="ltr">{e.startTime || '—'}</td>
+                  <td className="p-1.5 text-center num" dir="ltr">{e.endTime || '—'}</td>
+                  <td className="p-1.5 text-center text-[10px]">{e.severity || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (type === 'ATTACHMENTS') {
+      const items = rd.attachments || [];
+      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">پیوستی وجود ندارد</div>;
+      return (
+        <div className="bg-slate-50 rounded-lg p-2 space-y-1">
+          {items.map((a: any, i: number) => (
+            <div key={a.id || i} className="text-xs flex items-center gap-2">
+              <span className="text-slate-400">📎</span>
+              <a href={withAuthToken(a.fileUrl || a.url)} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                {a.title || a.filename || 'پیوست ' + (i + 1)}
+              </a>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return <div className="text-xs text-slate-400 p-2">محتوای این بخش قابل نمایش نیست</div>;
+  };
+
   const handleAction = async () => {
     if (!actionItem) return;
     setActionLoading(true);
@@ -395,7 +779,7 @@ export default function ApprovalsPage() {
                 } else if (item.module === 'purchase-order') {
                   navigate('/procurement/orders/' + item.id);
                 } else if (item.module === 'daily-report') {
-                  navigate('/site-ops/daily-reports/' + item.id);
+                  openSectionsModal(item);
                 } else if (item.module === 'goods-receipt') {
                   navigate('/warehouse/receipts/' + item.id);
                 } else if (item.module === 'subcontractor-statement') {
@@ -404,6 +788,131 @@ export default function ApprovalsPage() {
               }}
             />
           ))}
+        </div>
+      )}
+
+      {sectionsModalItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  تأیید بخش‌بخش — {sectionsModalItem.title}
+                </h3>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  کد: <span className="num font-medium" dir="ltr">{sectionsModalItem.code}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => { setSectionsModalItem(null); setSections([]); }}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1">
+              {sectionsLoading ? (
+                <div className="py-12 text-center text-slate-400">در حال بارگذاری...</div>
+              ) : sections.length === 0 ? (
+                <div className="py-12 text-center text-slate-400">بخشی یافت نشد</div>
+              ) : (
+                <div className="space-y-2">
+                  {[...sections]
+                    .sort((a: any, b: any) => SECTION_ORDER.indexOf(a.sectionType) - SECTION_ORDER.indexOf(b.sectionType))
+                    .map((s: any) => {
+                      const isExpanded = expandedSection === s.sectionType;
+                      return (
+                        <div key={s.id || s.sectionType} className="border rounded-lg overflow-hidden">
+                          <div
+                            className="p-3 flex items-center gap-3 flex-wrap cursor-pointer hover:bg-slate-50"
+                            onClick={() => setExpandedSection(isExpanded ? null : s.sectionType)}
+                          >
+                            <div className="flex-1 min-w-[180px]">
+                              <div className="font-medium text-slate-800 flex items-center gap-2">
+                                <span className={clsx('text-slate-400 transition-transform', isExpanded ? 'rotate-90' : '')}>▶</span>
+                                {SECTION_LABELS[s.sectionType] || s.sectionType}
+                              </div>
+                              {s.rejectedReason && (
+                                <div className="text-xs text-red-600 mt-1 pr-5">دلیل رد: {s.rejectedReason}</div>
+                              )}
+                            </div>
+                            <span className={clsx('text-xs px-2 py-1 rounded border', SECTION_STATUS_COLORS[s.status] || 'bg-slate-100')}>
+                              {SECTION_STATUS_LABELS[s.status] || s.status}
+                            </span>
+                            {(s.status === 'PENDING' || s.status === 'REJECTED') && (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => approveSection(s.sectionType)}
+                                  disabled={sectionsBusy === s.sectionType}
+                                  className="btn-primary text-xs px-3 py-1"
+                                >
+                                  {sectionsBusy === s.sectionType ? '...' : 'تأیید'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openSectionReject(s.sectionType)}
+                                  disabled={sectionsBusy === s.sectionType}
+                                  className="btn-danger text-xs px-3 py-1"
+                                >
+                                  رد
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {isExpanded && (
+                            <div className="p-3 pt-0 border-t bg-white">
+                              {renderSectionContent(s.sectionType)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t bg-slate-50 flex items-center justify-between">
+              <div className="text-xs text-slate-500">
+                ℹ️ پس از تایید همه بخش‌ها، گزارش خودکار تایید می‌شود
+              </div>
+              <button
+                onClick={() => { setSectionsModalItem(null); setSections([]); }}
+                className="btn-secondary"
+              >
+                بستن
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sectionRejectDialog && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-3">
+              رد بخش «{SECTION_LABELS[sectionRejectDialog.type] || sectionRejectDialog.type}»
+            </h3>
+            <textarea
+              rows={3}
+              value={sectionRejectReason}
+              onChange={(e) => setSectionRejectReason(e.target.value)}
+              placeholder="دلیل رد بخش..."
+              className="input w-full resize-none"
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button onClick={() => setSectionRejectDialog(null)} className="btn-secondary">انصراف</button>
+              <button
+                onClick={confirmSectionReject}
+                disabled={!sectionRejectReason.trim() || !!sectionsBusy}
+                className="btn-danger"
+              >
+                رد بخش
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -550,7 +1059,7 @@ function TabButton({ active, onClick, label, count }: any) {
   );
 }
 
-function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay}: any) {
+function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay, onEdit }: any) {
   const isTransaction = item.module === 'petty-cash-transaction';
   const isRequest = item.module === 'petty-cash-request';
   const isPurchase = item.module === 'purchase-request';
@@ -655,30 +1164,52 @@ function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay}: any) {
                 مشاهده
               </button>
             )}
-            <button
-              onClick={onReject}
-              className="btn-secondary text-sm py-1.5 px-3 text-red-600 hover:bg-red-50 hover:border-red-200"
-            >
-              <XCircle className="w-4 h-4" />
-              رد
-            </button>
-            {item.module === 'petty-cash-request' && item.status === 'APPROVED' && (
+            {isDailyReport && item.status === 'REJECTED' && (
               <button
-                onClick={onPay}
-                className="btn-primary text-sm py-1.5 px-4 bg-amber-600 hover:bg-amber-700"
-                title="پرداخت و شارژ تنخواه"
+                onClick={onEdit}
+                className="btn-primary text-sm py-1.5 px-4"
               >
-                <Wallet className="w-4 h-4" />
-                پرداخت
+                <Edit className="w-4 h-4" />
+                اصلاح و ارسال
               </button>
             )}
-            <button
-              onClick={onApprove}
-              className="btn-primary text-sm py-1.5 px-4"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              تایید
-            </button>
+            {isDailyReport && item.status !== 'REJECTED' && (
+              <button
+                onClick={onNavigate}
+                className="btn-primary text-sm py-1.5 px-4"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                بررسی بخش‌ها
+              </button>
+            )}
+            {!isDailyReport && (
+              <>
+                <button
+                  onClick={onReject}
+                  className="btn-secondary text-sm py-1.5 px-3 text-red-600 hover:bg-red-50 hover:border-red-200"
+                >
+                  <XCircle className="w-4 h-4" />
+                  رد
+                </button>
+                {item.module === 'petty-cash-request' && item.status === 'APPROVED' && (
+                  <button
+                    onClick={onPay}
+                    className="btn-primary text-sm py-1.5 px-4 bg-amber-600 hover:bg-amber-700"
+                    title="پرداخت و شارژ تنخواه"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    پرداخت
+                  </button>
+                )}
+                <button
+                  onClick={onApprove}
+                  className="btn-primary text-sm py-1.5 px-4"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  تایید
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

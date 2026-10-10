@@ -6,6 +6,7 @@ import { payrollApi } from '../services/payroll.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Employee, LeaveType } from '@/types/payroll';
 import { LEAVE_TYPE_LABELS } from '@/types/payroll';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -23,8 +24,8 @@ export default function LeaveFormModal({ isOpen, employees, onClose, onSaved }: 
     if (!isOpen) return;
     reset({
       employeeId: '', leaveType: 'ANNUAL',
-      startDate: new Date().toISOString().slice(0, 10),
-      endDate: new Date().toISOString().slice(0, 10),
+      startDate: todayLocalISO(),
+      endDate: todayLocalISO(),
       days: 1, reason: '',
     });
   }, [isOpen, reset]);

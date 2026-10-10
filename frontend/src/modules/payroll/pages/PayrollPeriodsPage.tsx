@@ -9,6 +9,7 @@ import { PERIOD_STATUS_LABELS, PERIOD_STATUS_COLORS } from '@/types/payroll';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import PayrollPeriodFormModal from '../components/PayrollPeriodFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function PayrollPeriodsPage() {
   const navigate = useNavigate();
@@ -76,7 +77,7 @@ export default function PayrollPeriodsPage() {
           <p className="text-sm text-slate-500 mt-1">مدیریت دوره‌های ماهانه حقوق و دستمزد</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
+                        <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
           <button className="btn-primary" onClick={() => setShowModal(true)}>
             <Plus className="w-4 h-4" /> دوره جدید
           </button>
@@ -137,6 +138,12 @@ export default function PayrollPeriodsPage() {
               </div>
 
               <div className="flex items-center gap-1 mt-4 pt-3 border-t border-slate-100">
+                <AdminDeleteButton
+                  endpoint="/payroll/periods"
+                  id={p.id}
+                  itemLabel={p.code || p.title}
+                  onSuccess={load}
+                />
                 <button onClick={() => navigate('/payroll/periods/' + p.id)} className="btn-secondary text-xs py-1.5 px-3 flex-1">
                   <Eye className="w-3.5 h-3.5" /> مشاهده
                 </button>

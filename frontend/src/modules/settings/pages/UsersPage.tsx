@@ -4,6 +4,7 @@ import { Plus, Loader2, Shield, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { usersApi, SystemUser } from '../services/users.api';
 import UserFormModal from '../components/UserFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<SystemUser[]>([]);
@@ -125,6 +126,12 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/users"
+                          id={u.id}
+                          itemLabel={(u as any).code || (u as any).name || (u as any).title || (u as any).fullName || (u as any).username || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => { setEditing(u); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"

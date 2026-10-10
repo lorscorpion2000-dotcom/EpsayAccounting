@@ -9,11 +9,12 @@ import PrintButton from '@/components/PrintButton';
 import PrintHeader from '@/components/PrintHeader';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function ARAgingPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [asOfDate, setAsOfDate] = useState<string>(todayLocalISO());
   const [fiscalYearId, setFiscalYearId] = useState('');
   const [fiscalYears, setFiscalYears] = useState<any[]>([]);
 

@@ -11,6 +11,7 @@ import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Partner, Project } from '@/types/project';
 import { formatNumber, toPersianDigits } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 const WORKER_KINDS = ['WORKER_EMPLOYMENT'];
 
@@ -32,8 +33,8 @@ export default function WorkerStatementFormPage() {
   const [contractId, setContractId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [statementNumber, setStatementNumber] = useState(1);
-  const [periodStart, setPeriodStart] = useState(new Date().toISOString().slice(0, 10));
-  const [periodEnd, setPeriodEnd] = useState(new Date().toISOString().slice(0, 10));
+  const [periodStart, setPeriodStart] = useState(todayLocalISO());
+  const [periodEnd, setPeriodEnd] = useState(todayLocalISO());
   const [description, setDescription] = useState('');
   const [insurancePercent, setInsurancePercent] = useState(7);
 

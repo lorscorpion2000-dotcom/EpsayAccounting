@@ -41,6 +41,7 @@ export class CreateEmployeeDto {
   @ApiPropertyOptional() @IsOptional() @IsString() education?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() projectId?: string;
 
   // Partner fields
   @IsOptional() @IsString() fatherName?: string;

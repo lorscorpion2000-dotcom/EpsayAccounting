@@ -168,7 +168,7 @@ export default function AdjustmentsListPage() {
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <AdminDeleteButton endpoint="/adjustments" id={it.id} itemLabel={it.code || it.id} onSuccess={load} />
+                        <AdminDeleteButton endpoint="/adjustments" id={it.id} itemLabel={(it as any).code || (it as any).id} onSuccess={load} />
                         {it.status === 'DRAFT' && (
                           <>
                             <button onClick={() => doAction(it, 'confirm')}

@@ -1,16 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SalesInvoicesService } from './sales-invoices.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Sales Invoices - فاکتور فروش')
 @ApiBearerAuth()
 @Controller('sales-invoices')
 export class SalesInvoicesController {
-  constructor(private service: SalesInvoicesService) {}
+  constructor(private service: SalesInvoicesService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('accounting.read')
@@ -46,4 +48,57 @@ export class SalesInvoicesController {
   approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.service.approve(id, userId);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('sales.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'salesInvoice',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('sales.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'salesInvoice',
+      id,
+      user,
+      meta: {
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+      },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('sales.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'salesInvoice',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

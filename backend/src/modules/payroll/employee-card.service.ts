@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { endOfLocalDay } from '../../common/utils/date.util';
+import { toLocalDateString } from '../../common/utils/date.util';
 
 const PERSIAN_MONTHS = [
   'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
@@ -111,7 +113,7 @@ export class EmployeeCardService {
 
       days.push({
         day: d,
-        date: date.toISOString().slice(0, 10),
+        date: toLocalDateString(date),
         dayOfWeek: dow,
         dayOfWeekName: this.getDayOfWeekName(dow),
         isHoliday,
@@ -143,8 +145,8 @@ export class EmployeeCardService {
         year,
         month,
         monthName: PERSIAN_MONTHS[month - 1] || month,
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
+        startDate: toLocalDateString(startDate),
+        endDate: toLocalDateString(endDate),
       },
       days,
       totals: {
@@ -177,8 +179,7 @@ export class EmployeeCardService {
     const days = this.getDaysInMonth(year, month);
     const end = new Date(start);
     end.setDate(end.getDate() + days - 1);
-    end.setHours(23, 59, 59, 999);
-    return end;
+    return endOfLocalDay(end);
   }
 
   private getDaysInMonth(year: number, month: number): number {

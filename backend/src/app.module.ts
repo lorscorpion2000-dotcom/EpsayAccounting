@@ -42,6 +42,7 @@ import { AdjustmentModule } from './modules/adjustment/adjustment.module';
 import { TaxReportsModule } from './modules/tax-reports/tax-reports.module';
 import { OperationalReportsModule } from './modules/operational-reports/operational-reports.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { CommonModule } from './common/common.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { HealthController } from './common/health/health.controller';
@@ -51,6 +52,7 @@ import { HealthController } from './common/health/health.controller';
     ThrottlerModule.forRoot([
       { ttl: 60_000, limit: 1000 },
     ]),
+    CommonModule,
     UnitsModule,
     RecycleBinModule,
     NotificationModule,

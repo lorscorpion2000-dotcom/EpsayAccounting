@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
 
@@ -53,6 +53,35 @@ export class DailyReportSectionsService {
   }
 
   /** لیست بخش‌های یک گزارش */
+  /** بازمحاسبه وضعیت کلی گزارش بر اساس وضعیت بخش‌ها */
+  private async syncReportStatus(reportId: string) {
+    const sections = await this.prisma.dailyReportSection.findMany({
+      where: { reportId },
+    });
+    const allApprovedOrForwarded = sections.every(
+      (s) => s.status === 'APPROVED' || s.status === 'FORWARDED',
+    );
+    const anyRejected = sections.some((s) => s.status === 'REJECTED');
+    const anyPending = sections.some((s) => s.status === 'PENDING');
+
+    let newStatus: string | null = null;
+
+    if (allApprovedOrForwarded) {
+      newStatus = 'APPROVED';
+    } else if (anyRejected && !anyPending) {
+      newStatus = 'REJECTED';
+    } else if (anyRejected || anyPending) {
+      newStatus = 'SUBMITTED';
+    }
+
+    if (newStatus) {
+      await this.prisma.dailyReport.update({
+        where: { id: reportId },
+        data: { status: newStatus as any },
+      });
+    }
+  }
+
   async list(reportId: string) {
     await this.ensureReport(reportId);
     await this.initSections(reportId);
@@ -69,6 +98,7 @@ export class DailyReportSectionsService {
   /** تأیید یک بخش */
   async approve(reportId: string, sectionType: string, userId: string) {
     await this.ensureReport(reportId);
+    await this.assertNotSelfApprove(reportId, userId);
     const type = this.normalizeType(sectionType);
 
     const section = await this.prisma.dailyReportSection.findUnique({
@@ -106,6 +136,9 @@ export class DailyReportSectionsService {
       forward = { success: 0, failed: 0, error: e?.message || 'forward failed' };
     }
 
+    // بازمحاسبه وضعیت کلی گزارش
+    await this.syncReportStatus(reportId);
+
     return { ...updated, forward };
   }
 
@@ -124,7 +157,7 @@ export class DailyReportSectionsService {
       throw new BadRequestException('بخش فوروارد شده قابل رد نیست — گزارش اصلاحی بسازید');
     }
 
-    return this.prisma.dailyReportSection.update({
+    const rejected = await this.prisma.dailyReportSection.update({
       where: { id: s.id },
       data: {
         status: 'REJECTED' as any,
@@ -133,6 +166,11 @@ export class DailyReportSectionsService {
         approvedAt: null,
       },
     });
+
+    // بازمحاسبه وضعیت کلی گزارش
+    await this.syncReportStatus(reportId);
+
+    return rejected;
   }
 
   /** خلاصه وضعیت بخش‌ها (برای UI) */
@@ -164,6 +202,40 @@ export class DailyReportSectionsService {
     const r = await this.prisma.dailyReport.findUnique({ where: { id: reportId } });
     if (!r) throw new NotFoundException('گزارش روزانه یافت نشد');
     return r;
+  }
+
+
+  /**
+   * F2 — تأییدکننده ≠ ثبت‌کننده
+   * اگر کاربر ثبت‌کننده گزارش باشد اجازه تأیید ندارد، مگر super_admin با ثبت در AuditLog.
+   */
+  private async assertNotSelfApprove(reportId: string, userId: string) {
+    const report = await this.prisma.dailyReport.findUnique({
+      where: { id: reportId },
+      select: { createdById: true },
+    });
+    if (!report) throw new NotFoundException('گزارش یافت نشد');
+    if (!report.createdById || report.createdById !== userId) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: { include: { role: true } } },
+    });
+    const isSuperAdmin = !!user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+
+    if (!isSuperAdmin) {
+      throw new ForbiddenException('شما ثبت‌کننده این گزارش هستید و نمی‌توانید آن را تأیید کنید');
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'SELF_APPROVE_REPORT',
+        entity: 'DailyReport',
+        entityId: reportId,
+        payload: { override: 'super_admin' } as any,
+      },
+    });
   }
 
   private normalizeType(t: string): SectionType {

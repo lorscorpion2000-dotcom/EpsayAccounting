@@ -20,3 +20,29 @@ export class CreateAttendanceDto {
   @ApiPropertyOptional({ enum: AttendanceStatusDto2 }) @IsOptional() @IsEnum(AttendanceStatusDto2) status?: AttendanceStatusDto2;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
 }
+
+// ═══════════════════════════════════════════════════════════
+// DTO های گرید ماهانه حضور و غیاب
+// ═══════════════════════════════════════════════════════════
+export class GridQueryDto {
+  @ApiProperty() @IsNumber() year!: number;
+  @ApiProperty() @IsNumber() month!: number;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() projectId?: string;
+}
+
+export class BulkAttendanceItemDto {
+  @ApiProperty() @IsUUID() employeeId!: string;
+  @ApiProperty() @IsDateString() attendanceDate!: string;
+  @ApiPropertyOptional({ enum: AttendanceStatusDto2 })
+  @IsOptional() @IsEnum(AttendanceStatusDto2) status?: AttendanceStatusDto2;
+  @ApiPropertyOptional() @IsOptional() @IsString() checkIn?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() checkOut?: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) workHours?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) overtimeHours?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+}
+
+export class BulkAttendanceDto {
+  @ApiPropertyOptional() @IsOptional() @IsUUID() projectId?: string;
+  @ApiProperty({ type: [BulkAttendanceItemDto] }) items!: BulkAttendanceItemDto[];
+}

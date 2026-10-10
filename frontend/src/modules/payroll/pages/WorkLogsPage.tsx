@@ -11,6 +11,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 export default function WorkLogsPage() {
   const [items, setItems] = useState<WorkLog[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -75,7 +77,7 @@ export default function WorkLogsPage() {
       'وضعیت': ATTENDANCE_LABELS[w.status],
     }));
     void exportToExcel({
-      filename: 'WorkLogs-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'WorkLogs-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'WorkLogs',
         rows,
@@ -164,6 +166,12 @@ export default function WorkLogsPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/payroll/work-logs"
+                          id={w.id}
+                          itemLabel={(w as any).code || (w as any).name || (w as any).title || (w as any).fullName || (w as any).username || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => { setEditing(w); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                           <Edit className="w-4 h-4" />
                         </button>

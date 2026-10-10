@@ -8,7 +8,7 @@ import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS } from '@/types/warehouse';
 import { toPersianDigits } from '@/utils/format';
 import CategoryFormModal from '../components/CategoryFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function CategoriesPage() {
   const [items, setItems] = useState<ItemCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +111,12 @@ export default function CategoriesPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/warehouse/categories"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || (c as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => { setEditing(c); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"

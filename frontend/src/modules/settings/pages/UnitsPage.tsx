@@ -9,6 +9,7 @@ import { invalidateUnitsCache } from '@/hooks/useUnits';
 import { toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import UnitFormModal from '../components/UnitFormModal';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function UnitsPage() {
   const [items, setItems] = useState<Unit[]>([]);
@@ -145,6 +146,12 @@ export default function UnitsPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/units"
+                          id={u.id}
+                          itemLabel={(u as any).code || (u as any).name || (u as any).title || (u as any).fullName || (u as any).username || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => { setEditing(u); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"

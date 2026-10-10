@@ -7,6 +7,7 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { api } from '@/services/api';
 import type { CapitalAccount, Contribution } from '../services/partner-capital.api';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -48,7 +49,7 @@ export default function ContributionFormModal({ isOpen, editing, onClose, onSave
     defaultValues: {
       type: 'CASH',
       category: 'CASH_DEPOSIT',
-      contributionDate: new Date().toISOString().slice(0, 10),
+      contributionDate: todayLocalISO(),
     },
   });
 
@@ -81,7 +82,7 @@ export default function ContributionFormModal({ isOpen, editing, onClose, onSave
         type: 'CASH',
         category: 'CASH_DEPOSIT',
         amount: 0,
-        contributionDate: new Date().toISOString().slice(0, 10),
+        contributionDate: todayLocalISO(),
         description: '',
         valuationNotes: '',
         referenceCode: '',

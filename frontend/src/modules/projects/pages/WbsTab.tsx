@@ -14,6 +14,7 @@ import WbsNodeModal from '../components/WbsNodeModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function WbsTab() {
   const { project } = useOutletContext<{ project: Project }>();
   const [tree, setTree] = useState<WbsItem[]>([]);
@@ -100,7 +101,7 @@ export default function WbsTab() {
     flatten(tree, 0);
 
     void exportToExcel({
-      filename: `WBS-${project.code}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `WBS-${project.code}-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'WBS',
         rows,

@@ -13,7 +13,7 @@ import {
 } from '../services/fixed-assets.api';
 import { accountsLookupApi, type AccountOption } from '../services/accounts-lookup.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 interface ProjectRef { id: string; code: string; name: string; }
 interface CostCenterRef { id: string; code: string; name: string; }
 
@@ -262,7 +262,13 @@ export default function FixedAssetsPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1">
-                    {a.status === 'ACTIVE' && (
+                        <AdminDeleteButton
+                          endpoint="/fixed-assets"
+                          id={a.id}
+                          itemLabel={(a as any).code || (a as any).name || (a as any).title || (a as any).fullName || (a as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
+                        {a.status === 'ACTIVE' && (
                       <>
                         <button
                           onClick={() => setDisposeTarget(a)}

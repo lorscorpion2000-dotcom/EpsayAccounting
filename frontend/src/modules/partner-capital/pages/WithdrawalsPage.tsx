@@ -11,6 +11,7 @@ import WithdrawalFormModal from '../components/WithdrawalFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس', SUBMITTED: 'ارسال‌شده', APPROVED: 'تاییدشده',
   PAID: 'پرداخت‌شده', CANCELLED: 'لغو‌شده',
@@ -72,7 +73,7 @@ export default function WithdrawalsPage() {
       'وضعیت': STATUS_LABELS[w.status], 'دلیل': w.reason || '',
     }));
     void exportToExcel({
-      filename: 'Withdrawals-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Withdrawals-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Withdrawals',
         rows,

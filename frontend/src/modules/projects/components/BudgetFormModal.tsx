@@ -7,6 +7,7 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { WbsItem, ProjectBudget } from '@/types/project';
 import { WBS_LEVEL_LABELS } from '@/types/project';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export default function BudgetFormModal({
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       isLocked: false,
-      approvedAt: new Date().toISOString().slice(0, 10),
+      approvedAt: todayLocalISO(),
     },
   });
 
@@ -90,7 +91,7 @@ export default function BudgetFormModal({
       reset({
         wbsItemId: undefined,
         amount: 0,
-        approvedAt: new Date().toISOString().slice(0, 10),
+        approvedAt: todayLocalISO(),
         isLocked: false,
         description: undefined,
       });
@@ -105,7 +106,7 @@ export default function BudgetFormModal({
         projectId,
         wbsItemId: data.wbsItemId || undefined,
         amount: Number(data.amount),
-        approvedAt: data.approvedAt || new Date().toISOString().slice(0, 10),
+        approvedAt: data.approvedAt || todayLocalISO(),
         isLocked: data.isLocked ?? false,
         description: data.description || undefined,
       };

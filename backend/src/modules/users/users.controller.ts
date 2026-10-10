@@ -1,17 +1,17 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Users - کاربران')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private users: UsersService) {}
+  constructor(private users: UsersService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('settings.read')
@@ -42,4 +42,51 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.users.remove(id);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('users.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'user',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('users.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'user',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('users.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'user',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

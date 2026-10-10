@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as jalaali from 'jalaali-js';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateAttendanceDto } from './dto/attendance.dto';
 
@@ -163,6 +164,196 @@ export class AttendanceService {
     // For hard delete by admin — soft delete first then optionally purge
     // For safety we only do soft delete by default; uncomment hard delete below if needed
     return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  }
+
+
+  // ═══════════════════════════════════════════════════════════
+  // گرید ماهانه: دریافت داده‌های یک ماه شمسی کامل
+  // ═══════════════════════════════════════════════════════════
+  async getGrid(year: number, month: number, projectId?: string) {
+    if (!year || !month || month < 1 || month > 12) {
+      throw new BadRequestException('سال و ماه شمسی معتبر وارد کنید');
+    }
+
+    // تبدیل شمسی به میلادی
+    const { gy, gm, gd } = jalaali.toGregorian(year, month, 1);
+    const startGregorian = new Date(Date.UTC(gy, gm - 1, gd));
+
+    // تعداد روزهای ماه شمسی
+    const daysInMonth = jalaali.jalaaliMonthLength(year, month);
+
+    // روز آخر
+    const { gy: gy2, gm: gm2, gd: gd2 } = jalaali.toGregorian(year, month, daysInMonth);
+    const endGregorian = new Date(Date.UTC(gy2, gm2 - 1, gd2, 23, 59, 59));
+
+    // لیست روزها با weekday
+    const days: Array<{ jalali: number; gregorian: string; weekday: number }> = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const { gy: gyy, gm: gmm, gd: gdd } = jalaali.toGregorian(year, month, d);
+      const dt = new Date(Date.UTC(gyy, gmm - 1, gdd));
+      const dateStr = dt.toISOString().slice(0, 10);
+      // weekday: 0=Sat (شنبه) ... 6=Fri (جمعه)
+      // JS: 0=Sun ... 6=Sat → تبدیل
+      const jsDay = dt.getUTCDay();
+      const faWeekday = (jsDay + 1) % 7; // 0=شنبه
+      days.push({ jalali: d, gregorian: dateStr, weekday: faWeekday });
+    }
+
+    // لیست پرسنل
+    const where: any = { isActive: true };
+    if (projectId) where.projectId = projectId;
+
+    const profiles = await (this.prisma as any).employeeProfile.findMany({
+      where,
+      include: {
+        partner: { select: { id: true, name: true, code: true } },
+        project: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { employeeCode: 'asc' },
+    });
+
+    // لیست partnerId ها
+    const partnerIds = profiles.map((p: any) => p.partnerId);
+
+    // attendance ها در بازه
+    const attendances = await this.prisma.attendance.findMany({
+      where: {
+        employeeId: { in: partnerIds },
+        attendanceDate: {
+          gte: startGregorian,
+          lte: endGregorian,
+        },
+        deletedAt: null,
+      } as any,
+    });
+
+    // گروه‌بندی attendance بر اساس employeeId
+    const byEmployee = new Map<string, Map<string, any>>();
+    for (const a of attendances) {
+      const dateKey = new Date(a.attendanceDate).toISOString().slice(0, 10);
+      if (!byEmployee.has(a.employeeId)) byEmployee.set(a.employeeId, new Map());
+      byEmployee.get(a.employeeId)!.set(dateKey, a);
+    }
+
+    // ساخت نتیجه
+    const employees = profiles.map((p: any) => {
+      const aMap = byEmployee.get(p.partnerId) || new Map();
+      const daysData = days.map((d) => {
+        const rec = aMap.get(d.gregorian);
+        return {
+          day: d.jalali,
+          gregorian: d.gregorian,
+          status: rec?.status || null,
+          checkIn: rec?.checkIn || null,
+          checkOut: rec?.checkOut || null,
+          workHours: rec ? Number(rec.workHours) : 0,
+          overtimeHours: rec ? Number(rec.overtimeHours) : 0,
+          notes: rec?.notes || null,
+        };
+      });
+
+      const totalWork = daysData.reduce((s, x) => s + x.workHours, 0);
+      const totalOT = daysData.reduce((s, x) => s + x.overtimeHours, 0);
+      const presentDays = daysData.filter((d) => d.status === 'PRESENT').length;
+
+      return {
+        profileId: p.id,
+        partnerId: p.partnerId,
+        employeeCode: p.employeeCode,
+        name: p.partner?.name || '—',
+        position: p.position || '—',
+        employeeType: p.employeeType,
+        projectId: p.projectId,
+        projectName: p.project?.name || null,
+        days: daysData,
+        totals: {
+          present: presentDays,
+          workHours: totalWork,
+          overtimeHours: totalOT,
+        },
+      };
+    });
+
+    return {
+      year,
+      month,
+      daysInMonth,
+      gregorianStart: startGregorian.toISOString().slice(0, 10),
+      gregorianEnd: endGregorian.toISOString().slice(0, 10),
+      days,
+      employees,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ذخیره جمعی
+  // ═══════════════════════════════════════════════════════════
+  async bulkUpsert(items: any[], userId: string) {
+    if (!items || items.length === 0) {
+      throw new BadRequestException('هیچ آیتمی ارسال نشده');
+    }
+
+    let created = 0, updated = 0, skipped = 0;
+
+    for (const item of items) {
+      if (!item.employeeId || !item.attendanceDate) {
+        skipped++;
+        continue;
+      }
+
+      const date = new Date(item.attendanceDate);
+
+      // اگه status === null یا 'DELETE' بود → حذف
+      if (item.status === null || item.status === 'DELETE') {
+        try {
+          await this.prisma.attendance.deleteMany({
+            where: {
+              employeeId: item.employeeId,
+              attendanceDate: date,
+            },
+          });
+        } catch { /* ignore */ }
+        continue;
+      }
+
+      const existing = await this.prisma.attendance.findUnique({
+        where: {
+          employeeId_attendanceDate: {
+            employeeId: item.employeeId,
+            attendanceDate: date,
+          },
+        },
+      });
+
+      const data: any = {
+        checkIn: item.checkIn || null,
+        checkOut: item.checkOut || null,
+        workHours: item.workHours ?? 0,
+        overtimeHours: item.overtimeHours ?? 0,
+        status: item.status || 'PRESENT',
+        notes: item.notes || null,
+      };
+
+      if (existing) {
+        await this.prisma.attendance.update({
+          where: { id: existing.id },
+          data,
+        });
+        updated++;
+      } else {
+        await this.prisma.attendance.create({
+          data: {
+            ...data,
+            employeeId: item.employeeId,
+            attendanceDate: date,
+            createdById: userId,
+          },
+        });
+        created++;
+      }
+    }
+
+    return { ok: true, created, updated, skipped, total: items.length };
   }
 
 }

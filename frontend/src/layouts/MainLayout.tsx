@@ -3,6 +3,7 @@ import {
   NavLink,
   useNavigate,
   useLocation } from 'react-router-dom';
+import { getMenuPermission } from '@/config/route-permissions';
 import {
   Landmark,
   Link2,
@@ -64,7 +65,7 @@ import {
   FileWarning,
   Trash2,
 } from 'lucide-react';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/auth.store';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -181,8 +182,7 @@ const MENU: MenuSection[] = [
       { to: '/payroll/employees', label: 'پرسنل', icon: UsersIcon },
       { to: '/payroll/periods', label: 'دوره‌های حقوق', icon: Calendar },
       { to: '/payroll/worker-statements', label: 'صورت‌وضعیت پرسنل', icon: FileSpreadsheet },
-      { to: '/payroll/attendance', label: 'حضور و غیاب', icon: Clock },
-      { to: '/payroll/work-logs', label: 'کارکرد روزانه', icon: Briefcase },
+      { to: '/payroll/attendance-grid', label: 'گرید ماهانه حاضری', icon: Calendar },
       { to: '/payroll/leave-requests', label: 'مرخصی‌ها', icon: CalendarOff },
       { to: '/payroll/advance-requests', label: 'مساعده', icon: Wallet },
     ],
@@ -330,6 +330,20 @@ export default function MainLayout() {
     return activeKey ? { [activeKey]: true } : {};
   });
   const { user, logout } = useAuthStore();
+  // F1.3 — فیلتر منو بر اساس permission کاربر
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const filteredMenu = useMemo(() => {
+    return MENU
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => {
+          const code = getMenuPermission(item.to);
+          return !code || hasPermission(code);
+        }),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [hasPermission]);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -395,7 +409,7 @@ export default function MainLayout() {
 
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
-          {MENU.map((section) => {
+          {filteredMenu.map((section) => {
             const SectionIcon = section.icon;
             const isExpanded = !!expanded[section.key];
             const hasActiveItem = findActiveSection(location.pathname) === section.key;

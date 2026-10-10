@@ -11,6 +11,30 @@ import { attachmentsApi, AttachmentInput } from '@/services/attachments.api';
 import PartyFormModal from './PartyFormModal';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 
+/**
+ * پیش‌نمایش HTML قالب با هایلایت placeholderها و نقطه‌چین‌ها
+ */
+function highlightPlaceholders(html: string): string {
+  if (!html || html.length < 5) {
+    return '<span style="color:#94a3b8;font-style:italic">(خالی — بعد از انتخاب نوع قرارداد، قالب خودکار لود میشه)</span>';
+  }
+  // حذف style/script برای پیش‌نمایش تمیز
+  let out = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+  // هایلایت {{placeholder}}
+  out = out.replace(
+    /\{\{([^}]+)\}\}/g,
+    '<span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-weight:bold;font-size:11px;border:1px solid #fcd34d">{{$1}}</span>'
+  );
+  // هایلایت نقطه‌چین‌ها
+  out = out.replace(
+    /\.{5,}/g,
+    (m) => `<span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:3px;font-size:10px;border:1px solid #fca5a5" title="${m.length} نقطه — نیاز به پرکردن دستی یا placeholder دارد">⬤ ${m.length}</span>`
+  );
+  return out;
+}
+
 const KIND_LABELS: Record<LegalContractKind, string> = {
   WORKER_EMPLOYMENT: 'قرارداد کارگری',
   CONTRACTOR_AGREEMENT: 'قرارداد پیمانکاری',
@@ -337,17 +361,17 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
                 <select
                   value={form.kind}
                   onChange={(e) => {
-                    const newKind = e.target.value;
-                    set('kind', newKind);
-                    set('partyId', '');
-                    setSelectedEmployeeId('');
-                    setSelectedContractorId('');
-                    // برای کارگری: اجزای پیش‌فرض
-                    if (newKind === 'WORKER_EMPLOYMENT') {
-                      setItems(defaultWorkerItems());
-                    } else if (items.length > 0 && items.every((it) => ['حقوق پایه','بن کارگری','حق مسکن','حق اولاد'].includes(it.description))) {
-                      setItems([]);
-                    }
+                   const newKind = e.target.value;
+                   setForm((f: any) => ({
+                    ...f,
+                    kind: newKind,
+                    bodyHtml: '',  // ← Force reload of template
+                   }));
+                   if (newKind === 'WORKER_EMPLOYMENT') {
+                    setItems(defaultWorkerItems());
+                   } else if (items.length > 0 && items.every((it) => ['حقوق پایه','بن کارگری','حق مسکن','حق اولاد'].includes(it.description))) {
+                   setItems([]);
+                   }
                   }}
                   className="input w-full"
                 >
@@ -689,8 +713,37 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
                     بارگذاری قالب
                   </button>
                 </div>
-                <textarea value={form.bodyHtml} onChange={(e) => set('bodyHtml', e.target.value)} rows={8} className="input w-full resize-none font-mono text-xs" dir="rtl" />
-                <p className="text-xs text-slate-500 mt-1">می‌توانید متن قرارداد را اینجا Paste کنید (HTML یا متن ساده)</p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <textarea
+                    value={form.bodyHtml}
+                    onChange={(e) => set('bodyHtml', e.target.value)}
+                    rows={12}
+                    className="input w-full resize-none font-mono text-xs"
+                    dir="rtl"
+                  />
+
+                  <div className="border rounded-lg p-3 bg-slate-50 overflow-auto" style={{ maxHeight: 300 }}>
+                    <div className="text-[10px] text-slate-500 mb-2 font-bold flex items-center gap-2 flex-wrap">
+                      <span>🔍 پیش‌نمایش</span>
+                      <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px]" dir="ltr">
+                        {'{{placeholder}}'}
+                      </span>
+                      <span className="bg-red-100 text-red-800 px-1.5 py-0.5 rounded text-[10px]">
+                        ⬤ = نقطه‌چین
+                      </span>
+                    </div>
+                    <div
+                      dir="rtl"
+                      className="text-xs leading-6"
+                      dangerouslySetInnerHTML={{ __html: highlightPlaceholders(form.bodyHtml) }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500 mt-1">
+                  برای درج placeholder از الگوی <code className="bg-slate-100 px-1 rounded" dir="ltr">{'{{party.fullName}}'}</code> استفاده کنید
+                </p>
               </div>
 
               <div className="md:col-span-2">

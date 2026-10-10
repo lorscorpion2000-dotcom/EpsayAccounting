@@ -65,7 +65,14 @@ export class ApprovalsService {
       }),
 
       this.prisma.dailyReport.findMany({
-        where: { status: 'SUBMITTED' },
+        where: userId
+          ? {
+              OR: [
+                { status: 'SUBMITTED' },
+                { status: 'REJECTED', createdById: userId },
+              ],
+            }
+          : { status: 'SUBMITTED' },
         include: {
           project: { select: { id: true, code: true, name: true } },
           createdBy: { select: { id: true, fullName: true } },

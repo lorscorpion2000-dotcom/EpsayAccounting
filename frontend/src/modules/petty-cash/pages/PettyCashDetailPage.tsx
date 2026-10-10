@@ -22,6 +22,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function PettyCashDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -125,7 +126,7 @@ export default function PettyCashDetailPage() {
       'وضعیت': TX_STATUS_LABELS[t.status],
     }));
     void exportToExcel({
-      filename: `PettyCash-${account.code}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `PettyCash-${account.code}-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'Transactions',
         rows,
@@ -360,7 +361,7 @@ export default function PettyCashDetailPage() {
                             >
                               <Send className="w-4 h-4" />
                             </button>
-                            <AdminDeleteButton endpoint="/petty-cash/transactions" id={t.id} itemLabel={t.description || t.id} />
+                            <AdminDeleteButton endpoint="/petty-cash/transactions" id={t.id} itemLabel={(t as any).description || (t as any).id} />
                           </>
                         )}
                         {t.status === 'SUBMITTED' && (

@@ -10,6 +10,7 @@ import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_COLORS, ITEM_UNIT_LABELS } from '@/
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function KardexPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -77,7 +78,7 @@ export default function KardexPage() {
       });
     }
     void exportToExcel({
-      filename: `Kardex-${result.item.code}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `Kardex-${result.item.code}-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'Kardex',
         rows,

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { toLocalDateString } from '../../common/utils/date.util';
 
 @Injectable()
 export class DashboardExecutiveService {
@@ -245,8 +246,8 @@ export class DashboardExecutiveService {
 
     return {
       days,
-      from: from.toISOString().slice(0, 10),
-      to: to.toISOString().slice(0, 10),
+      from: toLocalDateString(from),
+      to: toLocalDateString(to),
       inflow: Number(chequeIn._sum.amount || 0),
       outflow: Number(chequeOut._sum.amount || 0),
       net: Number(chequeIn._sum.amount || 0) - Number(chequeOut._sum.amount || 0),

@@ -12,6 +12,7 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { PERSIAN_MONTHS_ADJ } from '@/types/adjustment';
 import type { VATReport, PayrollTaxReport, InsuranceReport } from '@/types/tax-reports';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 type Tab = 'vat' | 'payroll' | 'insurance';
 
@@ -157,7 +158,7 @@ export default function TaxReportsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, name + '-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, name + '-' + todayLocalISO() + '.xlsx');
     toast.success('فایل دانلود شد');
   };
 

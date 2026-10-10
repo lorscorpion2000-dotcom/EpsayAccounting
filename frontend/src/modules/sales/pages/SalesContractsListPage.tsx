@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { salesApi, SalesContract } from '../services/sales.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس', ACTIVE: 'فعال', COMPLETED: 'خاتمه',
@@ -144,6 +145,12 @@ export default function SalesContractsListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/sales/contracts"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => nav('/sales/contracts/' + c.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>

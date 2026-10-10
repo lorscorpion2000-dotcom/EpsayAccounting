@@ -74,7 +74,7 @@ export default function PODetailPage() {
         <button className="btn-secondary" onClick={() => window.print()}>
           <Printer className="w-4 h-4" /> چاپ / PDF
         </button>
-        <AdminDeleteButton endpoint="/procurement/orders" id={po.id} itemLabel={po.code} onSuccess={() => navigate('/procurement/orders')} variant="button" />
+        <AdminDeleteButton endpoint="/procurement/orders" id={po.id} itemLabel={(po as any).code} onSuccess={() => navigate('/procurement/orders')} variant="button" />
         {po.status === 'DRAFT' && (
           <button className="btn-primary" onClick={() => setActionItem({ action: 'approve' })}>
             <CheckCircle2 className="w-4 h-4" /> تایید

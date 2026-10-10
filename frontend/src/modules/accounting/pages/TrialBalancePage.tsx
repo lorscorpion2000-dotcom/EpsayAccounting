@@ -11,6 +11,7 @@ import { ACCOUNT_LEVEL_LABELS } from '@/types/accounting';
 import { formatNumber, toPersianDigits } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function TrialBalancePage() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [currentFy, setCurrentFy] = useState('');
@@ -55,7 +56,7 @@ export default function TrialBalancePage() {
       'مانده': result.totals.difference,
     });
     void exportToExcel({
-      filename: `TrialBalance-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      filename: `TrialBalance-${todayLocalISO()}.xlsx`,
       sheets: [{
         name: 'TrialBalance',
         rows,

@@ -4,6 +4,7 @@ import { Loader2, Shield, Plus, Edit, Trash2, RefreshCw, Lock } from 'lucide-rea
 import { rolesApi, SystemRole } from '../services/roles.api';
 import RoleFormModal from '../components/RoleFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<SystemRole[]>([]);
@@ -102,7 +103,13 @@ export default function RolesPage() {
                   <span className="font-bold text-slate-700 num">{r.permissions?.length ?? 0}</span> مجوز
                 </div>
                 <div className="flex items-center gap-1">
-                  <button
+                  <AdminDeleteButton
+                    endpoint="/roles"
+                    id={r.id}
+                    itemLabel={(r as any).displayName || (r as any).name || r.code}
+                    onSuccess={load}
+                  />
+                        <button
                     onClick={() => { setEditing(r); setShowModal(true); }}
                     className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
                     title="ویرایش"

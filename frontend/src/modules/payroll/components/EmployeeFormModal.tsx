@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { X, Loader2, Save, User } from 'lucide-react';
 import { payrollApi } from '../services/payroll.api';
 import { partnersApi } from '@/modules/partners/services/partners.api';
+import { api } from '@/services/api';
 import type { Employee, EmployeeType, MaritalStatus } from '@/types/payroll';
 import { EMPLOYEE_TYPE_LABELS, MARITAL_STATUS_LABELS } from '@/types/payroll';
 import type { Partner } from '@/types/project';
@@ -53,11 +54,13 @@ interface FormData {
   education?: string;
   isActive: boolean;
   notes?: string;
+  projectId?: string;
 }
 
 export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }: Props) {
   const isEdit = !!editing;
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, reset, watch, control, formState: { errors } } = useForm<FormData>({
@@ -87,6 +90,7 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
   useEffect(() => {
     if (!isOpen) return;
     partnersApi.list().then(setPartners).catch(() => []);
+    api.get('/projects').then((r) => setProjects(r.data || [])).catch(() => []);
 
     if (editing) {
       reset({
@@ -119,6 +123,7 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
         education: editing.education || undefined,
         isActive: editing.isActive,
         notes: editing.notes || undefined,
+        projectId: (editing as any).projectId || '',
       });
     } else {
       reset({
@@ -127,6 +132,7 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
         maritalStatus: 'SINGLE',
         baseSalary: 0, housingAllow: 0, foodAllow: 0, childAllow: 0, otherAllow: 0,
         childrenCount: 0, hasInsurance: false, isActive: true,
+        projectId: '',
       });
     }
   }, [isOpen, editing, reset]);
@@ -154,6 +160,7 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
         birthPlace: data.birthPlace || undefined,
         education: data.education || undefined,
         notes: data.notes || undefined,
+        projectId: data.projectId || undefined,
       };
       if (isEdit && editing) {
         await payrollApi.employees.update(editing.id, payload);
@@ -217,6 +224,15 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
               <div>
                 <label className="label">واحد</label>
                 <input type="text" {...register('department')} className="input" />
+              </div>
+              <div>
+                <label className="label">پروژه / ستاد محل خدمت</label>
+                <select {...register('projectId')} className="input">
+                  <option value="">— بدون پروژه (ستاد) —</option>
+                  {projects.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name} {p.code ? '(' + p.code + ')' : ''}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="label">تاریخ استخدام</label>

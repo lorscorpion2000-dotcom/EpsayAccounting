@@ -11,7 +11,7 @@ import type { GoodsReceipt, ReceiptStatus } from '@/types/warehouse';
 import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_COLORS } from '@/types/warehouse';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function ReceiptsListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<GoodsReceipt[]>([]);
@@ -162,6 +162,12 @@ export default function ReceiptsListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/warehouse/receipts"
+                          id={r.id}
+                          itemLabel={(r as any).code || (r as any).name || (r as any).title || (r as any).fullName || (r as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => navigate('/warehouse/receipts/' + r.id)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>

@@ -1,15 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FiscalYearsService } from './fiscal-years.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Fiscal Years - سال‌های مالی')
 @ApiBearerAuth()
 @Controller('fiscal-years')
 export class FiscalYearsController {
-  constructor(private service: FiscalYearsService) {}
+  constructor(private service: FiscalYearsService,
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('accounting.read')
@@ -91,6 +93,53 @@ export class FiscalYearsController {
   @RequirePermissions('accounting.fiscal-years.manage')
   unlockMonth(@Param('id') id: string, @Body() body: { monthKey: string }) {
     return this.service.unlockMonth(id, body.monthKey);
+  }
+
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('accounting.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'fiscalYear',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('accounting.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'fiscalYear',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('accounting.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'fiscalYear',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
   }
 
 }

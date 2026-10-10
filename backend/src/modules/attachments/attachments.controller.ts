@@ -12,6 +12,7 @@ export class AttachmentsController {
   constructor(private svc: AttachmentsService) {}
 
   @Get()
+  @RequirePermissions('attachment.read')
   list(
     @Query('entityType') entityType: string,
     @Query('entityId') entityId: string,
@@ -20,6 +21,7 @@ export class AttachmentsController {
   }
 
   @Post()
+  @RequirePermissions('attachment.create')
   create(@Body() body: any) {
     return this.svc.createMany(body);
   }

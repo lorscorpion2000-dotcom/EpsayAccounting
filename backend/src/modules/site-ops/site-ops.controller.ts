@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SiteOpsService } from './site-ops.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
@@ -7,15 +7,15 @@ import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Site Operations - عملیات کارگاه')
 @ApiBearerAuth()
 @Controller('site-ops/daily-reports')
 export class SiteOpsController {
-  constructor(
-    private s: SiteOpsService,
+  constructor(private s: SiteOpsService,
     private forwarder: DailyReportForwarderService,
-  ) {}
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('site-ops.read')
@@ -40,7 +40,7 @@ export class SiteOpsController {
   sectionsSummary(@Param('id') id: string) { return this.s.sectionsSummary(id); }
 
   @Patch(':id/sections/:type/approve')
-  @RequirePermissions('approvals.update')
+  @RequirePermissions('approvals.approve')
   approveSection(
     @Param('id') id: string,
     @Param('type') type: string,
@@ -50,7 +50,7 @@ export class SiteOpsController {
   }
 
   @Patch(':id/sections/:type/reject')
-  @RequirePermissions('approvals.update')
+  @RequirePermissions('approvals.approve')
   rejectSection(
     @Param('id') id: string,
     @Param('type') type: string,
@@ -97,14 +97,61 @@ export class SiteOpsController {
   submit(@Param('id') id: string) { return this.s.submit(id); }
 
   @Patch(':id/approve')
-  @RequirePermissions('approvals.update')
+  @RequirePermissions('approvals.approve')
   approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.s.approve(id, userId);
   }
 
   @Patch(':id/reject')
-  @RequirePermissions('approvals.update')
+  @RequirePermissions('approvals.approve')
   reject(@Param('id') id: string, @Body() dto: RejectDto) {
     return this.s.reject(id, dto.reason);
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('site-ops.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'dailyReport',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('site-ops.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'dailyReport',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('site-ops.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'dailyReport',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

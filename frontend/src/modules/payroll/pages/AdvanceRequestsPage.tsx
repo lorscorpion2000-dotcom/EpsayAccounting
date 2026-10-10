@@ -8,6 +8,7 @@ import { REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS } from '@/types/payroll';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import AdvanceFormModal from '../components/AdvanceFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function AdvanceRequestsPage() {
   const [items, setItems] = useState<AdvanceRequest[]>([]);
@@ -108,6 +109,12 @@ export default function AdvanceRequestsPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/payroll/advance-requests"
+                          id={a.id}
+                          itemLabel={(a as any).code || (a as any).name || (a as any).title || (a as any).fullName || (a as any).username || ''}
+                          onSuccess={load}
+                        />
                         {a.status === 'PENDING' && (
                           <>
                             <button onClick={() => setActionItem({ item: a, action: 'approve' })} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600" title="تایید">

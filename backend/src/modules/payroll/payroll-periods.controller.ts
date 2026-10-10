@@ -1,19 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PayrollPeriodsService } from './payroll-periods.service';
 import { PayrollCalculationService } from './payroll-calculation.service';
 import { CreatePayrollPeriodDto } from './dto/payroll-period.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
 
 @ApiTags('Payroll Periods - دوره‌های حقوق')
 @ApiBearerAuth()
 @Controller('payroll/periods')
 export class PayrollPeriodsController {
-  constructor(
-    private s: PayrollPeriodsService,
+  constructor(private s: PayrollPeriodsService,
     private calc: PayrollCalculationService,
-  ) {}
+    private softDelete: SoftDeleteService,) {}
 
   @Get()
   @RequirePermissions('payroll.read')
@@ -51,6 +51,12 @@ export class PayrollPeriodsController {
     return this.calc.calculatePeriod(id, userId);
   }
 
+  @Patch(':id/calculate-from-attendance')
+  @RequirePermissions('payroll.update')
+  calculateFromAttendance(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.calc.calculateFromAttendance(id, userId);
+  }
+
   @Patch(':id/approve')
   @RequirePermissions('approvals.update')
   approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
@@ -60,4 +66,51 @@ export class PayrollPeriodsController {
   @Patch(':id/pay')
   @RequirePermissions('payroll.update')
   pay(@Param('id') id: string) { return this.s.markPaid(id); }
+
+  // ═══════════════════════════════════════════════════════
+  // Admin Delete / Restore
+  // ═══════════════════════════════════════════════════════
+
+  @Delete(':id/admin')
+  @RequirePermissions('payroll.update')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'payrollPeriod',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('payroll.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'payrollPeriod',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('payroll.update')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'payrollPeriod',
+      take: take ? parseInt(take, 10) : 100,
+      skip: skip ? parseInt(skip, 10) : 0,
+    });
+  }
+
 }

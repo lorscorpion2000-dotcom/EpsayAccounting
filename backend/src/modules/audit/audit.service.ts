@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { TelegramService } from '../../common/services/telegram.service';
 import { sanitize } from '../../common/utils/sanitize.util';
+import { startOfLocalDay } from '../../common/utils/date.util';
 
 // رویدادهای حساس امنیتی — برای گزارش امنیتی
 const SECURITY_ACTIONS = [
@@ -122,8 +123,7 @@ export class AuditService {
       if (params.fromDate) where.createdAt.gte = new Date(params.fromDate);
       if (params.toDate) where.createdAt.lte = new Date(params.toDate);
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = startOfLocalDay();
 
     const [total, todayCount, byEntity, byAction, topUsers] = await Promise.all([
       this.prisma.auditLog.count({ where }),

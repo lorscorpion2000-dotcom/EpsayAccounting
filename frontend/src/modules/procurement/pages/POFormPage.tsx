@@ -11,6 +11,7 @@ import type { Project, Partner } from '@/types/project';
 import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
 import { formatNumber } from '@/utils/format';
 import clsx from 'clsx';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm {
   description: string;
@@ -46,7 +47,7 @@ export default function POFormPage() {
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       prId: prIdQuery || undefined,
-      poDate: new Date().toISOString().slice(0, 10),
+      poDate: todayLocalISO(),
       taxPercent: 10,
       items: [{ description: '', quantity: 1, unit: 'NUMBER', unitPrice: 0 }],
     },
@@ -80,7 +81,7 @@ export default function POFormPage() {
               prId: prIdQuery,
               projectId: pr.projectId,
               supplierId: '',
-              poDate: new Date().toISOString().slice(0, 10),
+              poDate: todayLocalISO(),
               taxPercent: 10,
               notes: undefined,
               items: pr.items.map((it) => ({

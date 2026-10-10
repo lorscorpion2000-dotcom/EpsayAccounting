@@ -6,6 +6,7 @@ import { pettyCashApi } from '../services/petty-cash.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { PettyCashAccount } from '@/types/petty-cash';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export default function RequestFormModal({
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      requestDate: new Date().toISOString().slice(0, 10),
+      requestDate: todayLocalISO(),
       amount: 0,
       reason: '',
     },
@@ -40,7 +41,7 @@ export default function RequestFormModal({
     if (!isOpen) return;
     pettyCashApi.accounts.get(accountId).then(setAccount);
     reset({
-      requestDate: new Date().toISOString().slice(0, 10),
+      requestDate: todayLocalISO(),
       amount: 0,
       reason: '',
       iban: '',

@@ -1,7 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsArray, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested,
-} from 'class-validator';
+import {IsArray, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum WeatherEnum {
@@ -36,6 +34,15 @@ export enum EventTypeEnum {
 export class WorkerDto {
   @ApiProperty() @IsString() @MaxLength(200)
   teamName: string;
+
+  @ApiPropertyOptional({ enum: ['OWN', 'CONTRACTOR'] }) @IsOptional() @IsString()
+  kind?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsUUID()
+  contractorId?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0)
+  contractorRate?: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString()
   employeeId?: string;

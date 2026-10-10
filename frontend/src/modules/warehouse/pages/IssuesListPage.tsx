@@ -11,7 +11,7 @@ import type { GoodsIssue } from '@/types/warehouse';
 import { ISSUE_STATUS_LABELS, ISSUE_STATUS_COLORS } from '@/types/warehouse';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function IssuesListPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<GoodsIssue[]>([]);
@@ -155,6 +155,12 @@ export default function IssuesListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/warehouse/issues"
+                          id={r.id}
+                          itemLabel={(r as any).code || (r as any).name || (r as any).title || (r as any).fullName || (r as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => navigate('/warehouse/issues/' + r.id)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>

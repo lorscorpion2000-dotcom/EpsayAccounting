@@ -6,6 +6,7 @@ import { payrollApi } from '../services/payroll.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Employee } from '@/types/payroll';
 import { formatNumber } from '@/utils/format';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface Props {
 
 export default function AdvanceFormModal({ isOpen, employees, onClose, onSaved }: Props) {
   const { register, handleSubmit, reset, control, watch } = useForm<any>({
-    defaultValues: { requestDate: new Date().toISOString().slice(0, 10), amount: 0 },
+    defaultValues: { requestDate: todayLocalISO(), amount: 0 },
   });
 
   const amount = watch('amount') || 0;
@@ -25,7 +26,7 @@ export default function AdvanceFormModal({ isOpen, employees, onClose, onSaved }
     if (!isOpen) return;
     reset({
       employeeId: '',
-      requestDate: new Date().toISOString().slice(0, 10),
+      requestDate: todayLocalISO(),
       amount: 0, reason: '',
     });
   }, [isOpen, reset]);

@@ -10,6 +10,7 @@ import { api } from '@/services/api';
 import type { Project } from '@/types/project';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس',
@@ -160,6 +161,12 @@ export default function WorkerStatementsListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/payroll/worker-statements"
+                          id={s.id}
+                          itemLabel={(s as any).code || (s as any).name || (s as any).title || (s as any).fullName || (s as any).username || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => navigate('/payroll/worker-statements/' + s.id)} className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
                         </button>

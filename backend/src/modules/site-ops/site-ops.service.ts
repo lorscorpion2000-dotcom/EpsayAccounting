@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateDailyReportDto } from './dto/create-report.dto';
 import { UpdateDailyReportDto } from './dto/create-report.dto';
@@ -57,26 +57,71 @@ export class SiteOpsService {
   }
 
   // ─── Helper: create nested rows ───
+  /** تبدیل رشته خالی به null برای UUIDهای اختیاری */
+  /** تبدیل رشته زمان خالی به null */
+  private optTime(v: any): string | null {
+    if (v === undefined || v === null || v === '') return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    // نرمال‌سازی به HH:MM
+    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    if (m) return String(Number(m[1])).padStart(2, '0') + ':' + String(Number(m[2])).padStart(2, '0');
+    return null;
+  }
+
+  private optUuid(v: any): string | null {
+    if (v === undefined || v === null || v === '' || v === 'null') return null;
+    return String(v);
+  }
+
+
+  /** پاکسازی همه فیلدهای Id از '' به null در یک آبجکت */
+  private cleanIds(obj: any): any {
+    const out: any = {};
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (k.endsWith('Id') && (v === '' || v === undefined || v === 'null')) {
+        out[k] = null;
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  }
+
   private buildWorkers(items: any[]) {
-    return items.map((w, i) => ({
-      rowNumber: i + 1, teamName: w.teamName, foreman: w.foreman,
-      employeeId: w.employeeId,
-      workerCount: w.workerCount, workHours: w.workHours ?? 8, overtime: w.overtime ?? 0,
-      status: (w.status as any) || 'PRESENT', wbsItemId: w.wbsItemId, description: w.description,
-    }));
+    return items.map((w, i) => {
+      const kind = String(w.kind || 'OWN').toUpperCase() === 'CONTRACTOR' ? 'CONTRACTOR' : 'OWN';
+      const isContractor = kind === 'CONTRACTOR';
+      return {
+        rowNumber: i + 1,
+        teamName: w.teamName,
+        kind,
+        foreman: w.foreman,
+        employeeId: isContractor ? null : this.optUuid(w.employeeId),
+        contractorId: isContractor ? this.optUuid(w.contractorId) : null,
+        contractorRate: isContractor && w.contractorRate != null ? Number(w.contractorRate) : null,
+        workerCount: w.workerCount,
+        workHours: w.workHours ?? 8,
+        overtime: w.overtime ?? 0,
+        status: (w.status as any) || 'PRESENT',
+        wbsItemId: this.optUuid(w.wbsItemId),
+        description: w.description,
+      };
+    });
   }
   private buildEquipments(items: any[]) {
     return items.map((e, i) => ({
-      rowNumber: i + 1, equipmentId: e.equipmentId, name: e.name, plateNumber: e.plateNumber, operator: e.operator,
+      rowNumber: i + 1, equipmentId: this.optUuid(e.equipmentId), name: e.name, plateNumber: e.plateNumber, operator: e.operator,
       hoursWorked: e.hoursWorked ?? 0, status: (e.status as any) || 'ACTIVE',
-      wbsItemId: e.wbsItemId, fuelLiters: e.fuelLiters ?? 0, stopReason: e.stopReason,
+      wbsItemId: this.optUuid(e.wbsItemId), fuelLiters: e.fuelLiters ?? 0, stopReason: e.stopReason,
       description: e.description,
     }));
   }
   private buildMaterials(items: any[]) {
     return items.map((m, i) => ({
       rowNumber: i + 1, itemName: m.itemName, unit: m.unit, quantity: m.quantity,
-      itemId: m.itemId, warehouseId: m.warehouseId,
+      itemId: this.optUuid(m.itemId), warehouseId: this.optUuid(m.warehouseId),
       supplier: m.supplier, vehiclePlate: m.vehiclePlate, billNumber: m.billNumber,
       movementType: m.movementType, qcResult: m.qcResult,
       exitType: m.exitType, exitDest: m.exitDest, description: m.description,
@@ -84,7 +129,7 @@ export class SiteOpsService {
   }
   private buildProgresses(items: any[]) {
     return items.map((p, i) => ({
-      rowNumber: i + 1, wbsItemId: p.wbsItemId, description: p.description,
+      rowNumber: i + 1, wbsItemId: this.optUuid(p.wbsItemId), description: p.description,
       progressPct: p.progressPct, quantity: p.quantity, unit: p.unit,
       location: p.location, notes: p.notes,
     }));
@@ -94,7 +139,7 @@ export class SiteOpsService {
       rowNumber: i + 1, kind: e.kind,
       personName: e.personName, organization: e.organization, purpose: e.purpose,
       vehicleType: e.vehicleType, plateNumber: e.plateNumber, driverName: e.driverName, cargo: e.cargo,
-      entryTime: e.entryTime, exitTime: e.exitTime, notes: e.notes,
+      entryTime: this.optTime(e.entryTime), exitTime: this.optTime(e.exitTime), notes: e.notes,
     }));
   }
   private buildRequests(items: any[]) {
@@ -102,19 +147,33 @@ export class SiteOpsService {
       rowNumber: i + 1, requestType: r.requestType, title: r.title, description: r.description,
       quantity: r.quantity, unit: r.unit, priority: r.priority,
       requiredDate: r.requiredDate ? new Date(r.requiredDate) : null,
-      wbsItemId: r.wbsItemId, amount: r.amount, status: 'PENDING',
-      pettyCashAccountId: r.pettyCashAccountId,
+      wbsItemId: this.optUuid(r.wbsItemId), amount: r.amount, status: 'PENDING',
+      pettyCashAccountId: this.optUuid(r.pettyCashAccountId),
     }));
   }
   private buildEvents(items: any[]) {
     return items.map((e, i) => ({
       rowNumber: i + 1, eventType: e.eventType, title: e.title, description: e.description,
-      startTime: e.startTime, endTime: e.endTime, durationHrs: e.durationHrs,
+      startTime: this.optTime(e.startTime), endTime: this.optTime(e.endTime), durationHrs: e.durationHrs,
       severity: e.severity, actorName: e.actorName,
     }));
   }
 
+  private isValidUuid(s: string | null | undefined): boolean {
+    if (!s || typeof s !== 'string') return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(s);
+  }
+
   async create(dto: CreateDailyReportDto, userId: string) {
+    if (!this.isValidUuid(dto.projectId)) {
+      throw new BadRequestException('انتخاب پروژه الزامی است');
+    }
+    const project = await this.prisma.project.findUnique({
+      where: { id: dto.projectId },
+      select: { id: true },
+    });
+    if (!project) throw new BadRequestException('پروژه یافت نشد');
+
     const code = await this.generateCode(dto.projectId);
     const reportDate = new Date(dto.reportDate);
 
@@ -130,8 +189,8 @@ export class SiteOpsService {
       weather: dto.weather as any,
       tempMin: dto.tempMin,
       tempMax: dto.tempMax,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
+      startTime: this.optTime(dto.startTime),
+      endTime: this.optTime(dto.endTime),
       operations: dto.operations,
       issues: dto.issues,
       incidents: dto.incidents,
@@ -163,15 +222,17 @@ export class SiteOpsService {
 
   async update(id: string, dto: UpdateDailyReportDto) {
     const r = await this.findOne(id);
-    if (r.status !== 'DRAFT') throw new BadRequestException('فقط گزارش پیش‌نویس قابل ویرایش است');
+    if (r.status !== 'DRAFT' && r.status !== 'REJECTED') {
+      throw new BadRequestException('فقط گزارش پیش‌نویس یا ردشده قابل ویرایش است');
+    }
 
     const data: any = {};
     if (dto.reportDate) data.reportDate = new Date(dto.reportDate);
     if (dto.weather !== undefined) data.weather = dto.weather;
     if (dto.tempMin !== undefined) data.tempMin = dto.tempMin;
     if (dto.tempMax !== undefined) data.tempMax = dto.tempMax;
-    if (dto.startTime !== undefined) data.startTime = dto.startTime;
-    if (dto.endTime !== undefined) data.endTime = dto.endTime;
+    if (dto.startTime !== undefined) data.startTime = this.optTime(dto.startTime);
+    if (dto.endTime !== undefined) data.endTime = this.optTime(dto.endTime);
     if (dto.operations !== undefined) data.operations = dto.operations;
     if (dto.issues !== undefined) data.issues = dto.issues;
     if (dto.incidents !== undefined) data.incidents = dto.incidents;
@@ -211,20 +272,67 @@ export class SiteOpsService {
 
   async remove(id: string) {
     const r = await this.findOne(id);
-    if (r.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
+    if (r.status !== 'DRAFT' && r.status !== 'REJECTED') {
+      throw new BadRequestException('فقط گزارش پیش‌نویس یا ردشده قابل حذف است');
+    }
     await this.prisma.dailyReport.delete({ where: { id } });
     return { success: true };
   }
 
   async submit(id: string) {
     const r = await this.findOne(id);
-    if (r.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ارسال است');
-    return this.prisma.dailyReport.update({ where: { id }, data: { status: 'SUBMITTED' } });
+    if (r.status !== 'DRAFT' && r.status !== 'REJECTED') {
+      throw new BadRequestException('فقط گزارش پیش‌نویس یا ردشده قابل ارسال است');
+    }
+    return this.prisma.dailyReport.update({
+      where: { id },
+      data: {
+        status: 'SUBMITTED',
+        rejectedReason: null,
+        approvedById: null,
+        approvedAt: null,
+      },
+    });
   }
+  /**
+   * F2 — تأییدکننده ≠ ثبت‌کننده
+   * اگر کاربر ثبت‌کننده گزارش باشد اجازه تأیید ندارد، مگر super_admin با ثبت در AuditLog.
+   */
+  private async assertNotSelfApprove(reportId: string, userId: string) {
+    const report = await this.prisma.dailyReport.findUnique({
+      where: { id: reportId },
+      select: { createdById: true },
+    });
+    if (!report) throw new NotFoundException('گزارش یافت نشد');
+    if (!report.createdById || report.createdById !== userId) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { roles: { include: { role: true } } },
+    });
+    const isSuperAdmin = !!user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+
+    if (!isSuperAdmin) {
+      throw new ForbiddenException('شما ثبت‌کننده این گزارش هستید و نمی‌توانید آن را تأیید کنید');
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'SELF_APPROVE_REPORT',
+        entity: 'DailyReport',
+        entityId: reportId,
+        payload: { override: 'super_admin' } as any,
+      },
+    });
+  }
+
+
 
   async approve(id: string, userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
+    await this.assertNotSelfApprove(id, userId);
     return this.prisma.dailyReport.update({
       where: { id },
       data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },

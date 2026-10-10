@@ -9,8 +9,10 @@ import { partnerCapitalApi, CapitalAccount } from '../services/partner-capital.a
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import CapitalAccountFormModal from '../components/CapitalAccountFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 export default function CapitalAccountsPage() {
   const [accounts, setAccounts] = useState<CapitalAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function CapitalAccountsPage() {
       'وضعیت': a.isActive ? 'فعال' : 'غیرفعال',
     }));
     void exportToExcel({
-      filename: 'CapitalAccounts-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'CapitalAccounts-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'CapitalAccounts',
         rows,
@@ -153,6 +155,13 @@ export default function CapitalAccountsPage() {
                   title="حذف">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+                <AdminDeleteButton
+                  endpoint="/partner-capital/accounts"
+                  id={a.id}
+                  itemLabel={(a as any).partner?.name || (a as any).code}
+                  onSuccess={load}
+                  size="sm"
+                />
               </div>
               <div className="flex items-start gap-3 mb-3">
                 <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-md shrink-0',

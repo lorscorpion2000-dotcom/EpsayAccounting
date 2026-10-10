@@ -123,7 +123,7 @@ export default function PRDetailPage() {
             <button className="btn-secondary" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> چاپ
             </button>
-            <AdminDeleteButton endpoint="/procurement/requests" id={pr.id} itemLabel={pr.code} onSuccess={() => navigate('/procurement/requests')} variant="button" />
+            <AdminDeleteButton endpoint="/procurement/requests" id={pr.id} itemLabel={(pr as any).code} onSuccess={() => navigate('/procurement/requests')} variant="button" />
             {pr.status === 'DRAFT' && (
               <>
                 <button className="btn-secondary" onClick={() => navigate('/procurement/requests/' + pr.id + '/edit')}>

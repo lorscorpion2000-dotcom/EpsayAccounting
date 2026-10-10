@@ -11,6 +11,7 @@ import type { FiscalYear } from '@/types/accounting';
 import { formatJalaliDate } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FiscalYearFormModal from '../components/FiscalYearFormModal';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: 'باز',
@@ -206,6 +207,12 @@ export default function FiscalYearsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/fiscal-years"
+                          id={fy.id}
+                          itemLabel={(fy as any).code || (fy as any).name || (fy as any).title || (fy as any).fullName || (fy as any).username || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => { setEditing(fy); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"

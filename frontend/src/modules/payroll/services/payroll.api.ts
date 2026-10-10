@@ -60,6 +60,10 @@ export const payrollApi = {
       const { data } = await api.patch('/payroll/periods/' + id + '/calculate');
       return data;
     },
+    calculateFromAttendance: async (id: string) => {
+      const { data } = await api.patch('/payroll/periods/' + id + '/calculate-from-attendance');
+      return data;
+    },
     approve: async (id: string) => {
       const { data } = await api.patch('/payroll/periods/' + id + '/approve');
       return data;
@@ -92,6 +96,14 @@ export const payrollApi = {
     },
     remove: async (id: string) => {
       const { data } = await api.delete('/payroll/attendance/' + id);
+      return data;
+    },
+    getGrid: async (params: { year: number; month: number; projectId?: string }) => {
+      const { data } = await api.get('/payroll/attendance/grid', { params });
+      return data;
+    },
+    bulkUpsert: async (payload: { projectId?: string; items: any[] }) => {
+      const { data } = await api.post('/payroll/attendance/bulk', payload);
       return data;
     },
   },

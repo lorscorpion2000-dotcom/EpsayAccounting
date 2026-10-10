@@ -59,6 +59,64 @@ function formatValue(value: any, key: string): string {
  * Any {{path.to.value}} gets replaced with the formatted value.
  * Unknown paths are replaced with "—" (or a fallback if provided).
  */
+/**
+ * ساخت جدول اجزای اجرای قرارداد
+ */
+function buildItemsTable(items: any[] | null | undefined): string {
+  if (!items || items.length === 0) {
+    return '<span style="color:#94a3b8;font-style:italic">(هیچ ردیفی برای اجزای اجرا ثبت نشده است)</span>';
+  }
+  const fmt = (v: any) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString('en-US');
+  };
+  const th = 'border:1px solid #cbd5e1;padding:1px 3px;background:#f1f5f9;font-size:8px;font-weight:bold;text-align:center';
+  const td = 'border:1px solid #cbd5e1;padding:1px 3px;font-size:8px;vertical-align:top';
+  const tdr = td + ';text-align:right';
+  const tdc = td + ';text-align:center';
+  const tdn = td + ';text-align:left;font-family:monospace;direction:ltr';
+
+  let rows = '';
+  let total = 0;
+  items.forEach((it: any, idx: number) => {
+    const qty = Number(it.quantity) || 0;
+    const up = Number(it.unitPrice) || 0;
+    const lineTotal = qty * up;
+    total += lineTotal;
+    rows += `
+      <tr>
+        <td style="${tdc}">${idx + 1}</td>
+        <td style="${tdr}">${it.description || '—'}</td>
+        <td style="${tdc}">${it.unit || '—'}</td>
+        <td style="${tdn}">${fmt(qty)}</td>
+        <td style="${tdn}">${fmt(up)}</td>
+        <td style="${tdn}">${fmt(lineTotal)}</td>
+      </tr>`;
+  });
+
+  return `
+    <table style="width:100%;border-collapse:collapse;margin:3px 0;direction:rtl;font-family:'Vazirmatn',Tahoma,sans-serif;font-size:8px">
+      <thead>
+        <tr>
+          <th style="${th};width:24px">ردیف</th>
+          <th style="${th};text-align:right">شرح</th>
+          <th style="${th};width:48px">واحد</th>
+          <th style="${th};width:48px">تعداد</th>
+          <th style="${th};width:110px">مبلغ واحد</th></th>
+          <th style="${th};width:110px">جمع</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr style="background:#ecfdf5;font-weight:bold">
+          <td colspan="5" style="${tdr}">جمع کل:</td>
+          <td style="${tdn};font-weight:bold">${fmt(total)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
 export function renderContractTemplate(
   html: string | null | undefined,
   contract: AnyRecord | null | undefined,
@@ -66,6 +124,9 @@ export function renderContractTemplate(
 ): string {
   if (!html) return '';
   const fallback = options?.fallback ?? '—';
+
+  // جایگزینی ویژه {{itemsTable}}
+  html = html.replace(/\{\{\s*itemsTable\s*\}\}/g, buildItemsTable(contract?.items));
 
   return html.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, path: string) => {
     const value = resolvePath(contract, path);

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/store/auth.store';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowRight, Loader2, ClipboardList, Printer, Send, CheckCircle2, XCircle,
   Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp,
   AlertCircle, UserCheck, ShoppingCart, Bell,
-} from 'lucide-react';
+ Edit} from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 import type {
@@ -152,9 +153,28 @@ function DailyReportSectionsPanel({
 
 
 export default function DailyReportDetailPage() {
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [report, setReport] = useState<DailyReport | null>(null);
+
+  // F2 — تفکیک تأییدکننده از ثبت‌کننده
+  const { user: __f2User } = useAuthStore();
+  const canApproveReport = (() => {
+    if (!report) return false;
+    const r = report as any;
+    if (r.status === 'APPROVED') return false;
+    const roles: string[] = __f2User?.roles || [];
+    const perms: string[] = (__f2User as any)?.permissions || [];
+    const isSuper = roles.includes('super_admin');
+    // F2.5 — نیاز به permission تأیید
+    const hasApprovePerm = isSuper || perms.includes('approvals.approve');
+    if (!hasApprovePerm) return false;
+    // F2 — ثبت‌کننده نمی‌تواند تأیید کند (مگر super_admin)
+    const isCreator = r.createdById && __f2User?.id && r.createdById === __f2User.id;
+    if (isCreator && !isSuper) return false;
+    return true;
+  })();
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<any[]>([]);
   const [sectionsBusy, setSectionsBusy] = useState<string | null>(null);
@@ -302,23 +322,43 @@ export default function DailyReportDetailPage() {
             <button className="btn-secondary" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> چاپ
             </button>
-            {report.status === 'DRAFT' && (
-              <button className="btn-primary" onClick={() => setActionItem({ action: 'submit' })}>
-                <Send className="w-4 h-4" /> ارسال
-              </button>
-            )}
-            {report.status === 'SUBMITTED' && (
+            {(report.status === 'DRAFT' || report.status === 'REJECTED') && (
               <>
-                <button className="btn-danger" onClick={() => setActionItem({ action: 'reject' })}>
-                  <XCircle className="w-4 h-4" /> رد
+                <button className="btn-secondary" onClick={() => navigate('/site-ops/daily-reports/' + report.id + '/edit')}>
+                  <Edit className="w-4 h-4" /> ویرایش
                 </button>
-                <button className="btn-primary" onClick={() => setActionItem({ action: 'approve' })}>
-                  <CheckCircle2 className="w-4 h-4" /> تایید
+                <button className="btn-primary" onClick={() => setActionItem({ action: 'submit' })}>
+                  <Send className="w-4 h-4" /> ارسال
                 </button>
               </>
             )}
+            {report.status === 'SUBMITTED' && (
+              <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                ℹ️ لطفاً بخش‌ها را به‌صورت جداگانه در پایین صفحه تایید یا رد کنید
+              </div>
+            )}
           </div>
         </div>
+
+        {/* هشدار بخش‌های ردشده */}
+        {report.status === 'REJECTED' && sections.some((s: any) => s.status === 'REJECTED') && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+            <div className="font-bold text-amber-800 mb-2 flex items-center gap-2">
+              <span>⚠️</span>
+              بخش‌های زیر رد شده‌اند — لطفاً اصلاح کنید و مجدداً ارسال کنید
+            </div>
+            <ul className="list-disc list-inside text-sm text-amber-900 space-y-1">
+              {sections.filter((s: any) => s.status === 'REJECTED').map((s: any) => (
+                <li key={s.id || s.sectionType}>
+                  <b>{SECTION_LABELS[s.sectionType] || s.sectionType}</b>
+                  {s.rejectedReason && (
+                    <span className="text-red-700"> — {s.rejectedReason}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Info grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-6 border-t border-slate-100">
@@ -715,7 +755,7 @@ export default function DailyReportDetailPage() {
         onApprove={approveSection}
         onReject={openReject}
         busy={sectionsBusy}
-        canApprove={report ? (report as any).status !== 'APPROVED' : false}
+        canApprove={canApproveReport}
       />
       {rejectDialog && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">

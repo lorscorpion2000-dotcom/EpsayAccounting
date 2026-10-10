@@ -10,6 +10,7 @@ import type { Warehouse, Item, Stock } from '@/types/warehouse';
 import { ITEM_UNIT_LABELS } from '@/types/warehouse';
 import type { Project, Partner } from '@/types/project';
 import clsx from 'clsx';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm { itemId: string; quantity: number; notes?: string; }
 
@@ -40,7 +41,7 @@ export default function IssueFormPage() {
 
   const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      issueDate: new Date().toISOString().slice(0, 10),
+      issueDate: todayLocalISO(),
       items: [{ itemId: '', quantity: 1 }],
     },
   });

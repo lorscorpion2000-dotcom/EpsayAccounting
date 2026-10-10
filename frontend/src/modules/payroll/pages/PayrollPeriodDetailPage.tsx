@@ -15,7 +15,7 @@ export default function PayrollPeriodDetailPage() {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PayrollPeriod | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionItem, setActionItem] = useState<{ action: 'approve' | 'pay' } | null>(null);
+  const [actionItem, setActionItem] = useState<{ action: 'approve' | 'pay' | 'calculateFromAttendance' } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
@@ -37,7 +37,10 @@ export default function PayrollPeriodDetailPage() {
     if (!actionItem || !period) return;
     setActionLoading(true);
     try {
-      if (actionItem.action === 'approve') {
+      if (actionItem.action === 'calculateFromAttendance') {
+        await payrollApi.periods.calculateFromAttendance(period.id);
+        toast.success('محاسبه از حاضری انجام شد');
+      } else if (actionItem.action === 'approve') {
         await payrollApi.periods.approve(period.id);
         toast.success('دوره تایید شد');
       } else {
@@ -119,6 +122,11 @@ export default function PayrollPeriodDetailPage() {
             <button className="btn-secondary" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> چاپ
             </button>
+            {(period.status === 'DRAFT' || period.status === 'CALCULATED') && (
+              <button className="btn-secondary" onClick={() => setActionItem({ action: 'calculateFromAttendance' })}>
+                <FileSpreadsheet className="w-4 h-4" /> محاسبه از حاضری
+              </button>
+            )}
             {period.status === 'CALCULATED' && (
               <button className="btn-primary" onClick={() => setActionItem({ action: 'approve' })}>
                 <CheckCircle2 className="w-4 h-4" /> تایید

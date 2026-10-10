@@ -124,7 +124,7 @@ export default function SalesReceiptsPage() {
                 <td className="px-3 py-2 text-xs text-slate-600">{x.bankAccount?.name ?? x.reference ?? '—'}</td>
                 <td className="px-3 py-2 text-left font-mono text-xs font-bold text-emerald-700">{fmt(x.amount)}</td>
                 <td className="px-3 py-2 text-center">
-                  <AdminDeleteButton endpoint="/sales-receipts" id={x.id} itemLabel={x.code} onSuccess={load} />
+                  <AdminDeleteButton endpoint="/sales-receipts" id={x.id} itemLabel={(x as any).code} onSuccess={load} />
                 </td>
               </tr>
             ))}

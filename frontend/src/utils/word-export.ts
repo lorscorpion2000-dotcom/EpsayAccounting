@@ -1,12 +1,6 @@
 /**
- * خروجی HTML به Word — نسخه پایدار (بدون pseudo-elements و field codes)
+ * خروجی HTML به Word — نسخه ساده و پایدار
  */
-
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="70" height="70">
-  <rect x="10" y="10" width="80" height="80" fill="none" stroke="#1e40af" stroke-width="2"/>
-  <path d="M50 15 L50 85 M25 50 L75 50" stroke="#1e40af" stroke-width="1.5"/>
-  <text x="50" y="58" text-anchor="middle" font-family="Arial" font-size="16" fill="#1e40af" font-weight="bold">EP</text>
-</svg>`;
 
 interface WordExportOptions {
   filename: string;
@@ -21,14 +15,79 @@ interface WordExportOptions {
   signatures?: { left: string; right: string };
 }
 
-export function exportHtmlToWord(opts: WordExportOptions): void {
-  const companyName = opts.companyName || 'استودیو معماری اپسای';
-  const companySub = opts.companySub || 'Epsay Accounting';
-  const companyAddress = opts.companyAddress || 'خوانسار دهکده گردشگری گلستان‌کوه';
-  const companyPhone = opts.companyPhone || '۰۳۱-۵۷۷۹۹۵۰۰';
-  const signatures = opts.signatures || { left: 'مهر و امضای شرکت', right: 'امضای طرف قرارداد' };
+/**
+ * لوگو رو از سرور می‌گیره و به base64 تبدیل می‌کنه
+ * از icon-192 استفاده می‌کنیم چون کوچیک‌تره (28KB به جای 871KB)
+ */
+async function fetchLogoAsBase64(): Promise<string> {
+  try {
+    const urls = [
+      window.location.origin + '/images/icon-192.png',
+      window.location.origin + '/images/logo.png',
+    ];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch { /* try next */ }
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
 
-  const today = new Date().toLocaleDateString('fa-IR');
+export async function exportHtmlToWord(opts: WordExportOptions): Promise<void> {
+  const companyName = opts.companyName || 'استودیو معماری اپسای';
+  const signatures = opts.signatures || {
+    left: 'امضای کارفرما',
+    right: 'امضای پیمانکار',
+  };
+
+  const logoData = await fetchLogoAsBase64();
+
+  // سربرگ بالای صفحه اول (بدون mso-header که Word رو هنگ می‌کنه)
+  const headerBlock = `
+    <!--[if gte mso 9]><div style='mso-element:header' id=h1><![endif]-->
+    <div style="text-align:center;padding:2pt 0 5pt;border-bottom:0.5pt solid #cbd5e1;margin-bottom:6pt;">
+      ${logoData ? `<img src="${logoData}" alt="لوگو" style="height:20pt;width:auto;display:block;margin:0 auto 2pt;" />` : ''}
+      <div style="font-family:'B Nazanin','Vazirmatn',Tahoma,sans-serif;font-size:11pt;font-weight:bold;color:#1e3a8a;">${companyName}</div>
+    </div>
+    <!--[if gte mso 9]></div><![endif]-->
+  `;
+
+  // فوتر پایین (انتهای سند، نه در همه صفحات)
+  const footerBlock = `
+    <!--[if gte mso 9]><div style='mso-element:footer' id=f1><![endif]-->
+    <div style="margin-top:20pt;padding-top:6pt;border-top:0.5pt solid #cbd5e1;">
+      <table style="width:100%;border-collapse:collapse;direction:rtl;">
+        <tr>
+          <td style="width:50%;text-align:center;font-family:'B Nazanin','Vazirmatn',Tahoma,sans-serif;font-size:9pt;color:#1e3a8a;font-weight:bold;padding:2pt 0;">
+            ${signatures.left}
+          </td>
+          <td style="width:50%;text-align:center;font-family:'B Nazanin','Vazirmatn',Tahoma,sans-serif;font-size:11pt;color:#1e3a8a;font-weight:bold;padding:4pt 0;">
+            ${signatures.right}
+          </td>
+        </tr>
+        <tr>
+          <td style="width:50%;text-align:center;font-family:'B Nazanin','Vazirmatn',Tahoma,sans-serif;font-size:8pt;color:#475569;padding:14pt 0 3pt;">
+            &nbsp;
+          </td>
+          <td style="width:50%;text-align:center;font-family:'B Nazanin','Vazirmatn',Tahoma,sans-serif;font-size:10pt;color:#475569;padding:20pt 0 4pt;">
+            &nbsp;
+          </td>
+        </tr>
+      </table>
+    </div>
+    <!--[if gte mso 9]></div><![endif]-->
+  `;
 
   const html = `<!DOCTYPE html>
 <html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -49,14 +108,18 @@ export function exportHtmlToWord(opts: WordExportOptions): void {
 <style>
 @page {
   size: A4;
-  margin: 1.5cm 1.2cm 1.5cm 1.2cm;
+  margin: 2.2cm 1cm 1.8cm 1cm;
   mso-paper-source: 0;
+  mso-header-margin: 0.5cm;
+  mso-footer-margin: 0.4cm;
+  mso-header: h1;
+  mso-footer: f1;
 }
 
 body {
   font-family: 'B Nazanin', 'Vazirmatn', 'IRANSans', Tahoma, sans-serif;
-  font-size: 12pt;
-  line-height: 1.9;
+  font-size: 9pt;
+  line-height: 1.6;
   color: #0f172a;
   direction: rtl;
   text-align: right;
@@ -64,289 +127,31 @@ body {
   padding: 0;
 }
 
-/* ═══════ سربرگ (Header Table) ═══════ */
-.header-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-bottom: 3pt double #1e40af;
-  margin-bottom: 14pt;
-}
-.header-table td {
-  vertical-align: middle;
-  padding: 6pt 8pt;
-  border: none;
-}
-.h-logo {
-  width: 80pt;
-  text-align: center;
-}
-.h-center {
-  text-align: right;
-}
-.h-right {
-  width: 100pt;
-  text-align: left;
-  font-size: 9pt;
-  color: #64748b;
-}
-.h-company {
-  font-size: 16pt;
-  font-weight: bold;
-  color: #1e40af;
-  line-height: 1.3;
-  margin: 0;
-}
-.h-sub {
-  font-size: 10pt;
-  color: #475569;
-  margin: 3pt 0 0 0;
-}
-.h-contact {
-  font-size: 9pt;
-  color: #64748b;
-  margin-top: 3pt;
-  border-top: 0.5pt solid #e2e8f0;
-  padding-top: 3pt;
-}
-.h-meta-line {
-  margin: 2pt 0;
-  font-size: 9pt;
-  color: #475569;
-}
-.h-meta-label {
-  color: #94a3b8;
-  font-weight: normal;
-}
+table { border-collapse: collapse; width: 100%; }
 
-/* ═══════ عنوان سند ═══════ */
-.doc-title-block {
-  text-align: center;
-  margin: 14pt 0 12pt 0;
-  padding: 10pt;
-  border-top: 1pt solid #1e40af;
-  border-bottom: 1pt solid #1e40af;
-  background: #eff6ff;
-}
-.doc-main-title {
-  font-size: 18pt;
-  font-weight: bold;
-  color: #1e293b;
-  margin: 0;
-  padding: 0;
-}
-.doc-subtitle {
-  font-size: 12pt;
-  color: #475569;
-  margin: 4pt 0 0 0;
-}
-.doc-code-text {
-  font-size: 10pt;
-  color: #64748b;
-  font-family: 'Courier New', monospace;
-  direction: ltr;
-  margin-top: 4pt;
-}
+.contract-body { font-family: 'B Nazanin', 'Vazirmatn', Tahoma, sans-serif; direction: rtl; text-align: right; line-height: 1.6; font-size: 9pt; color: #0f172a; }
+.contract-body h1, .contract-body h2, .contract-body h3 { color: #1e40af; font-weight: bold; margin: 8pt 0 4pt; }
+.contract-body h2.clause-heading { font-size: 10.5pt; border-right: 3pt solid #1e40af; padding-right: 6pt; }
+.contract-body h3.sub-heading { font-size: 9.5pt; border-right: 2pt solid #93c5fd; padding-right: 5pt; }
+.contract-body p { margin: 0 0 5pt; text-align: justify; }
+.contract-body table th, .contract-body table td { border: 0.5pt solid #cbd5e1; padding: 1.5pt 3pt; font-size: 8pt; }
 
-/* ═══════ کادر محتوا ═══════ */
-.content-box {
-  border: 1.5pt solid #1e40af;
-  padding: 15pt 18pt;
-  margin: 12pt 0;
-  background: white;
-}
-
-/* ═══════ عناوین ═══════ */
-h1 {
-  font-size: 15pt;
-  font-weight: bold;
-  color: #1e40af;
-  margin: 14pt 0 8pt 0;
-  padding-bottom: 4pt;
-  border-bottom: 1.5pt solid #1e40af;
-}
-h2 {
-  font-size: 13pt;
-  font-weight: bold;
-  color: #1e293b;
-  margin: 12pt 0 6pt 0;
-  padding: 5pt 10pt;
-  background: #eff6ff;
-  border-right: 4pt solid #1e40af;
-}
-h3 {
-  font-size: 12pt;
-  font-weight: bold;
-  color: #334155;
-  margin: 10pt 0 4pt 0;
-}
-
-p {
-  margin: 6pt 0;
-  text-align: justify;
-  line-height: 1.9;
-}
-
-ul, ol {
-  margin: 6pt 20pt 6pt 0;
-  padding: 0;
-}
-li {
-  margin: 3pt 0;
-  line-height: 1.8;
-}
-
-/* ═══════ جداول ═══════ */
-table.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 8pt 0;
-  font-size: 11pt;
-}
-table.data-table th,
-table.data-table td {
-  border: 1pt solid #64748b;
-  padding: 6pt 8pt;
-  text-align: right;
-  vertical-align: top;
-}
-table.data-table th {
-  background: #1e40af;
-  color: white;
-  font-weight: bold;
-  text-align: center;
-}
-
-/* ═══════ جدول متادیتا ═══════ */
-table.meta-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 8pt 0;
-  font-size: 11pt;
-}
-table.meta-table td {
-  padding: 5pt 8pt;
-  border-bottom: 0.5pt dashed #cbd5e1;
-}
-table.meta-table td:first-child {
-  font-weight: bold;
-  color: #475569;
-  width: 25%;
-  background: #f8fafc;
-}
-
-/* ═══════ کادر اطلاعات ═══════ */
-.info-box {
-  border: 1pt solid #3b82f6;
-  background: #eff6ff;
-  padding: 10pt 12pt;
-  margin: 10pt 0;
-}
-
-/* ═══════ امضاها ═══════ */
-table.signature-table {
-  width: 100%;
-  margin-top: 50pt;
-  border-collapse: collapse;
-}
-table.signature-table td {
-  width: 50%;
-  text-align: center;
-  vertical-align: bottom;
-  padding: 0 25pt;
-  border: none;
-}
-.sig-label {
-  font-size: 11pt;
-  color: #475569;
-  margin-bottom: 50pt;
-}
-.sig-line {
-  border-top: 1pt solid #1e40af;
-  padding-top: 6pt;
-  font-weight: bold;
-  color: #1e293b;
-  font-size: 11pt;
-  min-height: 20pt;
-}
-.sig-date {
-  font-size: 9pt;
-  color: #94a3b8;
-  margin-top: 4pt;
-}
-
-/* ═══════ پانویس ═══════ */
-.footer-box {
-  margin-top: 30pt;
-  padding-top: 8pt;
-  border-top: 1pt solid #cbd5e1;
-  text-align: center;
-  font-size: 9pt;
-  color: #94a3b8;
-}
-
-/* Word-specific */
-p, h1, h2, h3, li {
-  mso-line-height-rule: exactly;
-}
+.no-print { display: none !important; }
 </style>
 </head>
 <body>
 
-<!-- ═══════ سربرگ ═══════ -->
-<table class="header-table" cellpadding="0" cellspacing="0">
-  <tr>
-    <td class="h-logo">
-      ${LOGO_SVG}
-    </td>
-    <td class="h-center">
-      <div class="h-company">${companyName}</div>
-      <div class="h-sub">${companySub}</div>
-      <div class="h-contact">${companyAddress} | تلفن: ${companyPhone}</div>
-    </td>
-    <td class="h-right">
-      <div class="h-meta-line"><span class="h-meta-label">تاریخ:</span> ${today}</div>
-      <div class="h-meta-line"><span class="h-meta-label">شماره:</span> ${opts.code || '—'}</div>
-    </td>
-  </tr>
-</table>
+${headerBlock}
 
-<!-- ═══════ عنوان سند ═══════ -->
-<div class="doc-title-block">
-  <div class="doc-main-title">${opts.title}</div>
-  ${opts.subtitle ? '<div class="doc-subtitle">' + opts.subtitle + '</div>' : ''}
-  ${opts.code ? '<div class="doc-code-text">' + opts.code + '</div>' : ''}
-</div>
-
-<!-- ═══════ کادر محتوا ═══════ -->
-<div class="content-box">
 ${opts.bodyHtml}
-</div>
 
-<!-- ═══════ امضاها ═══════ -->
-<table class="signature-table" cellpadding="0" cellspacing="0">
-  <tr>
-    <td>
-      <div class="sig-label">${signatures.right}</div>
-      <div class="sig-line">&nbsp;</div>
-      <div class="sig-date">تاریخ: .....................</div>
-    </td>
-    <td>
-      <div class="sig-label">${signatures.left}</div>
-      <div class="sig-line">&nbsp;</div>
-      <div class="sig-date">تاریخ: .....................</div>
-    </td>
-  </tr>
-</table>
-
-<!-- ═══════ پانویس ═══════ -->
-<div class="footer-box">
-  این سند توسط سیستم حسابداری اپسای تولید شده است — ${new Date().toLocaleString('fa-IR')}
-</div>
+${footerBlock}
 
 </body>
 </html>`;
 
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  // دانلود
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -354,51 +159,62 @@ ${opts.bodyHtml}
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 /**
  * چاپ HTML در پنجره جدید
  */
-export function printHtmlInNewWindow(title: string, htmlContent: string): void {
-  const w = window.open('', '_blank');
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html>
-<html dir="rtl">
+export function printHtmlInNewWindow(
+  title: string,
+  bodyHtml: string,
+  options?: { subtitle?: string; code?: string }
+): void {
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) {
+    alert('پنجره چاپ باز نشد — پاپ‌آپ‌ها رو اجازه بده');
+    return;
+  }
+
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="fa">
 <head>
-  <meta charset="utf-8">
-  <title>${title}</title>
-  <style>
-    @page { size: A4; margin: 1.5cm; }
-    body {
-      font-family: 'Vazirmatn', 'B Nazanin', Tahoma, sans-serif;
-      direction: rtl;
-      font-size: 12pt;
-      line-height: 1.8;
-      padding: 20px;
-      color: #0f172a;
-    }
-    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 6px; }
-    h2 { background: #eff6ff; border-right: 4px solid #1e40af; padding: 6px 10px; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-    table th, table td { border: 1px solid #64748b; padding: 6px 8px; text-align: right; }
-    table th { background: #1e40af; color: white; text-align: center; }
-    @media print { .no-print { display: none !important; } }
-  </style>
+<meta charset="utf-8">
+<title>${title}</title>
+<style>
+  @page { size: A4; margin: 20mm 12mm 18mm 12mm; }
+  html, body { margin: 0; padding: 0; background: white; }
+  body {
+    font-family: 'Vazirmatn', 'B Nazanin', Tahoma, sans-serif;
+    direction: rtl;
+    text-align: right;
+    color: #0f172a;
+    line-height: 1.9;
+    font-size: 11pt;
+  }
+  .contract-body { font-family: 'Vazirmatn', 'B Nazanin', Tahoma, sans-serif; direction: rtl; text-align: right; line-height: 1.9; }
+  .contract-body h1, .contract-body h2, .contract-body h3 { color: #1e40af; font-weight: bold; }
+  .contract-body h2.clause-heading { font-size: 14pt; border-right: 3pt solid #1e40af; padding-right: 8pt; margin: 12pt 0 6pt; }
+  .contract-body h3.sub-heading { font-size: 12pt; border-right: 2pt solid #93c5fd; padding-right: 6pt; margin: 8pt 0 4pt; }
+  .contract-body p { margin: 0 0 6pt; text-align: justify; }
+  .contract-body table { border-collapse: collapse; width: 100%; }
+  .contract-body table th, .contract-body table td { border: 1px solid #cbd5e1; padding: 3px 5px; font-size: 10pt; }
+</style>
 </head>
 <body>
-  ${htmlContent}
-  <script>
-    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
-  </script>
+${options?.subtitle ? `<div style="text-align:center;color:#475569;font-size:10pt;margin-bottom:8pt;">${options.subtitle}</div>` : ''}
+${bodyHtml}
 </body>
-</html>`);
-  w.document.close();
-}
+</html>`;
 
-/**
- * چاپ ساده
- */
-export function printCurrentContent(): void {
-  window.print();
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+
+  w.onload = () => {
+    setTimeout(() => {
+      w.focus();
+      w.print();
+    }, 300);
+  };
 }

@@ -8,6 +8,7 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { api } from '@/services/api';
 import type { PartnerShare } from '../services/partner-capital.api';
 import type { Partner, Project } from '@/types/project';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export default function ShareFormModal({ isOpen, editing, onClose, onSaved }: Pr
   const [projects, setProjects] = useState<Project[]>([]);
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormData>({
-    defaultValues: { effectiveFrom: new Date().toISOString().slice(0, 10) },
+    defaultValues: { effectiveFrom: todayLocalISO() },
   });
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function ShareFormModal({ isOpen, editing, onClose, onSaved }: Pr
         projectId: '',
         partnerId: '',
         sharePercent: 0,
-        effectiveFrom: new Date().toISOString().slice(0, 10),
+        effectiveFrom: todayLocalISO(),
         effectiveTo: undefined,
         notes: '',
       });

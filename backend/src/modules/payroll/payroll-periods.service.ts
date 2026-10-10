@@ -94,11 +94,15 @@ export class PayrollPeriodsService {
       }
 
       const empName = rec.employee?.name ?? '';
-      const entry = await this.engine.postEvent('PAYROLL_ACCRUAL', {
+      // اگر پرسنل به پروژه اختصاص دارد → حقوق کارگاهی، وگرنه ستادی
+      const isFieldWorker = !!rec.employeeProfile?.projectId;
+      const mappingCode = isFieldWorker ? 'PAYROLL_ACCRUAL_FIELD' : 'PAYROLL_ACCRUAL';
+      const entry = await this.engine.postEvent(mappingCode, {
         amount: Number(rec.netSalary),
         entryDate: p.endDate,
-        description: 'حقوق ' + empName + ' - ' + p.code,
+        description: (isFieldWorker ? 'دستمزد کارگاهی ' : 'حقوق ستادی ') + empName + ' - ' + p.code,
         partnerId: rec.employeeId,
+        projectId: rec.employeeProfile?.projectId || undefined,
         sourceId: rec.id,
         reference: p.code + '/' + rec.rowNumber,
         userId,
@@ -122,4 +126,6 @@ export class PayrollPeriodsService {
       data: { status: 'PAID', paidAt: new Date() },
     });
   }
+
+
 }

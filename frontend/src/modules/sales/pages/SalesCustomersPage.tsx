@@ -6,6 +6,8 @@ import CustomerFormModal from '../components/CustomerFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { todayLocalISO } from '@/utils/local-date';
 export default function SalesCustomersPage() {
   const [items, setItems] = useState<SalesCustomer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function SalesCustomersPage() {
       'شبا': c.bankSheba || '',
     }));
     void exportToExcel({
-      filename: 'SalesCustomers-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'SalesCustomers-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Customers',
         rows,
@@ -131,6 +133,12 @@ export default function SalesCustomersPage() {
                     <td className="px-4 py-3 text-xs text-slate-600 truncate max-w-xs">{c.address || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/sales/customers"
+                          id={c.id}
+                          itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || ''}
+                          onSuccess={load}
+                        />
                         <button
                           onClick={() => { setEditing(c); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"

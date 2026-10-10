@@ -11,6 +11,7 @@ import ContributionFormModal from '../components/ContributionFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import { todayLocalISO } from '@/utils/local-date';
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس', SUBMITTED: 'ارسال‌شده', APPROVED: 'تاییدشده',
   PAID: 'پرداخت‌شده', CANCELLED: 'لغو‌شده',
@@ -80,7 +81,7 @@ export default function ContributionsPage() {
       'وضعیت': STATUS_LABELS[c.status], 'شرح': c.description || '',
     }));
     void exportToExcel({
-      filename: 'Contributions-' + new Date().toISOString().slice(0, 10) + '.xlsx',
+      filename: 'Contributions-' + todayLocalISO() + '.xlsx',
       sheets: [{
         name: 'Contributions',
         rows,

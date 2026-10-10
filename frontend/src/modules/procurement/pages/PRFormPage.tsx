@@ -11,6 +11,7 @@ import type { Project, WbsItem } from '@/types/project';
 import {
   PR_PRIORITY_LABELS, PR_UNIT_LABELS, PRPriority, PRItemUnit,
 } from '@/types/procurement';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm {
   description: string;
@@ -43,7 +44,7 @@ export default function PRFormPage() {
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: {
-      requestDate: new Date().toISOString().slice(0, 10),
+      requestDate: todayLocalISO(),
       items: [{ description: '', quantity: 1, unit: 'NUMBER', priority: 'NORMAL' }],
     },
   });

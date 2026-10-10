@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { X, Save, Loader2 } from 'lucide-react';
 import { salesApi } from '../services/sales.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
+import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface Props {
 export default function PaymentFormModal({ isOpen, contractId, remaining, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({
-    amount: '', paidAt: new Date().toISOString().slice(0, 10),
+    amount: '', paidAt: todayLocalISO(),
     paymentMethod: '', referenceNumber: '', bankName: '', notes: '',
   });
 
@@ -23,7 +24,7 @@ export default function PaymentFormModal({ isOpen, contractId, remaining, onClos
     if (isOpen) {
       setForm({
         amount: String(remaining),
-        paidAt: new Date().toISOString().slice(0, 10),
+        paidAt: todayLocalISO(),
         paymentMethod: '', referenceNumber: '', bankName: '', notes: '',
       });
     }

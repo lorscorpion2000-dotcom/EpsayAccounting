@@ -141,6 +141,9 @@ export class EmployeesService {
 
     // 1) Build employeeProfile data
     const data: any = {};
+    if (dto.projectId !== undefined) {
+      data.projectId = (dto.projectId && String(dto.projectId).trim()) ? dto.projectId : null;
+    }
     if (dto.employeeType !== undefined) data.employeeType = dto.employeeType;
     if (dto.position !== undefined) data.position = dto.position;
     if (dto.department !== undefined) data.department = dto.department;

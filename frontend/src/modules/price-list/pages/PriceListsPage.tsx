@@ -11,7 +11,7 @@ import type { PriceList, BoqStats } from '@/types/price-list';
 import { PRICE_LIST_STATUS_LABELS, PRICE_LIST_STATUS_COLORS } from '@/types/price-list';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function PriceListsPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<PriceList[]>([]);
@@ -174,6 +174,12 @@ export default function PriceListsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton
+                          endpoint="/price-list"
+                          id={pl.id}
+                          itemLabel={(pl as any).code || (pl as any).name || (pl as any).title || (pl as any).fullName || (pl as any).serialNumber || ''}
+                          onSuccess={load}
+                        />
                         <button onClick={() => navigate(`/price-lists/${pl.id}`)}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-brand-600" title="مشاهده">
                           <Eye className="w-4 h-4" />
