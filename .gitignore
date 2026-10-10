@@ -58,3 +58,28 @@ _dryrun-output.txt
 # === Uploads & generated ===
 uploads/
 *.pid
+
+# === Corrupt/broken/archived files ===
+*.corrupt-bak
+*.corrupted
+*.broken-*
+*.archived-*
+
+# === Build artifacts ===
+*.tsbuildinfo
+
+# === Temp JSON files ===
+account-merge-bk-*.json
+cleanup-manifest.json
+notepad-cleanup-manifest.json
+contract-templates-backup-*.json
+
+# === Empty project structure ===
+modules/
+
+# === Backup dumps ===
+backup/
+*.dump
+
+# === Env prod (we use vite proxy) ===
+.env.production
