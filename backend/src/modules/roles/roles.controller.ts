@@ -6,6 +6,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Roles - نقش‌ها و مجوزها')
 @ApiBearerAuth()
@@ -58,7 +59,7 @@ export class RolesController {
   @RequirePermissions('roles.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

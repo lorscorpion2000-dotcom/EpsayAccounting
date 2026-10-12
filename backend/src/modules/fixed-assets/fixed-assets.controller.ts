@@ -8,6 +8,7 @@ import { DisposeFixedAssetDto } from './dto/dispose-fixed-asset.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Fixed Assets - دارایی‌های ثابت')
 @ApiBearerAuth()
@@ -77,7 +78,7 @@ export class FixedAssetsController {
   @RequirePermissions('accounting.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

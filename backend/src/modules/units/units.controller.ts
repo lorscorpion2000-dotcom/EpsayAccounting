@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UnitsService } from './units.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Units - \u0648\u0627\u062d\u062f\u0647\u0627\u06cc \u0627\u0646\u062f\u0627\u0632\u0647\u200c\u06af\u06cc\u0631\u06cc')
 @ApiBearerAuth()
@@ -45,7 +46,7 @@ export class UnitsController {
   @RequirePermissions('settings.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

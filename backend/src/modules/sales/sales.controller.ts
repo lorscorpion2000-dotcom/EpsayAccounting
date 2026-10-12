@@ -17,6 +17,7 @@ import {
 } from './dto/create-sales-contract.dto';
 import { CreateSalesPaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ReasonDto } from '../../common/dto';
 
 // ═══════════════════════════════════════════════
 // Units
@@ -77,7 +78,7 @@ export class SalesUnitsController {
   @RequirePermissions('sales.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};
@@ -165,7 +166,7 @@ export class SalesCustomersController {
   @RequirePermissions('sales.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};
@@ -276,7 +277,7 @@ export class SalesContractsController {
   @RequirePermissions('sales.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

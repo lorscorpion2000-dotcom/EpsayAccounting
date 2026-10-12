@@ -8,6 +8,7 @@ import {
 } from './dto/price-list.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
 @ApiBearerAuth()
@@ -122,7 +123,7 @@ export class PriceListController {
   @RequirePermissions('price-lists.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

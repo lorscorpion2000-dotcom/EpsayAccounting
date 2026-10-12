@@ -6,6 +6,7 @@ import { UpdateJournalDto } from './dto/update-journal.dto';
 import { ReverseJournalDto } from './dto/reverse-journal.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto, ReasonForceDto } from '../../common/dto';
 
 @ApiTags('Journals - اسناد حسابداری')
 @ApiBearerAuth()
@@ -86,7 +87,7 @@ export class JournalsController {
   @RequirePermissions('journal.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string; force?: boolean },
+    @Body() body: ReasonForceDto,
     @Req() req: any,
   ) {
     const user = req.user || {};
@@ -135,7 +136,7 @@ export class JournalsController {
   @RequirePermissions('journal.force-delete')
   async hardDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

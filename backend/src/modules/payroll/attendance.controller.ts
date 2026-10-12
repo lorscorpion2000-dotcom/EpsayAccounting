@@ -4,6 +4,7 @@ import { AttendanceService } from './attendance.service';
 import { CreateAttendanceDto, BulkAttendanceDto } from './dto/attendance.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Attendance - حضور و غیاب')
 @ApiBearerAuth()
@@ -77,7 +78,7 @@ export class AttendanceController {
   @RequirePermissions('attendance.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

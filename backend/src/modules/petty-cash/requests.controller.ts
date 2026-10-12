@@ -5,6 +5,7 @@ import { CreatePettyCashRequestDto } from './dto/create-request.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Petty Cash Requests - درخواست‌های شارژ')
 @ApiBearerAuth()
@@ -60,7 +61,7 @@ export class PettyCashRequestsController {
   @RequirePermissions('pettycashrequest.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

@@ -4,6 +4,7 @@ import { SalesReceiptsService } from './sales-receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Sales Receipts - دریافت از مشتری')
 @ApiBearerAuth()
@@ -34,7 +35,7 @@ export class SalesReceiptsController {
   @RequirePermissions('salesreceipt.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

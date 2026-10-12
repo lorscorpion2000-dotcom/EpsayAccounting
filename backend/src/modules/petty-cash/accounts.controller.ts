@@ -4,6 +4,7 @@ import { PettyCashAccountsService } from './accounts.service';
 import { CreatePettyCashAccountDto } from './dto/create-account.dto';
 import { UpdatePettyCashAccountDto } from './dto/update-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Petty Cash Accounts - حساب‌های تنخواه')
 @ApiBearerAuth()
@@ -50,7 +51,7 @@ export class PettyCashAccountsController {
   @RequirePermissions('capitalaccount.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

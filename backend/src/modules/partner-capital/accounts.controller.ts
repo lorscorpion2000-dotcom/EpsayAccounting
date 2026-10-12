@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CapitalAccountsService } from './accounts.service';
 import { CreateCapitalAccountDto } from './dto/capital-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Partner Capital Accounts - حساب‌های سرمایه شرکا')
 @ApiBearerAuth()
@@ -36,7 +37,7 @@ export class CapitalAccountsController {
   @RequirePermissions('capitalaccount.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

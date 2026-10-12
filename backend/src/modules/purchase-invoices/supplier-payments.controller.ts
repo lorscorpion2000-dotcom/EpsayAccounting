@@ -4,6 +4,7 @@ import { SupplierPaymentsService } from './supplier-payments.service';
 import { PaySupplierDto } from './dto/pay-supplier.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Supplier Payments - پرداخت به تأمین‌کننده')
 @ApiBearerAuth()
@@ -37,7 +38,7 @@ export class SupplierPaymentsController {
   @RequirePermissions('supplierpayment.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

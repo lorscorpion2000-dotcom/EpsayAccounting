@@ -6,6 +6,7 @@ import { UpdatePRDto } from './dto/update-pr.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Purchase Requests - درخواست‌های خرید')
 @ApiBearerAuth()
@@ -65,7 +66,7 @@ export class PurchaseRequestsController {
   @RequirePermissions('procurement.manage')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

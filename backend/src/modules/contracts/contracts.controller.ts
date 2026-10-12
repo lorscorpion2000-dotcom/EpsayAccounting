@@ -11,6 +11,7 @@ import { CreateLegalPartyDto } from './dto/create-party.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -167,7 +168,7 @@ export class ContractsController {
   @RequirePermissions('contracts.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

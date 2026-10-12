@@ -6,6 +6,7 @@ import { CreateRFQResponseDto } from './dto/create-rfq-response.dto';
 import { SelectSupplierDto } from './dto/select-supplier.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('RFQ - استعلام‌ها')
 @ApiBearerAuth()
@@ -45,7 +46,7 @@ export class RFQController {
   @RequirePermissions('rfq.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

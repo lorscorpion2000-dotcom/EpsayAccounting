@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AttachmentsService } from './attachments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Attachments - پیوست‌ها')
 @ApiBearerAuth()
@@ -37,7 +38,7 @@ export class AttachmentsController {
   @RequirePermissions('attachment.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

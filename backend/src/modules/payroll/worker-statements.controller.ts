@@ -8,6 +8,7 @@ import {
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Worker Statements - صورت‌وضعیت پرسنل')
 @ApiBearerAuth()
@@ -79,7 +80,7 @@ export class WorkerStatementsController {
   @RequirePermissions('payroll.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

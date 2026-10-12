@@ -4,6 +4,7 @@ import { AdjustmentService } from './adjustment.service';
 import { CalculateAdjDto } from './dto/adjustment.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Adjustment - تعدیل صورت‌وضعیت')
 @ApiBearerAuth()
@@ -50,7 +51,7 @@ export class AdjustmentController {
   @RequirePermissions('adjustment.delete')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};

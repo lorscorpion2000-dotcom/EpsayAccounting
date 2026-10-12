@@ -6,6 +6,7 @@ import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
 
 @ApiTags('Partners - اشخاص')
 @ApiBearerAuth()
@@ -61,7 +62,7 @@ export class PartnersController {
   @RequirePermissions('partners.update')
   async adminDelete(
     @Param('id') id: string,
-    @Body() body: { reason?: string },
+    @Body() body: ReasonDto,
     @Req() req: any,
   ) {
     const user = req.user || {};
