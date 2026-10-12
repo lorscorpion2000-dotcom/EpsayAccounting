@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PriceListService } from './price-list.service';
 import {
@@ -10,6 +10,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { PriceListStatus } from '@prisma/client';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
 @ApiBearerAuth()
@@ -158,8 +159,8 @@ export class PriceListController {
   @Get('deleted/list')
   @RequirePermissions('price-lists.update')
   listDeleted(
-    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
-    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'priceList',

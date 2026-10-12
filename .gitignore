@@ -103,3 +103,10 @@ prompt-next-chat.md
 # === Uploads/attachments ===
 **/uploads/
 
+# === dev-junk (added session) ===
+backend/_*.mjs
+!backend/_seed-all.mjs
+!backend/_seed-extra.mjs
+backend/_*.txt
+backend/lint-*.txt
+backend/lint-*.json

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;;
 import { ContractsService } from './contracts.service';
 import {
   CreateLegalContractDto,
@@ -11,6 +11,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
 import { LegalContractKind, LegalContractStatus } from '@prisma/client';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -201,8 +202,8 @@ export class ContractsController {
   @Get('deleted/list')
   @RequirePermissions('contracts.update')
   listDeleted(
-    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
-    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'contract',

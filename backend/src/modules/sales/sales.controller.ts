@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;;
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SalesService } from './sales.service';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
@@ -17,6 +17,7 @@ import { CreateSalesPaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ReasonDto } from '../../common/dto';
 import { SalesUnitStatus } from '@prisma/client';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 // ═══════════════════════════════════════════════
 // Units
@@ -41,7 +42,7 @@ export class SalesUnitsController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
+  listDeleted(@Query('take', new OptionalIntPipe()) take?: number, @Query('skip', new OptionalIntPipe()) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesUnit',
       take: take ?? 100,
@@ -122,7 +123,7 @@ export class SalesCustomersController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
+  listDeleted(@Query('take', new OptionalIntPipe()) take?: number, @Query('skip', new OptionalIntPipe()) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesCustomer',
       take: take ?? 100,
@@ -221,7 +222,7 @@ export class SalesContractsController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
+  listDeleted(@Query('take', new OptionalIntPipe()) take?: number, @Query('skip', new OptionalIntPipe()) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesContract',
       take: take ?? 100,
