@@ -56,7 +56,7 @@ _audit-*.json
 _dryrun-output.txt
 
 # === Uploads & generated ===
-uploads/
+/uploads/
 *.pid
 
 # === Corrupt/broken/archived files ===
@@ -74,11 +74,8 @@ cleanup-manifest.json
 notepad-cleanup-manifest.json
 contract-templates-backup-*.json
 
-# === Empty project structure ===
-modules/
-
 # === Backup dumps ===
-backup/
+/backup/
 *.dump
 
 # === Env prod (we use vite proxy) ===

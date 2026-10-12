@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
 import { FiscalYearsService } from '../../src/modules/accounting/fiscal-years.service';
 
 function serviceWithFindFirst(result: any) {
