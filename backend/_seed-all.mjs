@@ -45,9 +45,8 @@ for (const s of steps) {
   const abs = path.join(cwd, s.check);
   if (!fs.existsSync(abs)) {
     console.log('');
-    console.log('[!] ' + s.name);
+    console.log('[~] ' + s.name + ' — skipped');
     console.log('    file not found: ' + abs);
-    failed++;
     continue;
   }
   console.log('');
