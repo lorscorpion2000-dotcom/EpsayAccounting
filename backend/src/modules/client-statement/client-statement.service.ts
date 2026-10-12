@@ -5,13 +5,17 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import {
   CreateCSDto, UpdateCSDto, ImportCSItemsDto,
 } from './dto/client-statement.dto';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
 
 const CATEGORIES = ['MATERIAL', 'LABOR', 'MISC', 'TRANSPORT', 'EQUIPMENT'] as const;
 type Category = typeof CATEGORIES[number];
 
 @Injectable()
 export class ClientStatementService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   private async nextCode(): Promise<string> {
     const year = new Date().getFullYear();
@@ -308,14 +312,8 @@ export class ClientStatementService {
     if (s.status === 'PAID') throw new BadRequestException('قبلاً پرداخت شده است');
     if (s.journalEntryId) throw new BadRequestException('سند حسابداری قبلاً ثبت شده است');
 
-    const fiscalYear = await this.prisma.fiscalYear.findFirst({
-      where: { startDate: { lte: s.periodEnd }, endDate: { gte: s.periodEnd }, status: 'OPEN' },
-    });
-    if (!fiscalYear) throw new BadRequestException('سال مالی باز متناظر با این دوره یافت نشد');
-
-    const monthKey = s.periodEnd.getFullYear() + '-' + String(s.periodEnd.getMonth() + 1).padStart(2, '0');
-    const lockedMonths = (fiscalYear.lockedMonths as string[]) || [];
-    if (lockedMonths.includes(monthKey)) throw new BadRequestException('دوره ' + monthKey + ' قفل شده است');
+        // B2.5: unified period lock
+    const fiscalYear = await this.fiscalYears.assertPeriodOpen(s.periodEnd);
 
     const receivableAcc = await this.findAccount('1.1.2', 'حساب دریافتنی');
     const prepaidLiabilityAcc = await this.findAccount('2.1', 'پیش‌پرداخت دریافتی');

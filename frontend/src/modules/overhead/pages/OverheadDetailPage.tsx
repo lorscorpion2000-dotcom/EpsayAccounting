@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, Calculator, CheckCircle2, XCircle, Printer, FileText,
-} from 'lucide-react';
+import { ArrowRight, Loader2, Calculator, CheckCircle2, Printer, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { overheadApi } from '../services/overhead.api';
 import type { OverheadAllocation } from '@/types/overhead';

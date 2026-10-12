@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { X, Loader2, Save, Layers } from 'lucide-react';
+import { X, Save, Layers } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import type { WbsItem, WbsLevel, WbsUnit } from '@/types/project';
 import { WBS_LEVEL_LABELS } from '@/types/project';
@@ -44,7 +44,7 @@ export default function WbsNodeModal({
 }: Props) {
   const isEdit = !!editingItem;
 
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control: _control, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       level: getChildLevel(parentItem),
       sortOrder: 0,

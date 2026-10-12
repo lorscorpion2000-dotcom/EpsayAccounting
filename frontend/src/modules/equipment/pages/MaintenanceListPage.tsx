@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   Plus, Loader2, Wrench, Trash2, RefreshCw,
 } from 'lucide-react';
-import clsx from 'clsx';
+
 import { equipmentApi } from '../services/equipment.api';
 import type { EquipmentMaintenance, Equipment } from '@/types/equipment';
 import { MAINTENANCE_TYPE_LABELS } from '@/types/equipment';

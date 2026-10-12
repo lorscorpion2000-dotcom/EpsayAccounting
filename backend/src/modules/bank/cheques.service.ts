@@ -3,6 +3,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateChequeDto } from './dto/create-cheque.dto';
 import { UpdateChequeDto } from './dto/update-cheque.dto';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class ChequesService {
@@ -13,8 +14,7 @@ export class ChequesService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.cheque.count();
-    return 'CHQ-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'cheque', 'code', 'CHQ-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: {

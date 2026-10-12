@@ -2,17 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, ClipboardList, Printer, Send, CheckCircle2, XCircle,
-  Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp,
-  AlertCircle, UserCheck, ShoppingCart, Bell,
- Edit} from 'lucide-react';
+import { ArrowRight, Loader2, ClipboardList, Printer, Send, Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp, AlertCircle, UserCheck, ShoppingCart, Bell, Edit } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
-import type {
-  DailyReport, WeatherCondition,
-  EntryExitKind, RequestType, EventType,
-} from '@/types/site-ops';
+import type { DailyReport, WeatherCondition, RequestType, EventType } from '@/types/site-ops';
 import {
   REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, WEATHER_LABELS,
   ATTENDANCE_LABELS, ATTENDANCE_COLORS,
@@ -151,7 +144,6 @@ function DailyReportSectionsPanel({
   );
 }
 
-
 export default function DailyReportDetailPage() {
 
   const { id } = useParams<{ id: string }>();
@@ -239,7 +231,6 @@ export default function DailyReportDetailPage() {
       toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
     } finally { setSectionsBusy(null); }
   };
-
 
   const handleAction = async () => {
     if (!actionItem || !report) return;

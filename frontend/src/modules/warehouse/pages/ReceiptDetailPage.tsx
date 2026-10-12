@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Printer } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { warehouseApi } from '../services/warehouse.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import PrintButton from '@/components/PrintButton';

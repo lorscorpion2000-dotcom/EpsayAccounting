@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { X, Loader2, Wallet, Banknote, AlertCircle } from 'lucide-react';
-import clsx from 'clsx';
+
 import { api } from '@/services/api';
 import AccountSelect from '@/modules/accounting/components/AccountSelect';
 import { formatNumber } from '@/utils/format';

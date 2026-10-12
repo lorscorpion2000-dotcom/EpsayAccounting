@@ -101,7 +101,7 @@ export default function WorkerStatementFormPage() {
       (s, it) => s + Number(it.quantity) * Number(it.unitPrice), 0,
     );
     const insuranceAmount = (totalEarnings * insurancePercent) / 100;
-    const taxableBase = totalEarnings - insuranceAmount;
+
     // پیش‌نمایش مالیات (محاسبه‌ی دقیق سمت سرور انجام می‌شود)
     const taxAmount = totals?.taxAmount ?? 0; // در preview می‌آید
     const totalDeductions = insuranceAmount + taxAmount;

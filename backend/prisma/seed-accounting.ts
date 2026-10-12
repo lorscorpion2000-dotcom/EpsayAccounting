@@ -28,7 +28,7 @@ async function main() {
   console.log('Seeding accounting core...');
 
   // 1. سال مالی جاری
-  const fy = await prisma.fiscalYear.upsert({
+  await prisma.fiscalYear.upsert({
     where: { code: '1404' },
     update: {},
     create: {

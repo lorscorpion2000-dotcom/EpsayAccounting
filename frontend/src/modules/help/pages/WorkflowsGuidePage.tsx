@@ -1,11 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet,
-  ClipboardList, PackagePlus, FileCheck2, Users, Calendar,
-  ArrowDown, CheckCircle2, XCircle, User, Send, Ban,
-  GitBranch, Info, Printer,
-  Package, FileWarning, Lock, Trash2, Ruler,
-} from 'lucide-react';
+import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import PrintButton from '@/components/PrintButton';

@@ -232,7 +232,7 @@ export class EmployeesService {
   }
 
   async remove(id: string, options?: { force?: boolean }) {
-    const emp = await this.findOne(id);
+    await this.findOne(id);
     const force = options?.force === true;
 
     if (!force) {
@@ -300,7 +300,6 @@ export class EmployeesService {
       }, {} as Record<string, number>),
     };
   }
-
 
   /**
    * Syncs all LegalContractParty records that match this employee.

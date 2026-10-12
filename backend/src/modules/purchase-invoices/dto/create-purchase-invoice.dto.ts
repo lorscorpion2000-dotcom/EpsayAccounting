@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsUUID, IsDateString, IsIn, MaxLength, Min, IsArray, ValidateNested, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsUUID, IsDateString, MaxLength, Min, IsArray, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class CreatePIItemDto {

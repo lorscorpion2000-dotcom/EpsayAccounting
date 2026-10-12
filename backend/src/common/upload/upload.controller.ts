@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { join, extname } from 'node:path';
+import { join } from 'node:path';
 import { existsSync, mkdirSync } from 'node:fs';
 import {
   isAllowedExtension,

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AccountDetailType, AccountNature, Prisma } from '@prisma/client';
+import { AccountDetailType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 export interface EnsureDetailAccountInput {

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { UpdatePurchaseInvoiceDto } from './dto/update-purchase-invoice.dto';
 
@@ -8,7 +9,8 @@ import { UpdatePurchaseInvoiceDto } from './dto/update-purchase-invoice.dto';
 export class PurchaseInvoicesService {
   constructor(
     private prisma: PrismaService,
-    private engine: AccountingEngineService,
+    _engine: AccountingEngineService,
+    private fiscalYears: FiscalYearsService,
   ) {}
 
   private async generateCode(): Promise<string> {
@@ -44,7 +46,7 @@ export class PurchaseInvoicesService {
     throw new Error('Cannot generate unique code for PI');
   }
 
-  private computeTotals(items: any[], taxPercent: number, discountAmount: number) {
+  private computeTotals(items: any[], _taxPercent: number, discountAmount: number) {
     let subtotal = 0, totalDiscount = 0, totalAddition = 0, totalDeduction = 0;
     let totalTax = 0, totalShipping = 0, totalLoading = 0, grandTotal = 0;
 
@@ -408,7 +410,6 @@ export class PurchaseInvoicesService {
     const vatAcc     = await this.getVatAccount();
     const payableAcc = await this.resolveSupplierPayable(inv.supplierId);
 
-    
     // ساخت JE سه‌خطی
     // C-4.b: capital/non-capital split + asset mapping
     const assetMapping = await this.prisma.accountMapping.findUnique({
@@ -427,6 +428,53 @@ export class PurchaseInvoicesService {
     const discountNum = Number(inv.discountAmount);
     const taxNum = Number(inv.taxAmount);
     const totalNum = Number(inv.totalAmount);
+
+    // B3.c: GRNI path — فاکتوری که از رسید انبار می‌آید
+    if (inv.grId) {
+      const grniMapping = await this.prisma.accountMapping.findUnique({
+        where: { code: 'GOODS_RECEIPT' },
+      });
+      if (!grniMapping || !grniMapping.creditAccountId) {
+        throw new BadRequestException('Mapping GOODS_RECEIPT ناقص است');
+      }
+      const grniAmount = subtotalNum - discountNum;
+      const grniLines: any[] = [];
+      if (grniAmount > 0.01) {
+        grniLines.push({
+          accountId: grniMapping.creditAccountId,
+          debit: grniAmount,
+          credit: 0,
+          description: 'بستن GRNI طبق فاکتور ' + inv.code,
+        });
+      }
+      if (taxNum > 0.01) {
+        grniLines.push({ accountId: vatAcc.id, debit: taxNum, credit: 0 });
+      }
+      grniLines.push({ accountId: payableAcc.id, credit: totalNum });
+
+      await this.fiscalYears.assertPeriodOpen(inv.invoiceDate);
+
+      const grniJe = await this.createMultiLineJE({
+        entryDate: inv.invoiceDate,
+        description: 'فاکتور خرید ' + inv.code + ' — ' + inv.supplier.name + ' (GRNI)',
+        sourceType: 'PURCHASE_INVOICE',
+        sourceId: inv.id,
+        userId,
+        projectId: inv.projectId,
+        lines: grniLines,
+      });
+
+      return this.prisma.purchaseInvoice.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          journalEntryId: grniJe.id,
+          approvedAt: new Date(),
+          approvedBy: userId ?? null,
+        },
+      });
+    }
+
     let capitalNet = 0;
     let normalNet = 0;
     for (const it of ((inv as any).items || [])) {
@@ -444,6 +492,9 @@ export class PurchaseInvoicesService {
     if (capitalNet > 0.01 && assetAccId) jeLines.push({ accountId: assetAccId, debit: capitalNet });
     if (taxNum > 0.01) jeLines.push({ accountId: vatAcc.id, debit: taxNum });
     jeLines.push({ accountId: payableAcc.id, credit: totalNum });
+
+    // B2.4: period lock
+    await this.fiscalYears.assertPeriodOpen(inv.invoiceDate);
 
     const je = await this.createMultiLineJE({
       entryDate: inv.invoiceDate,
@@ -626,8 +677,7 @@ export class PurchaseInvoicesService {
     });
   }
 
-
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.purchaseInvoice.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) {

@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Calculator, Eye, Trash2, RefreshCw,
-  CheckCircle2, XCircle, BarChart3,
-} from 'lucide-react';
+import { Plus, Loader2, Calculator, Eye, Trash2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 import { overheadApi } from '../services/overhead.api';
 import { api } from '@/services/api';

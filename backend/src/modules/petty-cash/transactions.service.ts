@@ -4,6 +4,7 @@ import { CreatePettyCashTransactionDto } from './dto/create-transaction.dto';
 import { UpdatePettyCashTransactionDto } from './dto/update-transaction.dto';
 import { PettyCashAccountsService } from './accounts.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class PettyCashTransactionsService {
@@ -15,11 +16,10 @@ export class PettyCashTransactionsService {
 
   private async generateCode(type: string): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.pettyCashTransaction.count();
     const prefix = type === 'FUNDING' ? 'PCF' :
                    type === 'EXPENSE' ? 'PCE' :
                    type === 'SETTLEMENT' ? 'PCS' : 'PCA';
-    return prefix + '-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'pettyCashTransaction', 'code', prefix + '-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: {
@@ -239,7 +239,7 @@ export class PettyCashTransactionsService {
     });
   }
 
-  async approve(id: string, approverId: string) {
+  async approve(id: string, approverId: string, sourceAccountId?: string) {
     const tx = await this.findOne(id);
     if (tx.status !== 'SUBMITTED') {
       throw new BadRequestException('فقط تراکنش‌های ارسال‌شده قابل تایید هستند');
@@ -280,6 +280,7 @@ export class PettyCashTransactionsService {
         pettyCashId: tx.accountId,
         sourceId: tx.id,
         userId: approverId,
+        bankAccountId: sourceAccountId || undefined,
       });
 
       return this.prisma.pettyCashTransaction.update({
@@ -314,8 +315,7 @@ export class PettyCashTransactionsService {
     });
   }
 
-
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.pettyCashTransaction.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

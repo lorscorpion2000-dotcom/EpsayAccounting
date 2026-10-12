@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, X, Loader2, File as FileIcon, ExternalLink, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Loader2, File as FileIcon, ExternalLink, Paperclip } from 'lucide-react';
 import { api } from '@/services/api';
 import { attachmentsApi, Attachment, AttachmentInput } from '@/services/attachments.api';
 

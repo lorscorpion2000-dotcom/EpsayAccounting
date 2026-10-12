@@ -84,7 +84,6 @@ export default function PayrollPeriodDetailPage() {
   if (loading) return <div className="card p-12 flex items-center justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   if (!period) return null;
 
-  const MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 
   return (
     <div className="space-y-6 animate-fade-in">

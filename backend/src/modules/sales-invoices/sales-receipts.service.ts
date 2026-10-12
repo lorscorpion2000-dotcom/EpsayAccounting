@@ -1,15 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class SalesReceiptsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.salesReceipt.count();
-    return 'SR-' + year + '-' + String(count + 1).padStart(5, '0');
+    return generateCode(this.prisma, 'salesReceipt', 'code', 'SR-' + year + '-', { pad: 5 });
   }
 
   async findAll(query?: { customerId?: string; invoiceId?: string }) {
@@ -82,66 +86,71 @@ export class SalesReceiptsService {
 
     // JE
     const entryDate = new Date(dto.receiptDate);
-    const fy = await this.prisma.fiscalYear.findFirst({
-      where: { startDate: { lte: entryDate }, endDate: { gte: entryDate } },
-      orderBy: { startDate: 'desc' },
-    });
-    if (!fy) throw new BadRequestException('سال مالی پیدا نشد');
-
-    const last = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: fy.id }, orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
-    });
-    const entryNumber = (last?.entryNumber ?? 0) + 1;
-    const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+    // B2.4: period lock
+    const fy = await this.fiscalYears.assertPeriodOpen(entryDate);
 
     const code = await this.generateCode();
-    const je = await this.prisma.journalEntry.create({
-      data: {
-        code: jeCode,
-        entryNumber,
-        entryDate,
-        fiscalYearId: fy.id,
-        description: 'دریافت از ' + inv.customer.fullName + ' — ' + inv.code,
-        status: 'POSTED',
-        sourceType: 'SALES_RECEIPT',
-        sourceId: code,
-        totalDebit: dto.amount,
-        totalCredit: dto.amount,
-        createdById: userId ?? null,
-        lines: {
-          create: [
-            { accountId: creditAccountId, debit: dto.amount, credit: 0, sortOrder: 1 },
-            { accountId: custAcc.id,      debit: 0, credit: dto.amount, sortOrder: 2 },
-          ],
-        },
+
+    // B4.b: atomic receipt — JE + receipt + invoice update in one tx
+    return this.prisma.$transaction(
+      async (tx) => {
+        const last = await tx.journalEntry.findFirst({
+          where: { fiscalYearId: fy.id },
+          orderBy: { entryNumber: 'desc' },
+          select: { entryNumber: true },
+        });
+        const entryNumber = (last?.entryNumber ?? 0) + 1;
+        const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+
+        const je = await tx.journalEntry.create({
+          data: {
+            code: jeCode,
+            entryNumber,
+            entryDate,
+            fiscalYearId: fy.id,
+            description: 'دریافت از ' + inv.customer.fullName + ' — ' + inv.code,
+            status: 'POSTED',
+            sourceType: 'SALES_RECEIPT',
+            sourceId: code,
+            totalDebit: dto.amount,
+            totalCredit: dto.amount,
+            createdById: userId ?? null,
+            lines: {
+              create: [
+                { accountId: creditAccountId, debit: dto.amount, credit: 0, sortOrder: 1 },
+                { accountId: custAcc.id,      debit: 0, credit: dto.amount, sortOrder: 2 },
+              ],
+            },
+          },
+        });
+
+        const receipt = await tx.salesReceipt.create({
+          data: {
+            code,
+            customerId: inv.customerId,
+            invoiceId: inv.id,
+            method: dto.method,
+            bankAccountId: dto.bankAccountId ?? null,
+            amount: dto.amount,
+            receiptDate: entryDate,
+            reference: dto.reference ?? null,
+            notes: dto.notes ?? null,
+            journalEntryId: je.id,
+            createdById: userId ?? null,
+          },
+        });
+
+        const newRec = Number(inv.receivedAmount) + dto.amount;
+        const isPaid = newRec >= Number(inv.totalAmount) - 0.01;
+        await tx.salesInvoice.update({
+          where: { id: inv.id },
+          data: { receivedAmount: newRec, status: isPaid ? 'PAID' : 'PARTIALLY_RECEIVED' },
+        });
+
+        return receipt;
       },
-    });
-
-    const receipt = await this.prisma.salesReceipt.create({
-      data: {
-        code,
-        customerId: inv.customerId,
-        invoiceId: inv.id,
-        method: dto.method,
-        bankAccountId: dto.bankAccountId ?? null,
-        amount: dto.amount,
-        receiptDate: entryDate,
-        reference: dto.reference ?? null,
-        notes: dto.notes ?? null,
-        journalEntryId: je.id,
-        createdById: userId ?? null,
-      },
-    });
-
-    const newRec = Number(inv.receivedAmount) + dto.amount;
-    const isPaid = newRec >= Number(inv.totalAmount) - 0.01;
-    await this.prisma.salesInvoice.update({
-      where: { id: inv.id },
-      data: { receivedAmount: newRec, status: isPaid ? 'PAID' : 'PARTIALLY_RECEIVED' },
-    });
-
-    return receipt;
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   async remove(id: string) {
@@ -167,13 +176,12 @@ export class SalesReceiptsService {
     return { success: true };
   }
 
-
   // ═══════════════════════════════════════════════════════════
   // CRUD extras — soft delete, restore, admin delete
   // Auto-generated by patch-crud-9.mjs
   // ═══════════════════════════════════════════════════════════
 
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.salesReceipt.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

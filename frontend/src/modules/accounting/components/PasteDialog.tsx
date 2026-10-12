@@ -10,7 +10,7 @@ interface Props {
   onImport: (rows: Array<{ accountCode: string; description: string; debit: number; credit: number }>) => void;
 }
 
-export default function PasteDialog({ open, accounts, onClose, onImport }: Props) {
+export default function PasteDialog({ open, accounts: _accounts, onClose, onImport }: Props) {
   const [text, setText] = useState('');
 
   if (!open) return null;

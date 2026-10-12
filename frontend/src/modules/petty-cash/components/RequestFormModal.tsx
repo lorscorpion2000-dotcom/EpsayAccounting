@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
-import { X, Save, Wallet, AlertCircle } from 'lucide-react';
+import { X, Save, Wallet } from 'lucide-react';
 import { pettyCashApi } from '../services/petty-cash.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { PettyCashAccount } from '@/types/petty-cash';

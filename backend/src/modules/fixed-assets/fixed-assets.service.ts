@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateFixedAssetDto } from './dto/create-fixed-asset.dto';
 import { UpdateFixedAssetDto } from './dto/update-fixed-asset.dto';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class FixedAssetsService {
@@ -13,8 +15,7 @@ export class FixedAssetsService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.fixedAsset.count();
-    return 'FA-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'fixedAsset', 'code', 'FA-' + year + '-', { pad: 4 });
   }
 
   private computeMonthly(cost: number, residual: number, lifeMonths: number): number {
@@ -66,32 +67,32 @@ export class FixedAssetsService {
     const monthly = this.computeMonthly(cost, residual, dto.usefulLifeMonths);
     const code = await this.generateCode();
 
-    const created = await this.prisma.fixedAsset.create({
-      data: {
-        code,
-        name: dto.name,
-        description: dto.description,
-        acquisitionDate: new Date(dto.acquisitionDate),
-        acquisitionCost: cost,
-        residualValue: residual,
-        usefulLifeMonths: dto.usefulLifeMonths,
-        depreciationMethod: dto.depreciationMethod ?? 'STRAIGHT_LINE',
-        monthlyDepreciation: monthly,
-        accumulatedDepreciation: 0,
-        bookValue: cost,
-        status: 'ACTIVE',
-        assetAccountId: dto.assetAccountId,
-        depreciationAccountId: dto.depreciationAccountId,
-        accumulatedDeprecAccountId: dto.accumulatedDeprecAccountId,
-        projectId: dto.projectId ?? null,
-        costCenterId: dto.costCenterId ?? null,
-        createdById: userId ?? null,
-      },
-    });
+    // B4.d: atomic create — fixedAsset + optional JE in one tx
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.fixedAsset.create({
+        data: {
+          code,
+          name: dto.name,
+          description: dto.description,
+          acquisitionDate: new Date(dto.acquisitionDate),
+          acquisitionCost: cost,
+          residualValue: residual,
+          usefulLifeMonths: dto.usefulLifeMonths,
+          depreciationMethod: dto.depreciationMethod ?? 'STRAIGHT_LINE',
+          monthlyDepreciation: monthly,
+          accumulatedDepreciation: 0,
+          bookValue: cost,
+          status: 'ACTIVE',
+          assetAccountId: dto.assetAccountId,
+          depreciationAccountId: dto.depreciationAccountId,
+          accumulatedDeprecAccountId: dto.accumulatedDeprecAccountId,
+          projectId: dto.projectId ?? null,
+          costCenterId: dto.costCenterId ?? null,
+          createdById: userId ?? null,
+        },
+      });
 
-    // JE تملک (اختیاری)
-    if (dto.counterAccountId) {
-      try {
+      if (dto.counterAccountId) {
         const je = await this.engine.postEvent('FIXED_ASSET_ACQUISITION', {
           amount: cost,
           entryDate: new Date(dto.acquisitionDate),
@@ -101,8 +102,9 @@ export class FixedAssetsService {
           sourceId: created.id,
           userId,
           projectId: dto.projectId ?? undefined,
-        });
-        return this.prisma.fixedAsset.update({
+        }, tx);
+
+        return tx.fixedAsset.update({
           where: { id: created.id },
           data: { acquisitionJournalEntryId: je.id },
           include: {
@@ -111,14 +113,10 @@ export class FixedAssetsService {
             accumulatedDeprecAccount: { select: { id: true, code: true, name: true } },
           },
         });
-      } catch (e) {
-        await this.prisma.fixedAsset.delete({ where: { id: created.id } });
-        throw e;
       }
-    }
-    return created;
+      return created;
+    }, { isolationLevel: 'Serializable' });
   }
-
   async update(id: string, dto: UpdateFixedAssetDto) {
     await this.findOne(id);
     const data: any = {};
@@ -220,7 +218,6 @@ export class FixedAssetsService {
     return results;
   }
 
-
   /**
    * گزارش زمان‌بندی استهلاک: سابقه + پیش‌بینی
    */
@@ -295,11 +292,10 @@ export class FixedAssetsService {
     return { assets, totalProceeds, totalBookValue, count: assets.length };
   }
 
-  async dispose(id: string, dto: any, userId?: string) {
+  async dispose(id: string, dto: any, _userId?: string) {
     const a = await this.findOne(id);
     if (a.status === 'DISPOSED') throw new BadRequestException('این دارایی قبلاً کنار گذاشته شده است');
     const proceeds = Number(dto.disposalProceeds ?? 0);
-    const bv       = Number(a.bookValue);
 
     const updated = await this.prisma.fixedAsset.update({
       where: { id },
@@ -312,7 +308,6 @@ export class FixedAssetsService {
 
     // JE کنارگذاری — اختیاری؛ اگر حساب‌های مورد نیاز داده شده باشند
     if (dto.proceedsAccountId && dto.gainLossAccountId) {
-      const gainLoss = proceeds - bv; // مثبت: سود، منفی: زیان
       // debit:  proceedsAccount (وجه دریافتی)
       // debit:  accumulatedDeprecAccount (بستن استهلاک انباشته)
       // credit: assetAccount (بستن بهای تمام‌شده)

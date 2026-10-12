@@ -8,7 +8,7 @@ import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import { api } from '@/services/api';
 import type { Project } from '@/types/project';
-import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { formatNumber, formatJalaliDate } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 

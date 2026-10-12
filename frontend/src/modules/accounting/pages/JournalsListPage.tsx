@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Search, FileText, Edit, Trash2, CheckCircle2,
-  XCircle, Printer, RefreshCw, BookOpen, AlertTriangle,
-} from 'lucide-react';
+import { Plus, Loader2, Search, FileText, Edit, Trash2, CheckCircle2, XCircle, RefreshCw, BookOpen, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
 import type { JournalEntry, FiscalYear, JournalStatus } from '@/types/accounting';
 import { JOURNAL_STATUS_LABELS, JOURNAL_STATUS_COLORS } from '@/types/accounting';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { PersianDatePicker } from '@/components/PersianDatePicker';
 
 export default function JournalsListPage() {
   const navigate = useNavigate();
@@ -19,8 +15,8 @@ export default function JournalsListPage() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [currentFy, setCurrentFy] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string | undefined>();
-  const [toDate, setToDate] = useState<string | undefined>();
+  const [fromDate] = useState<string | undefined>();
+  const [toDate] = useState<string | undefined>();
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [deletingJournal, setDeletingJournal] = useState<JournalEntry | null>(null);

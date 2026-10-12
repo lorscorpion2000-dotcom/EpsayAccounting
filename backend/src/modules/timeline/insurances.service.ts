@@ -80,7 +80,7 @@ export class InsurancesService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, _options?: { force?: boolean }) {
     await this.findOne(id);
     // مستقیم پاک کن (این موجودیت‌ها معمولاً ارجاعی ندارند)
     await this.prisma.insurance.delete({ where: { id } });

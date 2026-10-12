@@ -12,7 +12,7 @@ const fmt = (n: number | undefined) =>
   new Intl.NumberFormat('fa-IR').format(Number(n ?? 0));
 
 export default function DepreciationRunPage() {
-  const now = new Date();
+
   const [year, setYear] = useState<number>(1404);
   const [month, setMonth] = useState<number>(7);
   const [busy, setBusy] = useState(false);

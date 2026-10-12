@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, User, Users, Edit, Trash2, RefreshCw,
-  FileSpreadsheet, Phone, Briefcase, DollarSign, Award, Eye,
-} from 'lucide-react';
+import { Plus, Search, Loader2, User, Users, Edit, Trash2, RefreshCw, FileSpreadsheet, Briefcase, Award, Eye } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
-import type { Employee, EmployeeType } from '@/types/payroll';
+import type { Employee } from '@/types/payroll';
 import { EMPLOYEE_TYPE_LABELS } from '@/types/payroll';
-import { formatNumber, toPersianDigits, formatJalaliDate } from '@/utils/format';
+import { formatNumber, toPersianDigits } from '@/utils/format';
 import EmployeeFormModal from '../components/EmployeeFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -36,7 +33,7 @@ export default function EmployeesListPage() {
   const [deleting, setDeleting] = useState<Employee | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  useState(false);
 
   const load = async () => {
     setLoading(true);

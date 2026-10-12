@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
 
@@ -113,7 +114,7 @@ export class FiscalYearsService {
   }
 
   async summary(id: string) {
-    const fy = await this.findOne(id);
+    await this.findOne(id);
     const [totalEntries, draftCount, postedCount, reversedCount] = await Promise.all([
       this.prisma.journalEntry.count({ where: { fiscalYearId: id } }),
       this.prisma.journalEntry.count({ where: { fiscalYearId: id, status: 'DRAFT' } }),
@@ -347,6 +348,54 @@ export class FiscalYearsService {
       },
       include: { lines: { include: { account: { select: { code: true, name: true } } } } },
     });
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════
+   * B2 — assertPeriodOpen
+   * چک می‌کند که تاریخ داده‌شده:
+   *   1) داخل یک سال مالی موجود باشد
+   *   2) آن سال مالی OPEN باشد
+   *   3) ماه آن تاریخ در lockedMonths نباشد
+   * اگر tx بدهی از همان تراکنش استفاده می‌کند (ضد race).
+   * کد خطای یکسان: PERIOD_LOCKED
+   * ═══════════════════════════════════════════════════════════════
+   */
+  async assertPeriodOpen(
+    date: Date | string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client: any = (tx as any) ?? this.prisma;
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (!d || isNaN(d.getTime())) {
+      throw new BadRequestException('PERIOD_LOCKED: invalid date');
+    }
+
+    const fy = await client.fiscalYear.findFirst({
+      where: {
+        startDate: { lte: d },
+        endDate:   { gte: d },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+    if (!fy) {
+      throw new BadRequestException(
+        'PERIOD_LOCKED: no fiscal year covers ' + d.toISOString().slice(0, 10),
+      );
+    }
+    if (fy.status !== 'OPEN') {
+      throw new BadRequestException(
+        'PERIOD_LOCKED: fiscal year ' + fy.code + ' is ' + fy.status,
+      );
+    }
+
+    const lockedMonths = (fy.lockedMonths as string[] | null) ?? [];
+    const monthKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    if (lockedMonths.includes(monthKey)) {
+      throw new BadRequestException('PERIOD_LOCKED: month ' + monthKey + ' is locked');
+    }
+
+    return fy;
   }
 
   async getLockedMonths(id: string): Promise<string[]> {

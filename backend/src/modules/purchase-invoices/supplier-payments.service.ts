@@ -1,15 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PaySupplierDto } from './dto/pay-supplier.dto';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class SupplierPaymentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.supplierPayment.count();
-    return 'SP-' + year + '-' + String(count + 1).padStart(5, '0');
+    return generateCode(this.prisma, 'supplierPayment', 'code', 'SP-' + year + '-', { pad: 5 });
   }
 
   async findAll(query?: { supplierId?: string; invoiceId?: string }) {
@@ -75,70 +79,74 @@ export class SupplierPaymentsService {
 
     // ساخت JE
     const entryDate = new Date(dto.paymentDate);
-    const fy = await this.prisma.fiscalYear.findFirst({
-      where: { startDate: { lte: entryDate }, endDate: { gte: entryDate } },
-      orderBy: { startDate: 'desc' },
-    });
-    if (!fy) throw new BadRequestException('سال مالی برای تاریخ پرداخت پیدا نشد');
-
-    const last = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: fy.id }, orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
-    });
-    const entryNumber = (last?.entryNumber ?? 0) + 1;
-    const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+    // B2.4: period lock
+    const fy = await this.fiscalYears.assertPeriodOpen(entryDate);
 
     const code = await this.generateCode();
-    const je = await this.prisma.journalEntry.create({
-      data: {
-        code: jeCode,
-        entryNumber,
-        entryDate,
-        fiscalYearId: fy.id,
-        description: 'پرداخت به ' + invoice.supplier.name + ' — ' + invoice.code,
-        status: 'POSTED',
-        sourceType: 'SUPPLIER_PAYMENT',
-        sourceId: code,
-        totalDebit: dto.amount,
-        totalCredit: dto.amount,
-        createdById: userId ?? null,
-        lines: {
-          create: [
-            { accountId: payableAcc.id,    debit: dto.amount, credit: 0,           sortOrder: 1 },
-            { accountId: creditAccountId,  debit: 0,          credit: dto.amount,  sortOrder: 2 },
-          ],
-        },
-      },
-    });
 
-    const payment = await this.prisma.supplierPayment.create({
-      data: {
-        code,
-        supplierId: invoice.supplierId,
-        invoiceId: invoice.id,
-        method: dto.method,
-        bankAccountId: dto.bankAccountId ?? null,
-        amount: dto.amount,
-        paymentDate: entryDate,
-        reference: dto.reference ?? null,
-        notes: dto.notes ?? null,
-        journalEntryId: je.id,
-        createdById: userId ?? null,
-      },
-    });
+    // B4.a: atomic pay — JE + payment + invoice update in one tx
+    return this.prisma.$transaction(
+      async (tx) => {
+        const last = await tx.journalEntry.findFirst({
+          where: { fiscalYearId: fy.id },
+          orderBy: { entryNumber: 'desc' },
+          select: { entryNumber: true },
+        });
+        const entryNumber = (last?.entryNumber ?? 0) + 1;
+        const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
 
-    // به‌روزرسانی فاکتور
-    const newPaid = Number(invoice.paidAmount) + dto.amount;
-    const isPaid = newPaid >= Number(invoice.totalAmount) - 0.01;
-    await this.prisma.purchaseInvoice.update({
-      where: { id: invoice.id },
-      data: {
-        paidAmount: newPaid,
-        status: isPaid ? 'PAID' : 'PARTIALLY_PAID',
-      },
-    });
+        const je = await tx.journalEntry.create({
+          data: {
+            code: jeCode,
+            entryNumber,
+            entryDate,
+            fiscalYearId: fy.id,
+            description: 'پرداخت به ' + invoice.supplier.name + ' — ' + invoice.code,
+            status: 'POSTED',
+            sourceType: 'SUPPLIER_PAYMENT',
+            sourceId: code,
+            totalDebit: dto.amount,
+            totalCredit: dto.amount,
+            createdById: userId ?? null,
+            lines: {
+              create: [
+                { accountId: payableAcc.id,   debit: dto.amount, credit: 0,          sortOrder: 1 },
+                { accountId: creditAccountId, debit: 0,          credit: dto.amount, sortOrder: 2 },
+              ],
+            },
+          },
+        });
 
-    return payment;
+        const payment = await tx.supplierPayment.create({
+          data: {
+            code,
+            supplierId: invoice.supplierId,
+            invoiceId: invoice.id,
+            method: dto.method,
+            bankAccountId: dto.bankAccountId ?? null,
+            amount: dto.amount,
+            paymentDate: entryDate,
+            reference: dto.reference ?? null,
+            notes: dto.notes ?? null,
+            journalEntryId: je.id,
+            createdById: userId ?? null,
+          },
+        });
+
+        const newPaid = Number(invoice.paidAmount) + dto.amount;
+        const isPaid = newPaid >= Number(invoice.totalAmount) - 0.01;
+        await tx.purchaseInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            paidAmount: newPaid,
+            status: isPaid ? 'PAID' : 'PARTIALLY_PAID',
+          },
+        });
+
+        return payment;
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   async remove(id: string) {
@@ -196,13 +204,12 @@ export class SupplierPaymentsService {
     return detail;
   }
 
-
   // ═══════════════════════════════════════════════════════════
   // CRUD extras — soft delete, restore, admin delete
   // Auto-generated by patch-crud-9.mjs
   // ═══════════════════════════════════════════════════════════
 
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.supplierPayment.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

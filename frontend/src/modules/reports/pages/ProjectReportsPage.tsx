@@ -1,16 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, Printer, RefreshCw, Building2, FileText, Package,
-  Users, Truck, Wallet, TrendingUp, BarChart3, ClipboardList, Briefcase,
-  FileSpreadsheet, AlertCircle, PieChart, Clock,
-} from 'lucide-react';
+import { ArrowRight, Loader2, Printer, RefreshCw, Building2, FileText, Package, Users, Truck, Wallet, TrendingUp, BarChart3, ClipboardList, Briefcase, FileSpreadsheet, PieChart, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/services/api';
 import PrintHeader from '@/components/PrintHeader';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { todayLocalISO, firstDayOfCurrentJalaliYearISO } from '@/utils/local-date';
 
 type Tab =
   | 'overview'
@@ -59,8 +56,8 @@ export default function ProjectReportsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('overview');
-  const [from, setFrom] = useState<string>('');
-  const [to, setTo] = useState<string>('');
+  const [from, setFrom] = useState<string>(() => firstDayOfCurrentJalaliYearISO());
+  const [to, setTo] = useState<string>(() => todayLocalISO());
 
   const load = async () => {
     if (!id) return;
@@ -525,9 +522,8 @@ function VatTab({ projectId }: { projectId?: string }) {
   useEffect(() => {
     if (!projectId) return;
     setLoading(true);
-    const now = new Date();
-    const from = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-    const to = now.toISOString().slice(0, 10);
+    const from = firstDayOfCurrentJalaliYearISO();
+    const to = todayLocalISO();
     api.get('/reports/vat', { params: { from, to, projectId } })
       .then((r) => setData(r.data))
       .catch(() => toast.error('خطا در بارگذاری گزارش مالیات'))

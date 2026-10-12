@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { X, Save, Loader2, Shield, Check, Search } from 'lucide-react';
+import { X, Save, Loader2, Check, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { rolesApi, permissionsApi, SystemRole, SystemPermission } from '../services/roles.api';
 

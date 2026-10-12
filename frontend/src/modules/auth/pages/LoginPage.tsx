@@ -1,19 +1,30 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Lock, User, Loader2, Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react';
 import { authApi } from '../services/auth.api';
 import { useAuthStore } from '@/store/auth.store';
+import { getApiErrorMessage } from '@/utils/api-error';
 import { useThemeStore } from '@/store/theme.store';
 
-interface FormData {
-  username: string;
-  password: string;
-}
+const loginSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, 'نام کاربری الزامی است')
+    .min(3, 'نام کاربری حداقل ۳ کاراکتر است'),
+  password: z
+    .string()
+    .min(1, 'رمز عبور الزامی است')
+    .min(6, 'رمز عبور حداقل ۶ کاراکتر است'),
+});
+type FormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { register, handleSubmit, formState: { errors }, getValues } = useForm<FormData>();
+  const { register, handleSubmit, formState: { errors }, getValues: _getValues } = useForm<FormData>({ resolver: zodResolver(loginSchema) });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -60,8 +71,7 @@ export default function LoginPage() {
         applySuccessfulLogin(res);
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در ورود');
+      toast.error(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -79,8 +89,7 @@ export default function LoginPage() {
       const res = await authApi.verify2FA(totpToken, code);
       applySuccessfulLogin(res);
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'کد نامعتبر است');
+      toast.error(getApiErrorMessage(e));
       setTwoFactorCode('');
     } finally {
       setLoading(false);
@@ -121,7 +130,7 @@ export default function LoginPage() {
                   <input
                     type="text"
                     autoComplete="username"
-                    {...register('username', { required: 'نام کاربری الزامی است' })}
+                    {...register('username')}
                     className="input ps-4 pe-10"
                     placeholder="admin"
                     autoFocus
@@ -140,7 +149,7 @@ export default function LoginPage() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    {...register('password', { required: 'رمز عبور الزامی است' })}
+                    {...register('password')}
                     className="input ps-12 pe-10"
                     placeholder="••••••••"
                     dir="ltr"

@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Loader2, FileSpreadsheet, Printer, RefreshCw, BarChart3, Calculator,
-} from 'lucide-react';
+import { Loader2, FileSpreadsheet, Printer, BarChart3, Calculator } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
 import PrintHeader from '@/components/PrintHeader';
 import type { FiscalYear, TrialBalanceResult } from '@/types/accounting';
 import { ACCOUNT_LEVEL_LABELS } from '@/types/accounting';
-import { formatNumber, toPersianDigits } from '@/utils/format';
+import { formatNumber } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
@@ -109,7 +107,6 @@ export default function TrialBalancePage() {
           </button>
         </div>
       </div>
-
 
       <div className="card overflow-hidden">
         {loading ? (

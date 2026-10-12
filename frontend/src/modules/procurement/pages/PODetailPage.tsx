@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, Printer, ShoppingBag, CheckCircle2, Send, XCircle,
-  FileText, User, Calendar, Hash, CreditCard,
-} from 'lucide-react';
-import clsx from 'clsx';
+import { ArrowRight, Loader2, Printer, CheckCircle2, Send } from 'lucide-react';
+
 import { procurementApi } from '../services/procurement.api';
-import type { PurchaseOrder, POStatus } from '@/types/procurement';
-import { PO_STATUS_LABELS, PO_STATUS_COLORS, PR_UNIT_LABELS } from '@/types/procurement';
+import type { PurchaseOrder } from '@/types/procurement';
+import { PO_STATUS_LABELS, PR_UNIT_LABELS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';

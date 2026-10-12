@@ -1,9 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString,
-  IsUUID, Min, ValidateNested,
-} from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
 
 export enum PRPriorityDto { LOW='LOW', NORMAL='NORMAL', HIGH='HIGH', URGENT='URGENT' }
 export enum PRItemUnitDto {

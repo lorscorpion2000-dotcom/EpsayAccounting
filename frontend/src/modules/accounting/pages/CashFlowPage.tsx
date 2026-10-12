@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  RefreshCw, TrendingUp, TrendingDown, Wallet, ArrowDownToLine, ArrowUpFromLine,
-  ChevronDown, ChevronLeft, Building2, Coins, PiggyBank,
-} from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Wallet, ChevronDown, ChevronLeft, Building2, Coins, PiggyBank } from 'lucide-react';
 import { toast } from 'sonner';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import {

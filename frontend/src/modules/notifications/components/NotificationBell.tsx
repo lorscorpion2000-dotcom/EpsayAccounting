@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Bell, Check, CheckCheck, Loader2, Trash2, X } from 'lucide-react';
+import { Bell, CheckCheck, Loader2, Trash2, X } from 'lucide-react';
 import clsx from 'clsx';
 import { notificationApi } from '../services/notification.api';
 import type { NotificationItem } from '@/types/notification';

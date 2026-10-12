@@ -174,7 +174,7 @@ export class PurchaseRequestsService {
     });
   }
 
-  async reject(id: string, reason: string, userId: string) {
+  async reject(id: string, reason: string, _userId: string) {
     const pr = await this.findOne(id);
     if (pr.status !== 'SUBMITTED') throw new BadRequestException('فقط درخواست‌های ارسال‌شده قابل رد هستند');
     return this.prisma.purchaseRequest.update({
@@ -183,8 +183,7 @@ export class PurchaseRequestsService {
     });
   }
 
-
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.purchaseRequest.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

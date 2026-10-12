@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
-import type { GoodsReceipt, ReceiptStatus } from '@/types/warehouse';
+import type { GoodsReceipt } from '@/types/warehouse';
 import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_COLORS } from '@/types/warehouse';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';

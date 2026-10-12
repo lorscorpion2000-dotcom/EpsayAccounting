@@ -60,6 +60,7 @@ import { ARAgingDetailController } from './reports/ar-aging-detail.controller';
   ],
   exports: [
     AccountsService,
+    FiscalYearsService,
     JournalsService,
     DetailAccountsService,
     AccountingEngineService,

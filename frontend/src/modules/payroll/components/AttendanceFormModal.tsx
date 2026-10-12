@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { X, Save, Clock } from 'lucide-react';
 import { payrollApi } from '../services/payroll.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import type { AttendanceRecord, Employee, AttendanceStatus } from '@/types/payroll';
+import type { AttendanceRecord, Employee } from '@/types/payroll';
 import { ATTENDANCE_LABELS } from '@/types/payroll';
 import { todayLocalISO } from '@/utils/local-date';
 

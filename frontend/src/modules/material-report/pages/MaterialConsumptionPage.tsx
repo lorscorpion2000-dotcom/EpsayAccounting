@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Loader2, RefreshCw, Package, Search, BarChart3, Download,
-} from 'lucide-react';
+import { Loader2, RefreshCw, Package, Search, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { materialReportApi } from '../services/material-report.api';
 import { api } from '@/services/api';

@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Bell, Loader2, ShoppingCart, ShoppingBag, Wallet, X,
-  CheckCircle2, AlertCircle, Building2, FileText,
-} from 'lucide-react';
+import { Bell, Loader2, ShoppingCart, ShoppingBag, Wallet, X, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { approvalsApi, PendingApproval } from '@/modules/approvals/services/approvals.api';
 

@@ -21,4 +21,7 @@ export interface PostEventPayload {
   debitAccountId?: string;
   creditAccountId?: string;
 
+  // B3.a: auto-post JE inside the caller's transaction
+  autoPost?: boolean;
+
 }

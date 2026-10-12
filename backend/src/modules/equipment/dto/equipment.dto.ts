@@ -1,8 +1,7 @@
-﻿import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 // ─────────────────────────────────────────────
 // Enums (mirror Prisma enums for validation)

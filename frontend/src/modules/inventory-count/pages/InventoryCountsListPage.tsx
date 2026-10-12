@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, ClipboardCheck, Eye, Trash2, RefreshCw,
-  CheckCircle2, Send, Search, XCircle,
-} from 'lucide-react';
+import { Plus, Loader2, ClipboardCheck, Eye, Trash2, RefreshCw, CheckCircle2, Send, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { inventoryCountApi } from '../services/inventory-count.api';
 import { api } from '@/services/api';

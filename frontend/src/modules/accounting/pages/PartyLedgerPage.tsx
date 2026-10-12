@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Users, Search, Printer, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Users, Search, FileSpreadsheet } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/services/api';
 import { accountingApi } from '../services/accounting.api';
@@ -12,7 +12,7 @@ import { exportToExcel } from '@/utils/export-excel';
 export default function PartyLedgerPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [partners, setPartners] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [partnerId, setPartnerId] = useState('');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);

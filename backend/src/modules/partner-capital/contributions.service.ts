@@ -7,7 +7,7 @@ import { CreateContributionDto, UpdateContributionDto } from './dto/contribution
 export class ContributionsService {
   constructor(
     private prisma: PrismaService,
-    private accounts: CapitalAccountsService,
+    _accounts: CapitalAccountsService,
   ) {}
 
   private async generateCode(): Promise<string> {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Building2, Edit, Ban, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, Loader2, Building2, Edit, RefreshCw, X } from 'lucide-react';
 import clsx from 'clsx';
 import { salesApi, SalesUnit, SalesUnitStatus } from '../services/sales.api';
 import { projectsApi } from '@/modules/projects/services/projects.api';

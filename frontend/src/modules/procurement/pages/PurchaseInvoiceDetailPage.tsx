@@ -1,9 +1,7 @@
 import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowRight, CheckCircle2, XCircle, RefreshCw, Wallet, FileText, Banknote,
-  CreditCard, Building2, Receipt, TrendingDown, Edit } from 'lucide-react';
+import { ArrowRight, CheckCircle2, RefreshCw, Wallet, FileText, Banknote, CreditCard, Building2, Receipt, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import AdminDeleteButton from '@/components/AdminDeleteButton';

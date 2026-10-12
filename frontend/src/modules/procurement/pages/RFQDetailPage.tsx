@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, TrendingDown, Save, CheckCircle2, Trophy,
-  Plus, User, Calendar, X,
-} from 'lucide-react';
+import { ArrowRight, Loader2, TrendingDown, Save, CheckCircle2, Trophy, Plus, X } from 'lucide-react';
 import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
 import type { RFQ } from '@/types/procurement';

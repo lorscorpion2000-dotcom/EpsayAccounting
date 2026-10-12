@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { X, Save, CalendarOff } from 'lucide-react';
 import { payrollApi } from '../services/payroll.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import type { Employee, LeaveType } from '@/types/payroll';
+import type { Employee } from '@/types/payroll';
 import { LEAVE_TYPE_LABELS } from '@/types/payroll';
 import { todayLocalISO } from '@/utils/local-date';
 

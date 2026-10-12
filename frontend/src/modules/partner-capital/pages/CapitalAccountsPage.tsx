@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, Wallet, Trash2, RefreshCw, User, FolderOpen,
-  FileSpreadsheet,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Wallet, Trash2, RefreshCw, FolderOpen, FileSpreadsheet } from 'lucide-react';
 import clsx from 'clsx';
 import { partnerCapitalApi, CapitalAccount } from '../services/partner-capital.api';
-import { formatNumber, formatJalaliDate } from '@/utils/format';
+import { formatNumber } from '@/utils/format';
 import CapitalAccountFormModal from '../components/CapitalAccountFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';

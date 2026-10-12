@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { toast } from 'sonner';
 import { X, Save, Loader2, Plus, FileText, Trash2, Calculator } from 'lucide-react';
-import { contractsApi, LegalContract, LegalContractKind, LegalContractParty, LegalContractItem } from '../services/contracts.api';
+import { contractsApi, LegalContract, LegalContractKind, LegalContractParty, LegalContractItem, WageBreakdown } from '../services/contracts.api';
 import { projectsApi } from '@/modules/projects/services/projects.api';
 import { partnersApi } from '@/modules/partners/services/partners.api';
 import { payrollApi } from '@/modules/payroll/services/payroll.api';
@@ -18,12 +19,18 @@ function highlightPlaceholders(html: string): string {
   if (!html || html.length < 5) {
     return '<span style="color:#94a3b8;font-style:italic">(خالی — بعد از انتخاب نوع قرارداد، قالب خودکار لود میشه)</span>';
   }
-  // حذف style/script برای پیش‌نمایش تمیز
-  let out = html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '');
+  // F3: sanitize preview — حذف script/style/iframe/on* قبل از هر پردازش
+  const sanitized = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p','b','i','u','strong','em','br','hr','span','div','section','article',
+      'h1','h2','h3','h4','h5','h6','table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
+      'ul','ol','li','a'],
+    ALLOWED_ATTR: ['style','dir','class','title','colspan','rowspan','width','height','align','valign','href','target','rel'],
+    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: ['script','iframe','object','embed','form','input','button','textarea','select','style','link','meta'],
+    FORBID_ATTR: ['onerror','onload','onclick','onmouseover','onfocus','onblur','onchange','onsubmit','onmouseenter','onmouseleave'],
+  });
   // هایلایت {{placeholder}}
-  out = out.replace(
+  let out = sanitized.replace(
     /\{\{([^}]+)\}\}/g,
     '<span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-weight:bold;font-size:11px;border:1px solid #fcd34d">{{$1}}</span>'
   );
@@ -76,6 +83,12 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
   const [selectedContractorId, setSelectedContractorId] = useState('');
   const [loadingContractorData, setLoadingContractorData] = useState(false);
   const [items, setItems] = useState<LegalContractItem[]>([]);
+  // B15.6: پیوست ۱ — تفکیک حقوق و مزایا
+  const [wage, setWage] = useState<WageBreakdown>({
+    baseSalary: '', housingAllow: '', foodAllow: '', childAllow: '',
+    missionAllow: '', overtimeAllow: '', attractionAllow: '',
+    positionAllow: '', seniority: '', insuranceShare: '',
+  });
 
   const [form, setForm] = useState<any>({
     kind: 'WORKER_EMPLOYMENT',
@@ -156,6 +169,20 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
         unitPrice: Number(it.unitPrice) || 0,
         notes: it.notes || '',
       })));
+      // B15.6: load wage breakdown
+      const wb = (editing.wageBreakdown || {}) as any;
+      setWage({
+        baseSalary:     wb.baseSalary     != null ? String(wb.baseSalary)     : '',
+        housingAllow:   wb.housingAllow   != null ? String(wb.housingAllow)   : '',
+        foodAllow:      wb.foodAllow      != null ? String(wb.foodAllow)      : '',
+        childAllow:     wb.childAllow     != null ? String(wb.childAllow)     : '',
+        missionAllow:   wb.missionAllow   != null ? String(wb.missionAllow)   : '',
+        overtimeAllow:  wb.overtimeAllow  != null ? String(wb.overtimeAllow)  : '',
+        attractionAllow:wb.attractionAllow!= null ? String(wb.attractionAllow): '',
+        positionAllow:  wb.positionAllow  != null ? String(wb.positionAllow)  : '',
+        seniority:      wb.seniority      != null ? String(wb.seniority)      : '',
+        insuranceShare: wb.insuranceShare != null ? String(wb.insuranceShare) : '',
+      });
     } else {
       setForm({
         kind: 'WORKER_EMPLOYMENT', title: '', partyId: '', projectId: '',
@@ -167,6 +194,12 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
         workerSignerName: '', notes: '',
       });
       setItems(defaultWorkerItems());
+      // B15.6: reset wage
+      setWage({
+        baseSalary: '', housingAllow: '', foodAllow: '', childAllow: '',
+        missionAllow: '', overtimeAllow: '', attractionAllow: '',
+        positionAllow: '', seniority: '', insuranceShare: '',
+      });
     }
   }, [isOpen, editing]);
 
@@ -215,6 +248,15 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
         salaryDaily: emp?.dailyWage ? String(emp.dailyWage) : f.salaryDaily,
         salaryHourly: emp?.hourlyWage ? String(emp.hourlyWage) : f.salaryHourly,
         workHoursPerWeek: f.workHoursPerWeek || '44',
+      }));
+      // B15.6: auto-fill از پرونده پرسنلی
+      setWage((w) => ({
+        ...w,
+        baseSalary:      emp?.baseSalary   != null ? String(emp.baseSalary)   : w.baseSalary,
+        housingAllow:    emp?.housingAllow != null ? String(emp.housingAllow) : w.housingAllow,
+        foodAllow:       emp?.foodAllow    != null ? String(emp.foodAllow)    : w.foodAllow,
+        childAllow:      emp?.childAllow   != null ? String(emp.childAllow)   : w.childAllow,
+        seniority:       emp?.otherAllow   != null ? String(emp.otherAllow)   : w.seniority,
       }));
       await reloadParties();
       toast.success('اطلاعات پرسنل بارگذاری شد');
@@ -282,6 +324,18 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
       Object.keys(payload).forEach((k) => {
         if (payload[k] === '') delete payload[k];
       });
+
+      // B15.6: پیوست ۱ — تفکیک حقوق و مزایا
+      if (isEmployeeKind(form.kind)) {
+        const wb: any = {};
+        Object.entries(wage).forEach(([k, v]: any) => {
+          if (v !== '' && v !== null && v !== undefined) {
+            const n = Number(v);
+            if (Number.isFinite(n)) wb[k] = n;
+          }
+        });
+        payload.wageBreakdown = wb;
+      }
 
       // اجزای اجرای قرارداد
       payload.items = items
@@ -542,6 +596,50 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
                 <label className="block text-sm font-medium text-slate-700 mb-1">ساعت کار در هفته</label>
                 <input type="number" value={form.workHoursPerWeek} onChange={(e) => set('workHoursPerWeek', e.target.value)} className="input w-full num" dir="ltr" />
               </div>
+
+              {/* B15.6: پیوست ۱ — تفکیک حقوق و مزایا */}
+              {isEmployeeKind(form.kind) && (
+                <div className="md:col-span-2 border-t pt-5 mt-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <Calculator className="w-4 h-4 text-brand-600" />
+                        تفکیک حقوق و مزایا (پیوست ۱)
+                      </label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        با انتخاب پرسنل از پرونده پرسنلی پر می‌شود؛ می‌توانید دستی تغییر دهید.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                      { key: 'baseSalary',      label: 'حقوق پایه' },
+                      { key: 'housingAllow',    label: 'حق مسکن' },
+                      { key: 'foodAllow',       label: 'بن کارگری (حق خواربار)' },
+                      { key: 'childAllow',      label: 'حق اولاد' },
+                      { key: 'missionAllow',    label: 'حق ماموریت' },
+                      { key: 'overtimeAllow',   label: 'اضافه کاری' },
+                      { key: 'attractionAllow', label: 'حق جذب' },
+                      { key: 'positionAllow',   label: 'فوق العاده شغل' },
+                      { key: 'seniority',       label: 'سنوات' },
+                      { key: 'insuranceShare',  label: 'سهم بیمه تأمین اجتماعی' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+                        <input
+                          type="number"
+                          value={((wage as any)[key] as any) ?? ''}
+                          onChange={(e) => setWage((w) => ({ ...w, [key]: e.target.value }))}
+                          className="input w-full num text-sm"
+                          dir="ltr"
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">مدت قرارداد</label>
                 <input value={form.durationText} onChange={(e) => set('durationText', e.target.value)} className="input w-full" placeholder="مثال: ۳ ماه" />

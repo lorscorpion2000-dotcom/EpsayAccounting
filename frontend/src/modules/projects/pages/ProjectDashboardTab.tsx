@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Loader2, TrendingUp, TrendingDown, DollarSign, Wallet,
-  Package, Users, Activity, BarChart3,
-} from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, DollarSign, Wallet, Package, Activity, BarChart3 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell,
@@ -12,6 +9,7 @@ import {
 import clsx from 'clsx';
 import { api } from '@/services/api';
 import { formatNumber, toPersianDigits } from '@/utils/format';
+import { todayLocalISO, firstDayOfCurrentJalaliYearISO } from '@/utils/local-date';
 
 const COLORS = ['#6C63FF', '#2EC4B6', '#EB5B38', '#F5A623', '#8E44AD', '#3498DB', '#E91E63'];
 
@@ -24,9 +22,8 @@ export default function ProjectDashboardTab() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    const now = new Date();
-    const from = new Date(now.getFullYear() - 1, 0, 1).toISOString().slice(0, 10);
-    const to = now.toISOString().slice(0, 10);
+    const from = firstDayOfCurrentJalaliYearISO();
+    const to = todayLocalISO();
 
     Promise.all([
       api.get('/reports/project/' + id, { params: { from, to } }).then(r => r.data),
@@ -48,8 +45,8 @@ export default function ProjectDashboardTab() {
   const cashFlow = report.cashFlow || {};
   const costByCat = report.costByCategory?.categories || [];
   const progressVsCost = report.progressVsCost || { rows: [] };
-  const accounting = report.accounting || {};
-  const budget = report.budget || {};
+
+
   const aging = report.aging || {};
 
   const kpiCards = [

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Printer, Plus, Play, Ban, Wallet } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Play, Ban } from 'lucide-react';
 import clsx from 'clsx';
 import { salesApi, SalesContract } from '../services/sales.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';

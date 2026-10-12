@@ -1,18 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
-interface EmployeeCalcData {
-  id: string;
-  baseSalary: number;
-  housingAllow: number;
-  foodAllow: number;
-  childAllow: number;
-  otherAllow: number;
-  dailyWage: number;
-  hourlyWage: number;
-  employeeType: string;
-}
-
 @Injectable()
 export class PayrollCalculationService {
   constructor(private prisma: PrismaService) {}
@@ -20,7 +8,7 @@ export class PayrollCalculationService {
   /**
    * محاسبه حقوق همه پرسنل فعال برای یک دوره
    */
-  async calculatePeriod(periodId: string, userId: string) {
+  async calculatePeriod(periodId: string, _userId: string) {
     const period = await this.prisma.payrollPeriod.findUnique({
       where: { id: periodId },
       include: { project: true },
@@ -256,7 +244,7 @@ export class PayrollCalculationService {
   // ═══════════════════════════════════════════════════════════
   // محاسبه حقوق بر اساس Attendance (حاضری گرید ماهانه)
   // ═══════════════════════════════════════════════════════════
-  async calculateFromAttendance(periodId: string, userId: string) {
+  async calculateFromAttendance(periodId: string, _userId: string) {
     const period = await this.prisma.payrollPeriod.findUnique({
       where: { id: periodId },
     });

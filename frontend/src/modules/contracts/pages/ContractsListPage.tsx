@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Plus, Search, Loader2, FileText, Edit, Ban, RefreshCw, Printer, FileSpreadsheet, CheckCircle2, Play, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { contractsApi, LegalContract, LegalContractKind, LegalContractStatus } from '../services/contracts.api';
-import { formatJalaliDate } from '@/utils/format';
+
 import ContractFormModal from '../components/ContractFormModal';
 import CancelDialog from '../components/CancelDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -104,7 +104,7 @@ export default function ContractsListPage() {
     if (!deleting) return;
     setForceError(null);
     try {
-      const res = await contractsApi.remove(deleting.id, force);
+
       toast.success(force ? 'قرارداد بهطور کامل حذف شد' : 'قرارداد حذف شد');
       setDeleting(null);
       setForceConfirm(false);
@@ -143,7 +143,6 @@ export default function ContractsListPage() {
     });
     toast.success('Excel دانلود شد');
   };
-
 
   const handleEditClick = async (c: LegalContract) => {
     try {

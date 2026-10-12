@@ -56,7 +56,6 @@ async function seedRoles() {
   console.log('\n[2/4] Creating roles...');
 
   const allPerms = await prisma.permission.findMany();
-  const byCode = (code: string) => allPerms.find(p => p.code === code)?.id;
   const allIds = allPerms.map(p => p.id);
   const readOnly = allPerms.filter(p => p.action === 'read').map(p => p.id);
 

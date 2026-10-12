@@ -1,20 +1,22 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from './stock.service';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateIssueDto } from './dto/create-issue.dto';
 import { UpdateIssueDto } from './dto/update-issue.dto';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class IssuesService {
   constructor(
     private prisma: PrismaService,
     private stock: StockService,
+    private engine: AccountingEngineService,
   ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.goodsIssue.count();
-    return 'GIN-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'goodsIssue', 'code', 'GIN-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
@@ -181,16 +183,42 @@ export class IssuesService {
   }
 
   /**
-   * ثبت حواله → کسر از موجودی + الصاق به هزینه پروژه
+   * ثبت حواله → کسر از موجودی + سند حسابداری (B3.b)
    */
   async post(id: string, userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'APPROVED') throw new BadRequestException('ابتدا حواله تایید شود');
 
+    // B3.b: idempotency
+    const existing = await this.prisma.journalEntry.findFirst({
+      where: { sourceType: 'GOODS_ISSUE', sourceId: r.id },
+      select: { id: true, code: true },
+    });
+    if (existing) {
+      if ((r.status as string) !== 'POSTED') {
+        await this.prisma.goodsIssue.update({
+          where: { id },
+          data: { status: 'POSTED', postedAt: new Date() },
+        });
+      }
+      return { success: true, alreadyPosted: true, journalCode: existing.code };
+    }
+
+    // B3.b: mapping
+    const mapping = await this.prisma.accountMapping.findUnique({
+      where: { code: 'GOODS_ISSUE' },
+    });
+    if (!mapping || !mapping.debitAccountId || !mapping.creditAccountId) {
+      throw new BadRequestException('Mapping GOODS_ISSUE ناقص است');
+    }
+    const debitAccId = mapping.debitAccountId;
+    const creditAccId = mapping.creditAccountId;
+
     return this.prisma.$transaction(async (tx) => {
       let totalValue = 0;
+      const jeLines: any[] = [];
+
       for (const it of r.items) {
-        // دریافت بهای میانگین فعلی
         const stock = await tx.stock.findUnique({
           where: { warehouseId_itemId: { warehouseId: r.warehouseId, itemId: it.itemId } },
         });
@@ -198,7 +226,6 @@ export class IssuesService {
         const lineValue = Number(it.quantity) * avgCost;
         totalValue += lineValue;
 
-        // به‌روزرسانی unitCost و totalCost در line
         await tx.goodsIssueItem.update({
           where: { id: it.id },
           data: { unitCost: avgCost, totalCost: lineValue },
@@ -221,12 +248,45 @@ export class IssuesService {
           createdById: userId,
           tx,
         });
+
+        if (lineValue > 0.01) {
+          jeLines.push({
+            accountId: debitAccId,
+            debit: lineValue,
+            credit: 0,
+            projectId: r.projectId || undefined,
+            description: 'مصرف ' + ((it as any).item?.name || 'کالا') + ' طبق حواله ' + r.code,
+          });
+        }
       }
 
-      return tx.goodsIssue.update({
+      // B3.b: post multi-line JE
+      let journalCode: string | null = null;
+      if (totalValue > 0.01 && jeLines.length > 0) {
+        jeLines.push({
+          accountId: creditAccId,
+          debit: 0,
+          credit: totalValue,
+          description: 'خروج از انبار طبق حواله ' + r.code,
+        });
+
+        const je = await this.engine.postMultiLine('GOODS_ISSUE', {
+          entryDate: r.issueDate.toISOString().slice(0, 10),
+          description: 'حواله مصرف ' + r.code,
+          reference: r.code,
+          sourceId: r.id,
+          userId,
+          lines: jeLines,
+        }, tx);
+        journalCode = je.code;
+      }
+
+      await tx.goodsIssue.update({
         where: { id },
         data: { status: 'POSTED', postedAt: new Date(), totalValue },
       });
+
+      return { success: true, journalCode, totalValue };
     });
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Loader2,
-  Shield,
+
   ShieldCheck,
   ShieldOff,
   QrCode,
@@ -25,7 +25,7 @@ export default function TwoFactorSection() {
 
   // setup data
   const [qrDataUrl, setQrDataUrl] = useState('');
-  const [otpauth, setOtpauth] = useState('');
+  const [, setOtpauth] = useState('');
   const [secret, setSecret] = useState('');
   const [code, setCode] = useState('');
 

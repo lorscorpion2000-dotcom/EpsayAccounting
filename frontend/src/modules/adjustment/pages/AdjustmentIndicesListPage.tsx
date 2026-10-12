@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, TrendingUp, Edit, Trash2, RefreshCw, Search, Power,
-} from 'lucide-react';
+import { Plus, Loader2, TrendingUp, Edit, RefreshCw, Search, Power } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import type { AdjustmentIndex } from '@/types/adjustment';

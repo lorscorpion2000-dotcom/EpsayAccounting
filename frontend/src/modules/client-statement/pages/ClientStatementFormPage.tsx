@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Save, X, Loader2, FileSpreadsheet, Plus, Trash2, Calculator,
-  Package, Users, Wrench, Truck, Cog, RefreshCw,
-} from 'lucide-react';
+import { Save, X, Loader2, FileSpreadsheet, Plus, Trash2, Calculator, Package, Users, Wrench, Truck, Cog } from 'lucide-react';
 import clsx from 'clsx';
 import { clientStatementApi } from '../services/client-statement.api';
 import { api } from '@/services/api';
@@ -12,10 +9,8 @@ import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type {
   CSCategory, ClientStatement, CSItem, CreateCSPayload,
 } from '@/types/client-statement';
-import {
-  CS_CATEGORY_LABELS, CS_CATEGORY_ORDER, CS_STATUS_LABELS,
-} from '@/types/client-statement';
-import { toPersianDigits, formatJalaliDate } from '@/utils/format';
+import { CS_CATEGORY_LABELS, CS_CATEGORY_ORDER } from '@/types/client-statement';
+import { toPersianDigits } from '@/utils/format';
 
 type Tab = 'general' | CSCategory;
 
@@ -68,8 +63,8 @@ export default function ClientStatementFormPage() {
   const [tab, setTab] = useState<Tab>('general');
   const [projects, setProjects] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
-  const [priceLists, setPriceLists] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setPriceLists] = useState<any[]>([]);
+  useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -163,7 +158,6 @@ export default function ClientStatementFormPage() {
     const before = Object.values(sub).reduce((a, b) => a + b, 0);
     const after = before * coefficient;
     const share = after - before;
-    const prepaymentDeduction = 0; // will be computed by backend
     return { sub, before, after, share };
   }, [items, coefficient]);
 

@@ -1,12 +1,7 @@
 ﻿import { useEffect, useState, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Briefcase, Wallet, Package, AlertTriangle, TrendingUp,
-  TrendingDown, Activity, CheckCircle2, RefreshCw, ArrowRight,
-  DollarSign, FileText,
-  ShoppingCart, ClipboardList, Inbox, CalendarOff, Boxes,
-} from 'lucide-react';
+import { Briefcase, Wallet, Package, AlertTriangle, TrendingUp, Activity, CheckCircle2, RefreshCw, DollarSign, FileText, ShoppingCart, ClipboardList, Inbox, CalendarOff, Boxes } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/auth.store';
 import { dashboardApi } from '../services/dashboard.api';

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PayrollTaxService } from './payroll-tax.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { generateCode } from '../../shared/utils/code-generator';
 import {
   CreateWorkerStatementDto,
   PreviewWorkerStatementDto,
@@ -17,8 +18,7 @@ export class WorkerStatementsService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.workerStatement.count();
-    return 'WS-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'workerStatement', 'code', 'WS-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: { projectId?: string; partnerId?: string; status?: string }) {
@@ -63,7 +63,7 @@ export class WorkerStatementsService {
     const end = new Date(dto.periodEnd);
 
     // ─── جمع حضور و کارکرد ───
-    const [attendances, workLogs, leaves] = await Promise.all([
+    const [attendances, workLogs] = await Promise.all([
       this.prisma.attendance.findMany({
         where: { employeeId: dto.partnerId, attendanceDate: { gte: start, lte: end } },
       }),

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { FiscalYearsService } from './fiscal-years.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 
@@ -12,7 +13,10 @@ const D = Prisma.Decimal;
 
 @Injectable()
 export class JournalsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   async findAll(query?: {
     fiscalYearId?: string;
@@ -83,25 +87,9 @@ export class JournalsService {
   }
 
   private async ensureFiscalYearOpen(fiscalYearId: string, entryDate: Date) {
-    const fy = await this.prisma.fiscalYear.findUnique({
-      where: { id: fiscalYearId },
-    });
-    if (!fy) throw new NotFoundException('Fiscal year not found');
-    if (fy.status !== 'OPEN') {
-      throw new BadRequestException('Fiscal year is CLOSED');
-    }
-    if (entryDate < fy.startDate || entryDate > fy.endDate) {
-      throw new BadRequestException(
-        'Entry date is outside of the fiscal year range',
-      );
-    }
-    // D: Period lock check
-    const lockedMonths = (fy.lockedMonths as string[] | null) ?? [];
-    const monthKey = entryDate.getFullYear() + '-' + String(entryDate.getMonth() + 1).padStart(2, '0');
-    if (lockedMonths.includes(monthKey)) {
-      throw new BadRequestException('PERIOD_LOCKED: month ' + monthKey + ' is locked');
-    }
-    return fy;
+    // B2.3: delegated to centralized helper (unified PERIOD_LOCKED error)
+    void fiscalYearId;
+    return this.fiscalYears.assertPeriodOpen(entryDate);
   }
 
   private async validateAccounts(lines: any[]) {
@@ -181,15 +169,19 @@ export class JournalsService {
     return { code, entryNumber };
   }
 
-  async create(dto: CreateJournalDto, userId?: string, meta?: { sourceType?: string; sourceId?: string }) {
+  async create(
+    dto: CreateJournalDto,
+    userId?: string,
+    meta?: { sourceType?: string; sourceId?: string },
+    tx?: Prisma.TransactionClient,
+  ) {
     const { totalDebit, totalCredit } = this.validateAndCompute(dto.lines);
     await this.validateAccounts(dto.lines);
 
     const entryDate = new Date(dto.entryDate);
     await this.ensureFiscalYearOpen(dto.fiscalYearId, entryDate);
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    const runInTx = async (tx: Prisma.TransactionClient) => {
         const { code, entryNumber } = await this.allocateEntryNumber(
           tx,
           dto.fiscalYearId,
@@ -234,12 +226,16 @@ export class JournalsService {
             },
           },
         });
-      },
+    };
+
+    if (tx) return runInTx(tx);
+    return this.prisma.$transaction(
+      runInTx,
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
   }
 
-  async update(id: string, dto: UpdateJournalDto, userId: string) {
+  async update(id: string, dto: UpdateJournalDto, _userId: string) {
     return this.prisma.$transaction(async (tx) => {
       const entry = await tx.journalEntry.findUnique({ where: { id } });
       if (!entry || entry.deletedAt) {
@@ -248,6 +244,9 @@ export class JournalsService {
       if (entry.status !== 'DRAFT') {
         throw new BadRequestException('Only DRAFT entries can be edited');
       }
+
+      // B2.3: period lock
+      await this.fiscalYears.assertPeriodOpen(entry.entryDate, tx);
 
       const data: any = {};
       if (dto.description !== undefined) data.description = dto.description;
@@ -307,6 +306,9 @@ export class JournalsService {
       if (entry.status !== 'DRAFT') {
         throw new BadRequestException('Only DRAFT entries can be deleted');
       }
+
+      // B2.3: period lock
+      await this.fiscalYears.assertPeriodOpen(entry.entryDate, tx);
       await tx.journalEntry.update({
         where: { id },
         data: { deletedAt: new Date(), deletedById: userId },
@@ -315,7 +317,7 @@ export class JournalsService {
     });
   }
 
-  async post(id: string, userId: string) {
+  async post(id: string, _userId: string) {
     return this.prisma.$transaction(async (tx) => {
       const entry = await tx.journalEntry.findUnique({
         where: { id },
@@ -431,7 +433,6 @@ export class JournalsService {
     );
   }
 
-
   /**
    * حذف سند حسابداری با ثبت لاگ ویژه (فقط مدیر ارشد)
    * - حتی سند Posted قابل حذف است
@@ -452,6 +453,9 @@ export class JournalsService {
     if (!journal) {
       throw new Error('سند یافت نشد');
     }
+
+    // B2.3: period lock
+    await this.fiscalYears.assertPeriodOpen(journal.entryDate);
     if ((journal as any).deletedAt) {
       throw new Error('این سند قبلاً حذف شده است');
     }
@@ -521,8 +525,6 @@ export class JournalsService {
     });
   }
 
-
-
   async restore(id: string, userId?: string) {
     const existing: any = await this.prisma.journalEntry.findUnique({ where: { id } });
     if (!existing) throw new Error('سند یافت نشد');
@@ -535,7 +537,6 @@ export class JournalsService {
 
     return { ok: true, id, restored: true, by: userId || null };
   }
-
 
   // ============================================================
   // Hard delete (admin only) — snapshot در JournalDeletionLog
@@ -551,6 +552,9 @@ export class JournalsService {
       include: { lines: { include: { account: true } } },
     });
     if (!journal) throw new Error('سند یافت نشد');
+
+    // B2.3: period lock
+    await this.fiscalYears.assertPeriodOpen(journal.entryDate);
 
     const snapshot = {
       journal: {

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { X, Loader2, Save, Wallet } from 'lucide-react';
+import { X, Save, Wallet } from 'lucide-react';
 import { pettyCashApi } from '../services/petty-cash.api';
 import { api } from '@/services/api';
 import type { PettyCashAccount } from '@/types/petty-cash';
 import type { Project } from '@/types/project';
-import { formatNumber } from '@/utils/format';
 
 interface Props {
   isOpen: boolean;

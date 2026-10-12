@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, Wallet, Plus, TrendingUp, TrendingDown,
-  FileSpreadsheet, Printer, RefreshCw, Send, CheckCircle2, XCircle,
-  Edit, Trash2, FileText, ChevronDown, ChevronLeft, Image as ImageIcon,
-  MessageSquare, User, Calendar, Hash, AlertCircle,
-} from 'lucide-react';
+import { ArrowRight, Loader2, Wallet, Plus, TrendingUp, TrendingDown, FileSpreadsheet, RefreshCw, Send, CheckCircle2, XCircle, FileText, User, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { pettyCashApi } from '../services/petty-cash.api';
-import type {
-  PettyCashAccount, PettyCashTransaction, PettyCashTxStatus,
-} from '@/types/petty-cash';
+import type { PettyCashAccount, PettyCashTransaction } from '@/types/petty-cash';
 import {
   TX_TYPE_LABELS, TX_TYPE_COLORS, TX_STATUS_LABELS, TX_STATUS_COLORS,
 } from '@/types/petty-cash';

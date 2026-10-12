@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { X, Loader2, Save, User } from 'lucide-react';
 import { payrollApi } from '../services/payroll.api';
 import { partnersApi } from '@/modules/partners/services/partners.api';
 import { api } from '@/services/api';
-import type { Employee, EmployeeType, MaritalStatus } from '@/types/payroll';
+import type { Employee } from '@/types/payroll';
 import { EMPLOYEE_TYPE_LABELS, MARITAL_STATUS_LABELS } from '@/types/payroll';
 import type { Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
+import { getApiErrorMessage, applyApiErrorsToForm } from '@/utils/api-error';
 
 interface Props {
   isOpen: boolean;
@@ -18,44 +21,40 @@ interface Props {
   onSaved: () => void;
 }
 
-interface FormData {
-  partnerId: string;
-  employeeType: EmployeeType;
-  position?: string;
-  department?: string;
-  hireDate?: string;
-  baseSalary: number;
-  housingAllow: number;
-  foodAllow: number;
-  childAllow: number;
-  otherAllow: number;
-  dailyWage?: number;
-  hourlyWage?: number;
-  bankAccount?: string;
-  bankIban?: string;
-  bankName?: string;
-  insuranceNumber?: string;
-  hasInsurance: boolean;
-  maritalStatus: MaritalStatus;
-  childrenCount: number;
-  nationalId?: string;
+const employeeSchema = z.object({
+  partnerId: z.string().min(1, 'شخص الزامی است'),
+  employeeType: z.string().min(1),
+  position: z.string().optional(),
+  department: z.string().optional(),
+  hireDate: z.string().optional(),
+  baseSalary: z.number({ invalid_type_error: 'حقوق پایه نامعتبر است' }).nonnegative('حقوق پایه باید ≥ ۰ باشد'),
+  housingAllow: z.number({ invalid_type_error: 'حق مسکن نامعتبر است' }).nonnegative('حق مسکن باید ≥ ۰ باشد'),
+  foodAllow: z.number({ invalid_type_error: 'حق خواربار نامعتبر است' }).nonnegative('حق خواربار باید ≥ ۰ باشد'),
+  childAllow: z.number({ invalid_type_error: 'حق اولاد نامعتبر است' }).nonnegative('حق اولاد باید ≥ ۰ باشد'),
+  otherAllow: z.number({ invalid_type_error: 'سایر مزایا نامعتبر است' }).nonnegative('سایر مزایا باید ≥ ۰ باشد'),
+  dailyWage: z.number({ invalid_type_error: 'دستمزد روزانه نامعتبر است' }).nonnegative('دستمزد روزانه باید ≥ ۰ باشد').optional(),
+  hourlyWage: z.number({ invalid_type_error: 'دستمزد ساعتی نامعتبر است' }).nonnegative('دستمزد ساعتی باید ≥ ۰ باشد').optional(),
+  bankAccount: z.string().optional(),
+  bankIban: z.string().optional(),
+  bankName: z.string().optional(),
+  insuranceNumber: z.string().optional(),
+  hasInsurance: z.boolean(),
+  maritalStatus: z.string().min(1),
+  childrenCount: z.number({ invalid_type_error: 'تعداد فرزند نامعتبر است' }).int('تعداد فرزند باید عدد صحیح باشد').nonnegative('تعداد فرزند باید ≥ ۰ باشد'),
+  nationalId: z.string().optional(),
+  fatherName: z.string().optional(),
+  postalCode: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  birthDate: z.string().optional(),
+  birthPlace: z.string().optional(),
+  education: z.string().optional(),
+  isActive: z.boolean(),
+  notes: z.string().optional(),
+  projectId: z.string().optional(),
+});
 
-  fatherName?: string;
-
-  postalCode?: string;
-
-  phone?: string;
-
-  address?: string;
-
-  birthDate?: string;
-
-  birthPlace?: string;
-  education?: string;
-  isActive: boolean;
-  notes?: string;
-  projectId?: string;
-}
+type FormData = z.infer<typeof employeeSchema>;
 
 export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }: Props) {
   const isEdit = !!editing;
@@ -63,7 +62,8 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, reset, watch, control, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, control, setError, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(employeeSchema),
     defaultValues: {
       employeeType: 'FULL_TIME',
       maritalStatus: 'SINGLE',
@@ -172,8 +172,8 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
       onSaved();
       onClose();
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      const failed = applyApiErrorsToForm(e, setError);
+      if (failed.length === 0) toast.error(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -203,7 +203,7 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="label">شخص (از دایرکتوری) *</label>
-                <select {...register('partnerId', { required: 'شخص الزامی است' })} className="input" disabled={isEdit}>
+                <select {...register('partnerId')} className="input" disabled={isEdit}>
                   <option value="">— انتخاب کنید —</option>
                   {partners.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
                 </select>
@@ -257,38 +257,38 @@ export default function EmployeeFormModal({ isOpen, editing, onClose, onSaved }:
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="label">حقوق پایه (ریال)</label>
-                <input type="number" step="100000" {...register('baseSalary', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" step="100000" {...register('baseSalary', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               <div>
                 <label className="label">حق مسکن</label>
-                <input type="number" step="100000" {...register('housingAllow', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" step="100000" {...register('housingAllow', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               <div>
                 <label className="label">حق خواربار</label>
-                <input type="number" step="100000" {...register('foodAllow', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" step="100000" {...register('foodAllow', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               <div>
                 <label className="label">حق اولاد</label>
-                <input type="number" step="100000" {...register('childAllow', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" step="100000" {...register('childAllow', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               <div>
                 <label className="label">سایر مزایا</label>
-                <input type="number" step="100000" {...register('otherAllow', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" step="100000" {...register('otherAllow', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               <div>
                 <label className="label">تعداد فرزند</label>
-                <input type="number" {...register('childrenCount', { valueAsNumber: true })} className="input num" dir="ltr" />
+                <input type="number" {...register('childrenCount', { setValueAs: (v) => { if (v === '' || v === null || v === undefined) return 0; const n = Number(v); return Number.isFinite(n) ? n : 0; } })} className="input num" dir="ltr" />
               </div>
               {employeeType === 'DAILY_WAGE' && (
                 <div>
                   <label className="label">دستمزد روزانه</label>
-                  <input type="number" step="100000" {...register('dailyWage', { valueAsNumber: true })} className="input num" dir="ltr" />
+                  <input type="number" step="100000" {...register('dailyWage', { setValueAs: (v) => (v === '' || v === null || v === undefined) ? undefined : Number(v) })} className="input num" dir="ltr" />
                 </div>
               )}
               {employeeType === 'HOURLY' && (
                 <div>
                   <label className="label">دستمزد ساعتی</label>
-                  <input type="number" step="10000" {...register('hourlyWage', { valueAsNumber: true })} className="input num" dir="ltr" />
+                  <input type="number" step="10000" {...register('hourlyWage', { setValueAs: (v) => (v === '' || v === null || v === undefined) ? undefined : Number(v) })} className="input num" dir="ltr" />
                 </div>
               )}
             </div>

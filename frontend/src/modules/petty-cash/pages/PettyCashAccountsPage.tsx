@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, Wallet, Edit, Trash2, User, FolderOpen,
-  TrendingUp, TrendingDown, FileSpreadsheet, Printer, RefreshCw, Eye,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Wallet, Edit, User, FolderOpen, TrendingUp, FileSpreadsheet, RefreshCw, Eye } from 'lucide-react';
 import clsx from 'clsx';
 import { pettyCashApi } from '../services/petty-cash.api';
 import type { PettyCashAccount } from '@/types/petty-cash';

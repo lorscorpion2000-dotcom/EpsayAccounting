@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Clock, Trash2, RefreshCw, CheckCircle2, Search,
-} from 'lucide-react';
+import { Plus, Loader2, Clock, Trash2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 import { equipmentApi } from '../services/equipment.api';
 import type { EquipmentDailyLog, Equipment } from '@/types/equipment';

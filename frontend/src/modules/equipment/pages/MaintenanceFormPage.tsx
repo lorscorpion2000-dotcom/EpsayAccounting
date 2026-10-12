@@ -6,9 +6,7 @@ import { Save, X, Loader2, Wrench } from 'lucide-react';
 import { equipmentApi } from '../services/equipment.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import type {
-  Equipment, CreateMaintenancePayload, MaintenanceType,
-} from '@/types/equipment';
+import type { Equipment, CreateMaintenancePayload } from '@/types/equipment';
 import { MAINTENANCE_TYPE_LABELS } from '@/types/equipment';
 import type { Project } from '@/types/project';
 

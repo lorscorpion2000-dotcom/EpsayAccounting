@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Outlet, NavLink } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Edit, Loader2, Building2, MapPin, Calendar,
-  Layers, FileText, DollarSign, Package, Link2, Activity,
-} from 'lucide-react';
+import { ArrowRight, Edit, Loader2, Building2, MapPin, Calendar, Layers, FileText, DollarSign, Link2, Activity } from 'lucide-react';
 import clsx from 'clsx';
 import { projectsApi } from '../services/projects.api';
 import type { Project } from '@/types/project';

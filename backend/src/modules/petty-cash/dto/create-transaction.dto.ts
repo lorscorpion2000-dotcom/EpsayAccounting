@@ -63,4 +63,9 @@ export class CreatePettyCashTransactionDto {
   @IsOptional()
   @IsUUID()
   partnerId?: string;
+
+  @ApiPropertyOptional({ description: 'حساب بانکی/نقدی مبدأ برای FUNDING' })
+  @IsOptional()
+  @IsUUID()
+  sourceAccountId?: string;
 }

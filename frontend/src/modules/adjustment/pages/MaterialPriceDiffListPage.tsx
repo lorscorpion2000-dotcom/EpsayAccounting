@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Package, Eye, Trash2, RefreshCw,
-  CheckCircle2, Send, XCircle, TrendingUp, TrendingDown,
-} from 'lucide-react';
+import { Plus, Loader2, Package, Eye, Trash2, RefreshCw, CheckCircle2, Send, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import { api } from '@/services/api';
 import type { MaterialPriceDiff } from '@/types/adjustment';
 import { ADJ_STATUS_LABELS, ADJ_STATUS_COLORS } from '@/types/adjustment';
-import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 

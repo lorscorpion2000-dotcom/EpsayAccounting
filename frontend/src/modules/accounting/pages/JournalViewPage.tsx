@@ -10,7 +10,6 @@ import { accountingApi } from '../services/accounting.api';
 import type { JournalEntry, JournalStatus } from '@/types/accounting';
 import { JOURNAL_STATUS_LABELS, JOURNAL_STATUS_COLORS } from '@/types/accounting';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
-import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function JournalViewPage() {
   const { id } = useParams<{ id: string }>();

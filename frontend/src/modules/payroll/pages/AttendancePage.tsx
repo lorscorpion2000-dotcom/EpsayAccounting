@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Clock, RefreshCw, FileSpreadsheet, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Loader2, Clock, RefreshCw, FileSpreadsheet, Edit, Search } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
-import type { AttendanceRecord, Employee, AttendanceStatus } from '@/types/payroll';
+import type { AttendanceRecord, Employee } from '@/types/payroll';
 import { ATTENDANCE_LABELS, ATTENDANCE_COLORS } from '@/types/payroll';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import AttendanceFormModal from '../components/AttendanceFormModal';

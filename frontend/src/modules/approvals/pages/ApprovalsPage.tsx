@@ -2,17 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Inbox,
-  RefreshCw, User, Wallet, FolderOpen, Calendar, Hash,
-  FileText, TrendingUp, TrendingDown, Eye, ShoppingCart, Layers,
-  ShoppingBag, ClipboardList, Edit } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Inbox, RefreshCw, User, Wallet, FolderOpen, Calendar, Hash, TrendingUp, TrendingDown, Eye, ShoppingCart, Layers, ShoppingBag, ClipboardList, Edit } from 'lucide-react';
 import { PackagePlus } from 'lucide-react';
 import clsx from 'clsx';
 import { approvalsApi, PendingApproval, ApprovalStats } from '../services/approvals.api';
 import AccountPickerModal from '@/modules/petty-cash/components/AccountPickerModal';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { useAuthStore } from '@/store/auth.store';
-
 
 const SECTION_LABELS: Record<string, string> = {
   HEADER: 'سرصفحه (اطلاعات کلی)',
@@ -55,7 +51,6 @@ interface PendingData {
   advanceRequests: PendingApproval[];
 }
 
-
 // نقشه: هر تب برای کدام نقش‌ها نمایش داده شود
 const TAB_ROLES: Record<string, string[]> = {
   all: ['admin'],
@@ -75,7 +70,6 @@ function canSeeTab(tab: string, roles: string[]): boolean {
   const allowed = TAB_ROLES[tab] || [];
   return roles.some((r) => allowed.includes(r));
 }
-
 
 export default function ApprovalsPage() {
   const { token } = useAuthStore();
@@ -976,7 +970,6 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-
       {budgetWarning && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -1060,7 +1053,7 @@ function TabButton({ active, onClick, label, count }: any) {
 }
 
 function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay, onEdit }: any) {
-  const isTransaction = item.module === 'petty-cash-transaction';
+
   const isRequest = item.module === 'petty-cash-request';
   const isPurchase = item.module === 'purchase-request';
   const isPO = item.module === 'purchase-order';
@@ -1227,7 +1220,6 @@ function InfoItem({ icon: Icon, label, value }: any) {
 </div>
   );
 }
-
 
 function BudgetRow({ label, value, highlight, danger }: any) {
   return (

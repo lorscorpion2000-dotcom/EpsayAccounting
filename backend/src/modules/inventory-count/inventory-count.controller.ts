@@ -3,9 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { InventoryCountService } from './inventory-count.service';
-import {
-  CreateInvCountDto, UpdateInvCountDto, SetItemsDto,
-} from './dto/inventory-count.dto';
+import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 

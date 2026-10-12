@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
+
 import { decrypt, isEncryptedEnvelope } from '../utils/crypto.util';
 
 interface TelegramConfig {

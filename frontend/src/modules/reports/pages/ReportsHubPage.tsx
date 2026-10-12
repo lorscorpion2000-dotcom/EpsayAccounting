@@ -1,24 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import {
-  BarChart3, FileText, Wallet, Package, Users, Building2,
-  FileCheck2, Truck, TrendingUp, TrendingDown, ArrowLeft,
-  Loader2, RefreshCw, DollarSign, Activity, AlertCircle, FileSpreadsheet, Printer,
-} from 'lucide-react';
+import { BarChart3, FileText, Wallet, Package, Users, Building2, FileCheck2, Truck, TrendingUp, TrendingDown, ArrowLeft, Loader2, RefreshCw, DollarSign, Activity, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line,
-} from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, LineChart, Line } from 'recharts';
 import { api } from '@/services/api';
 import PrintHeader from '@/components/PrintHeader';
-import PrintButton from '@/components/PrintButton';
-import { exportToExcel } from '@/utils/export-excel';
-import { formatNumber } from '@/utils/format';
-import { todayLocalISO } from '@/utils/local-date';
 
-const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899'];
+
+import { formatNumber } from '@/utils/format';
+
+
 
 interface QuickLink {
   title: string;
@@ -70,33 +62,6 @@ export default function ReportsHubPage() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const handleExportExcel = () => {
-    const rows = [
-      { 'شاخص': 'درآمد کل', 'مقدار (ریال)': totalRevenue },
-      { 'شاخص': 'هزینه کل', 'مقدار (ریال)': totalExpenses },
-      { 'شاخص': 'سود/زیان خالص', 'مقدار (ریال)': netProfit },
-      { 'شاخص': 'پروههای فعال', 'مقدار': kpis?.activeProjects ?? kpis?.projectsCount ?? 0 },
-    ];
-
-    // Add cash flow rows
-    cashFlow.forEach((cf: any) => {
-      rows.push({
-        'شاخص': 'جریان نقدی - ' + (cf.name || ''),
-        'مقدار (ریال)': Number(cf.income || 0),
-      } as any);
-    });
-
-    void exportToExcel({
-      filename: 'ReportsHub-' + todayLocalISO() + '.xlsx',
-      sheets: [{
-        name: 'ReportsHub',
-        rows,
-        cols: [{ wch: 30 }, { wch: 25 }],
-      }],
-    });
-    toast.success('Excel دانلود شد');
-  };
 
   const totalRevenue = Number(kpis?.totalRevenue || profitLoss?.totalIncome || 0);
   const totalExpenses = Number(kpis?.totalExpenses || profitLoss?.totalExpense || 0);

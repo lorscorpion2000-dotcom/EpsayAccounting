@@ -1,8 +1,5 @@
 import { api } from '@/services/api';
-import type {
-  Employee, PayrollPeriod, PayrollRecord, AttendanceRecord, WorkLog,
-  LeaveRequest, AdvanceRequest, SubcontractorStatement,
-} from '@/types/payroll';
+import type { Employee, PayrollPeriod, AttendanceRecord, WorkLog, LeaveRequest, AdvanceRequest, SubcontractorStatement } from '@/types/payroll';
 
 export const payrollApi = {
   // ===== Employees =====

@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2,
-  XCircle, Package, Users, Wrench, Truck, Cog, FileText,
-  Building2, Edit, BadgeCheck, Ban,
-} from 'lucide-react';
+import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban } from 'lucide-react';
 import clsx from 'clsx';
 import { useReactToPrint } from 'react-to-print';
 import { clientStatementApi } from '../services/client-statement.api';

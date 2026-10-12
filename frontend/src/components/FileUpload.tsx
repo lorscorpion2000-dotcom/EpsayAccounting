@@ -1,8 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-  Upload, X, Loader2, File as FileIcon, ExternalLink, Image as ImageIcon,
-} from 'lucide-react';
+import { Upload, X, Loader2, File as FileIcon, ExternalLink } from 'lucide-react';
 import { api } from '@/services/api';
 
 interface Props {

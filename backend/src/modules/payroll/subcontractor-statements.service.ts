@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class SubcontractorStatementsService {
@@ -11,9 +12,9 @@ export class SubcontractorStatementsService {
   ) {}
 
   private async generateCode(projectId: string): Promise<string> {
+    void projectId;
     const year = new Date().getFullYear();
-    const count = await this.prisma.subcontractorStatement.count();
-    return 'SS-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'subcontractorStatement', 'code', 'SS-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: { projectId?: string; contractorId?: string; status?: string }) {

@@ -22,7 +22,7 @@ export default function SalesContractsListPage() {
   const [deleting, setDeleting] = useState<SalesContract | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -42,7 +42,7 @@ export default function SalesContractsListPage() {
     if (!deleting) return;
     setForceError(null);
     try {
-      const res = await salesApi.contracts.remove(deleting.id, force);
+
       toast.success(force ? 'به‌طور کامل حذف شد' : 'حذف شد');
       setDeleting(null);
       setForceConfirm(false);

@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Trash2, Loader2, RefreshCw, RotateCcw, FileText, ShoppingCart,
-  ShoppingBag, BookOpen, FileSpreadsheet, AlertCircle, ExternalLink,
-} from 'lucide-react';
+import { Trash2, Loader2, RefreshCw, RotateCcw, FileText, ShoppingCart, ShoppingBag, BookOpen, AlertCircle, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { recycleBinApi, RecycleItem, RecycleEntity, RecycleCounts } from '../services/recycle-bin.api';

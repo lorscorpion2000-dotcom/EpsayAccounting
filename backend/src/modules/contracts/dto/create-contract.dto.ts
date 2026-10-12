@@ -1,7 +1,4 @@
-import {
-  IsString, IsOptional, IsEnum, IsNumber, IsInt, IsDateString, IsBoolean,
-  IsArray, ValidateNested,
-} from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsInt, IsDateString, IsArray, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum LegalContractKindDto {
@@ -28,6 +25,9 @@ export class CreateLegalContractDto {
   @IsOptional() @IsNumber() @Type(() => Number) salaryMonthly?: number;
   @IsOptional() @IsNumber() @Type(() => Number) salaryDaily?: number;
   @IsOptional() @IsNumber() @Type(() => Number) salaryHourly?: number;
+
+  // B15.6: wage breakdown (پیوست ۱ قرارداد کارگری)
+  @IsOptional() @IsObject() wageBreakdown?: Record<string, any>;
   @IsOptional() @IsInt() @Type(() => Number) workHoursPerWeek?: number;
 
   @IsOptional() @IsDateString() startDate?: string;

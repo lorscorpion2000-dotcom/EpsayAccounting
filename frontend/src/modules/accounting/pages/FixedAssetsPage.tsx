@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Plus, Pencil, Trash2, RefreshCw, Building2, TrendingDown, XCircle, CheckCircle2,
-} from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, Building2, XCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import {

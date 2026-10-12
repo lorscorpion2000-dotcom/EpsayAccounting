@@ -369,7 +369,7 @@ model Contract {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   type   ContractType   @default(LUMP_SUM)
   status ContractStatus @default(ACTIVE)
@@ -444,10 +444,10 @@ enum WbsLevel {
 model WbsItem {
   id        String  @id @default(uuid()) @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   parentId String?   @map("parent_id") @db.Uuid
-  parent   WbsItem?  @relation("WbsHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  parent   WbsItem?  @relation("WbsHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children WbsItem[] @relation("WbsHierarchy")
 
   code  String   @db.VarChar(64)
@@ -493,7 +493,7 @@ model WbsItem {
 model ProjectBudget {
   id        String  @id @default(uuid()) @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   wbsItemId String?  @map("wbs_item_id") @db.Uuid
   wbsItem   WbsItem? @relation(fields: [wbsItemId], references: [id], onDelete: SetNull)
@@ -898,7 +898,7 @@ model PettyCashAccount {
 model PettyCashTransaction {
   id        String           @id @default(uuid()) @db.Uuid
   accountId String           @map("account_id") @db.Uuid
-  account   PettyCashAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account   PettyCashAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
   code   String            @unique @db.VarChar(32)
   type   PettyCashTxType
@@ -942,7 +942,7 @@ model PettyCashTransaction {
 model PettyCashRequest {
   id        String           @id @default(uuid()) @db.Uuid
   accountId String           @map("account_id") @db.Uuid
-  account   PettyCashAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account   PettyCashAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
   code           String   @unique @db.VarChar(32)
   requestDate    DateTime @map("request_date") @db.Date
@@ -1069,7 +1069,7 @@ model RFQ {
   code String @unique @db.VarChar(32)
 
   prId String          @map("pr_id") @db.Uuid
-  pr   PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+  pr   PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Restrict)
 
   rfqDate      DateTime  @map("rfq_date") @db.Date
   validUntil   DateTime? @map("valid_until") @db.Date
@@ -1318,9 +1318,9 @@ model Item {
 model Stock {
   id          String    @id @default(uuid()) @db.Uuid
   warehouseId String    @map("warehouse_id") @db.Uuid
-  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   itemId      String    @map("item_id") @db.Uuid
-  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
   quantity    Decimal   @default(0) @db.Decimal(20, 4)
   avgCost     Decimal   @default(0) @map("avg_cost") @db.Decimal(20, 2)
   totalValue  Decimal   @default(0) @map("total_value") @db.Decimal(24, 2)
@@ -1528,7 +1528,7 @@ model DailyReport {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   reportDate DateTime @map("report_date") @db.Date
 
@@ -1961,7 +1961,7 @@ enum RequestStatus {
 model EmployeeProfile {
   id        String  @id @default(uuid()) @db.Uuid
   partnerId String  @unique @map("partner_id") @db.Uuid
-  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
 
   projectId String?  @map("project_id") @db.Uuid
   project   Project? @relation("EmployeeProject", fields: [projectId], references: [id], onDelete: SetNull)
@@ -2115,7 +2115,7 @@ model PayrollRecord {
 model Attendance {
   id         String  @id @default(uuid()) @db.Uuid
   employeeId String  @map("employee_id") @db.Uuid
-  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
   attendanceDate DateTime          @map("attendance_date") @db.Date
   checkIn        String?           @map("check_in") @db.VarChar(10)
@@ -2140,7 +2140,7 @@ model Attendance {
 model DailyWorkLog {
   id         String  @id @default(uuid()) @db.Uuid
   employeeId String  @map("employee_id") @db.Uuid
-  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
   workDate      DateTime          @map("work_date") @db.Date
   projectId     String?           @map("project_id") @db.Uuid
@@ -2167,7 +2167,7 @@ model LeaveRequest {
   id         String  @id @default(uuid()) @db.Uuid
   code       String  @unique @db.VarChar(32)
   employeeId String  @map("employee_id") @db.Uuid
-  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
   leaveType LeaveType @default(ANNUAL) @map("leave_type")
   startDate DateTime  @map("start_date") @db.Date
@@ -2197,7 +2197,7 @@ model AdvanceRequest {
   id         String  @id @default(uuid()) @db.Uuid
   code       String  @unique @db.VarChar(32)
   employeeId String  @map("employee_id") @db.Uuid
-  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Partner @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
   requestDate DateTime @map("request_date") @db.Date
   amount      Decimal  @db.Decimal(20, 2)
@@ -2334,9 +2334,9 @@ enum CapitalTransactionStatus {
 model ProjectPartnerShare {
   id        String  @id @default(uuid()) @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
   partnerId String  @map("partner_id") @db.Uuid
-  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
 
   sharePercent  Decimal   @map("share_percent") @db.Decimal(5, 2)
   effectiveFrom DateTime  @map("effective_from") @db.Date
@@ -2357,7 +2357,7 @@ model PartnerCapitalAccount {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   partnerId String  @map("partner_id") @db.Uuid
-  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
 
   projectId String?  @map("project_id") @db.Uuid
   project   Project? @relation(fields: [projectId], references: [id])
@@ -2481,7 +2481,7 @@ model Permit {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   type      PermitType
   title     String       @db.VarChar(200)
@@ -2603,7 +2603,7 @@ model TechnicalDocument {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
   type       DocumentType
   phase      DocumentPhase @default(PHASE_1)
@@ -2647,7 +2647,7 @@ model PhaseChecklist {
   id        String  @id @default(uuid()) @db.Uuid
   code      String  @unique @db.VarChar(32)
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
   wbsItemId String? @map("wbs_item_id") @db.Uuid
 
   type          ChecklistType
@@ -2760,6 +2760,9 @@ model LegalContract {
   salaryDaily      Decimal? @db.Decimal(18, 0)
   salaryHourly     Decimal? @db.Decimal(18, 0)
   workHoursPerWeek Int?
+
+  // B15.6: تفکیک مزایا و کسورات حقوق (پیوست ۱ قرارداد کارگری)
+  wageBreakdown Json?
 
   startDate    DateTime?
   endDate      DateTime?
@@ -3837,10 +3840,10 @@ model DailyReportEvent {
 model WbsProgressSnapshot {
   id        String  @id @default(uuid()) @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  project   Project @relation("WbsProgressProject", fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation("WbsProgressProject", fields: [projectId], references: [id], onDelete: Restrict)
 
   wbsItemId String  @map("wbs_item_id") @db.Uuid
-  wbsItem   WbsItem @relation("WbsProgressItem", fields: [wbsItemId], references: [id], onDelete: Cascade)
+  wbsItem   WbsItem @relation("WbsProgressItem", fields: [wbsItemId], references: [id], onDelete: Restrict)
 
   reportId String? @map("report_id") @db.Uuid
 

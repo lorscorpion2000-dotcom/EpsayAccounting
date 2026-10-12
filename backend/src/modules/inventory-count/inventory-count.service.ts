@@ -3,9 +3,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from '../warehouse/stock.service';
-import {
-  CreateInvCountDto, UpdateInvCountDto, SetItemsDto,
-} from './dto/inventory-count.dto';
+import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
 
 @Injectable()
 export class InventoryCountService {

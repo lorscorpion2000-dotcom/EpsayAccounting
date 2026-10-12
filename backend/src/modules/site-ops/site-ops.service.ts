@@ -3,6 +3,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateDailyReportDto } from './dto/create-report.dto';
 import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { DailyReportSectionsService } from './daily-report-sections.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class SiteOpsService {
@@ -12,9 +13,9 @@ export class SiteOpsService {
   ) {}
 
   private async generateCode(projectId: string): Promise<string> {
+    void projectId; // codes are globally unique, not per-project
     const year = new Date().getFullYear();
-    const count = await this.prisma.dailyReport.count({ where: { projectId } });
-    return 'DR-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'dailyReport', 'code', 'DR-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: { projectId?: string; status?: string; fromDate?: string; toDate?: string }) {
@@ -74,20 +75,7 @@ export class SiteOpsService {
     return String(v);
   }
 
-
   /** پاکسازی همه فیلدهای Id از '' به null در یک آبجکت */
-  private cleanIds(obj: any): any {
-    const out: any = {};
-    for (const k of Object.keys(obj)) {
-      const v = obj[k];
-      if (k.endsWith('Id') && (v === '' || v === undefined || v === 'null')) {
-        out[k] = null;
-      } else {
-        out[k] = v;
-      }
-    }
-    return out;
-  }
 
   private buildWorkers(items: any[]) {
     return items.map((w, i) => {
@@ -327,24 +315,46 @@ export class SiteOpsService {
     });
   }
 
-
-
   async approve(id: string, userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
     await this.assertNotSelfApprove(id, userId);
+
+    // B13: check all sections — همه بخش‌ها باید APPROVED یا FORWARDED باشند
+    const sections = await this.prisma.dailyReportSection.findMany({
+      where: { reportId: id },
+    });
+    if (sections.length === 0) {
+      throw new BadRequestException('این گزارش هیچ بخشی ندارد — ابتدا گزارش را اصلاح کنید');
+    }
+    const notApproved = sections.filter(
+      (s) => s.status !== 'APPROVED' && s.status !== 'FORWARDED',
+    );
+    if (notApproved.length > 0) {
+      throw new BadRequestException(
+        'این گزارش بخش‌های تأییدنشده دارد. ابتدا از پنل بخش‌ها تأیید کنید: ' +
+        notApproved.map((s) => s.sectionType).join(', '),
+      );
+    }
+
     return this.prisma.dailyReport.update({
       where: { id },
       data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
     });
   }
 
-  async reject(id: string, reason: string) {
+  async reject(id: string, reason: string, _userId?: string) {
+    // B12: unify reject — REJECTED (same as approvals.reject)
     const r = await this.findOne(id);
     if (r.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل رد است');
     return this.prisma.dailyReport.update({
       where: { id },
-      data: { status: 'DRAFT', rejectedReason: reason },
+      data: {
+        status: 'REJECTED',
+        rejectedReason: reason,
+        approvedById: null,
+        approvedAt: null,
+      },
     });
   }
 

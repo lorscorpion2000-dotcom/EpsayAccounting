@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Loader2, RefreshCw, Receipt, FileText, ShieldCheck, Download,
-  TrendingUp, TrendingDown, Users, DollarSign, Filter, Info,
-} from 'lucide-react';
+import { Loader2, Receipt, ShieldCheck, Download, TrendingUp, TrendingDown, Users, Filter, Info } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
 import { taxReportsApi } from '../services/tax-reports.api';

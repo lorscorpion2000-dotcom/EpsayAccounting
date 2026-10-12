@@ -152,6 +152,7 @@ export class ContractsService {
           salaryMonthly: dto.salaryMonthly,
           salaryDaily: dto.salaryDaily,
           salaryHourly: dto.salaryHourly,
+          wageBreakdown: dto.wageBreakdown ?? undefined,
           workHoursPerWeek: dto.workHoursPerWeek,
           startDate: dto.startDate ? new Date(dto.startDate) : undefined,
           endDate: dto.endDate ? new Date(dto.endDate) : undefined,

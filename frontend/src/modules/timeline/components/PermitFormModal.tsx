@@ -49,7 +49,7 @@ export default function PermitFormModal({ isOpen, editing, onClose, onSaved }: P
   const [projects, setProjects] = useState<Project[]>([]);
   const [pendingFiles, setPendingFiles] = useState<AttachmentInput[]>([]);
 
-  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, watch: _watch, formState: { errors } } = useForm<FormData>({
     defaultValues: { type: 'CONSTRUCTION', status: 'PENDING' },
   });
 

@@ -8,7 +8,7 @@ import {
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 import { api } from '@/services/api';
-import type { DailyReport, ReportStatus, WeatherCondition } from '@/types/site-ops';
+import type { DailyReport, WeatherCondition } from '@/types/site-ops';
 import {
   REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, WEATHER_LABELS,
 } from '@/types/site-ops';

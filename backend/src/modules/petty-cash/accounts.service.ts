@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreatePettyCashAccountDto } from './dto/create-account.dto';
 import { UpdatePettyCashAccountDto } from './dto/update-account.dto';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class PettyCashAccountsService {
@@ -14,8 +15,7 @@ export class PettyCashAccountsService {
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.pettyCashAccount.count();
-    return 'PC-' + year + '-' + String(count + 1).padStart(3, '0');
+    return generateCode(this.prisma, 'pettyCashAccount', 'code', 'PC-' + year + '-', { pad: 3 });
   }
 
   async findAll(query?: { holderId?: string; projectId?: string; active?: boolean }) {
@@ -182,8 +182,7 @@ export class PettyCashAccountsService {
     return Number(result._sum.amount || 0);
   }
 
-
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

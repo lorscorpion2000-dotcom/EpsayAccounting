@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, FileText, Calendar, Trash2, TrendingDown, Building2 } from 'lucide-react';
+import { RefreshCw, FileText, Calendar, Trash2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import {

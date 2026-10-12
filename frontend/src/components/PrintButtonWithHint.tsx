@@ -1,5 +1,5 @@
 // E:\EpsayAccounting\frontend\src\components\PrintButtonWithHint.tsx
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, Info, X } from 'lucide-react';
 

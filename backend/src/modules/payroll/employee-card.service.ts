@@ -182,7 +182,7 @@ export class EmployeeCardService {
     return endOfLocalDay(end);
   }
 
-  private getDaysInMonth(year: number, month: number): number {
+  private getDaysInMonth(_year: number, month: number): number {
     if (month <= 6) return 31;
     if (month <= 11) return 30;
     // اسفند — ساده: 29 یا 30

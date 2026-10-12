@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { Loader2, BarChart3, FileSpreadsheet, RefreshCw, Search } from 'lucide-react';
-import clsx from 'clsx';
+
 import { accountingApi } from '../services/accounting.api';
 import { formatNumber } from '@/utils/format';
 import { PersianDatePicker } from '@/components/PersianDatePicker';

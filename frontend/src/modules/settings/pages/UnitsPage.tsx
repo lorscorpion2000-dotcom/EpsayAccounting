@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Edit, Trash2, RefreshCw, Ruler, AlertCircle, Info,
-} from 'lucide-react';
+import { Plus, Loader2, Edit, Trash2, RefreshCw, Ruler, Info } from 'lucide-react';
 import clsx from 'clsx';
 import { unitsApi, Unit } from '../services/units.api';
 import { invalidateUnitsCache } from '@/hooks/useUnits';

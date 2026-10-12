@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export enum AdjStatusEnum {
   DRAFT = 'DRAFT', CONFIRMED = 'CONFIRMED', POSTED = 'POSTED', CANCELLED = 'CANCELLED',

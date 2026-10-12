@@ -2,13 +2,15 @@ import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import {
-  CreateOverheadDto, UpdateOverheadDto, PreviewDto, OverheadItemDto,
-} from './dto/overhead.dto';
+import { CreateOverheadDto, UpdateOverheadDto, PreviewDto } from './dto/overhead.dto';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
 
 @Injectable()
 export class OverheadService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   private async nextCode(): Promise<string> {
     const year = new Date().getFullYear();
@@ -224,19 +226,12 @@ export class OverheadService {
       throw new BadRequestException('حساب مبدأ و مقصد باید تعیین شود');
     }
 
-    // Check fiscal year is open
-    const fy = await this.prisma.fiscalYear.findUnique({ where: { id: a.fiscalYearId } });
-    if (!fy) throw new NotFoundException('سال مالی یافت نشد');
-    if (fy.status !== 'OPEN') throw new BadRequestException('سال مالی بسته است');
-
-    const lockedMonths = (fy.lockedMonths as string[]) || [];
-    if (lockedMonths.includes(a.periodMonth)) {
-      throw new BadRequestException('دوره قفل شده است');
-    }
-
-    // Entry date = last day of period
+        // Entry date = last day of period
     const [year, month] = a.periodMonth.split('-').map(Number);
     const entryDate = new Date(year, month, 0); // last day of month
+
+    // B2.5: unified period lock
+    await this.fiscalYears.assertPeriodOpen(entryDate);
 
     // Validate accounts
     const source = await this.prisma.account.findUnique({ where: { id: a.sourceAccountId } });

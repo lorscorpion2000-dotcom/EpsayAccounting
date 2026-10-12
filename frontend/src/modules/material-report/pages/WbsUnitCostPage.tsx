@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Loader2, RefreshCw, BarChart3, TrendingUp, TrendingDown, Download,
-} from 'lucide-react';
+import { RefreshCw, BarChart3, TrendingUp, TrendingDown, Download } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
 import { materialReportApi } from '../services/material-report.api';
@@ -15,7 +13,7 @@ export default function WbsUnitCostPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [projectId, setProjectId] = useState('');
   const [data, setData] = useState<WbsUnitCostResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   useEffect(() => {
     api.get('/projects').then((r) => {

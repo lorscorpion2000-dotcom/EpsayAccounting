@@ -2,6 +2,7 @@ import {
   Injectable, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import {
   CreateEquipmentDto, UpdateEquipmentDto,
   CreateDailyLogDto, UpdateDailyLogDto,
@@ -10,7 +11,10 @@ import {
 
 @Injectable()
 export class EquipmentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private engine: AccountingEngineService,
+  ) {}
 
   // ─── Code generators ───
   private async nextEquipmentCode(): Promise<string> {
@@ -309,12 +313,46 @@ export class EquipmentService {
     return { success: true };
   }
 
-  async confirmDailyLog(id: string) {
+  async confirmDailyLog(id: string, userId?: string) {
     const log = await this.getDailyLog(id);
     if (log.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تأیید است');
-    return this.prisma.equipmentDailyLog.update({
-      where: { id },
-      data: { status: 'CONFIRMED' },
+
+    // B3.d: idempotency
+    const existing = await this.prisma.journalEntry.findFirst({
+      where: { sourceType: 'EQUIPMENT_COST', sourceId: log.id },
+      select: { id: true, code: true },
+    });
+    if (existing) {
+      return this.prisma.equipmentDailyLog.update({
+        where: { id },
+        data: { status: 'CONFIRMED' },
+      });
+    }
+
+    const cost = Number(log.computedCost);
+
+    return this.prisma.$transaction(async (tx) => {
+      // B3.d: JE در همان tx
+      let je: any = null;
+      if (cost > 0.01) {
+        je = await this.engine.postEvent('EQUIPMENT_COST', {
+          amount: cost,
+          entryDate: log.logDate,
+          description: 'کارکرد ماشین ' + (log.equipment?.code || '') + ' — ' + (log.equipment?.name || ''),
+          reference: log.code,
+          projectId: log.projectId,
+          sourceId: log.id,
+          userId,
+          autoPost: true,
+        }, tx);
+      }
+
+      const updated = await tx.equipmentDailyLog.update({
+        where: { id },
+        data: { status: 'CONFIRMED' },
+      });
+
+      return { ...updated, journalCode: je?.code || null };
     });
   }
 
@@ -371,24 +409,46 @@ export class EquipmentService {
     if (!eq) throw new NotFoundException('ماشین یافت نشد');
 
     const code = await this.nextMaintenanceCode();
-    return this.prisma.equipmentMaintenance.create({
-      data: {
-        code,
-        equipmentId: dto.equipmentId,
-        type: dto.type as any,
-        maintenanceDate: new Date(dto.maintenanceDate),
-        description: dto.description,
-        cost: dto.cost,
-        parts: dto.parts,
-        vendor: dto.vendor,
-        invoiceNumber: dto.invoiceNumber,
-        projectId: dto.projectId,
-        nextServiceDate: dto.nextServiceDate ? new Date(dto.nextServiceDate) : null,
-        nextServiceHours: dto.nextServiceHours,
-        notes: dto.notes,
-        createdById: userId,
-      },
-      include: { equipment: true },
+    const cost = Number(dto.cost) || 0;
+
+    // B3.e: JE + create اتمیک
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.equipmentMaintenance.create({
+        data: {
+          code,
+          equipmentId: dto.equipmentId,
+          type: dto.type as any,
+          maintenanceDate: new Date(dto.maintenanceDate),
+          description: dto.description,
+          cost,
+          parts: dto.parts,
+          vendor: dto.vendor,
+          invoiceNumber: dto.invoiceNumber,
+          projectId: dto.projectId,
+          nextServiceDate: dto.nextServiceDate ? new Date(dto.nextServiceDate) : null,
+          nextServiceHours: dto.nextServiceHours,
+          notes: dto.notes,
+          createdById: userId,
+        },
+        include: { equipment: true },
+      });
+
+      let journalCode: string | null = null;
+      if (cost > 0.01) {
+        const je = await this.engine.postEvent('EQUIPMENT_MAINTENANCE', {
+          amount: cost,
+          entryDate: created.maintenanceDate,
+          description: 'تعمیرات ماشین ' + eq.code + ' — ' + eq.name,
+          reference: created.code,
+          projectId: dto.projectId || undefined,
+          sourceId: created.id,
+          userId,
+          autoPost: true,
+        }, tx);
+        journalCode = je.code;
+      }
+
+      return { ...created, journalCode };
     });
   }
 

@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, FileSpreadsheet, Printer, CheckCircle2,
-  XCircle, Send, FileText, Edit, TrendingUp, TrendingDown, BadgeCheck,
-} from 'lucide-react';
+import { ArrowRight, Loader2, FileSpreadsheet, Printer, CheckCircle2, Send, FileText, Edit, BadgeCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { useReactToPrint } from 'react-to-print';
 import { payrollApi } from '../services/payroll.api';
@@ -90,7 +87,7 @@ export default function StatementDetailPage() {
   const insuranceAmount = Number((s as any).insuranceAmount || 0);
   const taxAmount = Number((s as any).taxAmount || 0);
   const retentionAmount = Number((s as any).retentionAmount || 0);
-  const prepaymentAmount = Number((s as any).prepaymentAmount || 0);
+
   const prepaymentDepreciation = Number((s as any).prepaymentDepreciation || 0);
   const otherDeduction = Number((s as any).otherDeduction || 0);
   const totalDeduction = Number((s as any).totalDeduction || 0);

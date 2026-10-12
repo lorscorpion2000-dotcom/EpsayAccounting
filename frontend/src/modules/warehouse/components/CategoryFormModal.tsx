@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { X, Loader2, Save, FolderTree } from 'lucide-react';
+import { X, Save, FolderTree } from 'lucide-react';
 import { warehouseApi } from '../services/warehouse.api';
 import type { ItemCategory, ItemType } from '@/types/warehouse';
 import { ITEM_TYPE_LABELS } from '@/types/warehouse';

@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, FileCheck2, Edit, Trash2, RefreshCw,
-  FileSpreadsheet, AlertTriangle, Calendar,
-} from 'lucide-react';
+import { Plus, Search, Loader2, FileCheck2, Edit, Trash2, RefreshCw, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { timelineApi, Permit, PermitType, PermitStatus } from '../services/timeline.api';
-import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { formatJalaliDate } from '@/utils/format';
 import PermitFormModal from '../components/PermitFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 

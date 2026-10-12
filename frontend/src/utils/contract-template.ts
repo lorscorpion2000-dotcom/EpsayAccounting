@@ -1,18 +1,52 @@
 // src/utils/contract-template.ts
 // Substitutes {{var}} placeholders in contract template HTML.
-// Supports dot notation: {{party.fullName}}, {{project.name}}, etc.
+// F3: escape values + sanitize final HTML (DOMPurify).
 //
 // Usage:
 //   const html = renderContractTemplate(contract.bodyHtml, contract);
 //   // {{party.fullName}} → "علی رضایی"
+//   // values are HTML-escaped, final HTML is sanitized
 
+import DOMPurify from 'dompurify';
 import { formatJalaliDate, formatNumber } from './format';
 
 type AnyRecord = Record<string, any>;
 
+// ═══════════════════════════════════════════════════════════
+// F3: HTML escape helper
+// ═══════════════════════════════════════════════════════════
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ═══════════════════════════════════════════════════════════
+// F3: DOMPurify config for contract template
+// ═══════════════════════════════════════════════════════════
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: [
+    'p','b','i','u','strong','em','br','hr','span','div','section','article',
+    'h1','h2','h3','h4','h5','h6',
+    'table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
+    'ul','ol','li',
+    'a',
+  ],
+  ALLOWED_ATTR: [
+    'style','dir','class','title','colspan','rowspan','width','height','align','valign',
+    'href','target','rel',
+  ],
+  ALLOW_DATA_ATTR: false,
+  FORBID_TAGS: ['script','iframe','object','embed','form','input','button','textarea','select','style','link','meta'],
+  FORBID_ATTR: ['onerror','onload','onclick','onmouseover','onfocus','onblur','onchange','onsubmit','onmouseenter','onmouseleave'],
+};
+
 /**
  * Resolve a dotted path like "party.fullName" against the context object.
- * Returns empty string if not found.
+ * Returns undefined if not found.
  */
 function resolvePath(obj: AnyRecord | null | undefined, path: string): any {
   if (!obj) return undefined;
@@ -32,17 +66,14 @@ function resolvePath(obj: AnyRecord | null | undefined, path: string): any {
 function formatValue(value: any, key: string): string {
   if (value === null || value === undefined || value === '') return '—';
 
-  // Jalali date
   if (key.toLowerCase().endsWith('date') || /At$/.test(key)) {
     return formatJalaliDate(value);
   }
 
-  // Numeric fields
   if (typeof value === 'number') {
     return formatNumber(value);
   }
 
-  // Numeric strings for known money fields
   if (
     typeof value === 'string' &&
     /^\d+(\.\d+)?$/.test(value) &&
@@ -55,12 +86,7 @@ function formatValue(value: any, key: string): string {
 }
 
 /**
- * Render a template HTML string using a contract object as context.
- * Any {{path.to.value}} gets replaced with the formatted value.
- * Unknown paths are replaced with "—" (or a fallback if provided).
- */
-/**
- * ساخت جدول اجزای اجرای قرارداد
+ * F3: ساخت جدول اجزای اجرای قرارداد — با escape مقادیر
  */
 function buildItemsTable(items: any[] | null | undefined): string {
   if (!items || items.length === 0) {
@@ -87,8 +113,8 @@ function buildItemsTable(items: any[] | null | undefined): string {
     rows += `
       <tr>
         <td style="${tdc}">${idx + 1}</td>
-        <td style="${tdr}">${it.description || '—'}</td>
-        <td style="${tdc}">${it.unit || '—'}</td>
+        <td style="${tdr}">${escapeHtml(it.description || '—')}</td>
+        <td style="${tdc}">${escapeHtml(it.unit || '—')}</td>
         <td style="${tdn}">${fmt(qty)}</td>
         <td style="${tdn}">${fmt(up)}</td>
         <td style="${tdn}">${fmt(lineTotal)}</td>
@@ -103,7 +129,7 @@ function buildItemsTable(items: any[] | null | undefined): string {
           <th style="${th};text-align:right">شرح</th>
           <th style="${th};width:48px">واحد</th>
           <th style="${th};width:48px">تعداد</th>
-          <th style="${th};width:110px">مبلغ واحد</th></th>
+          <th style="${th};width:110px">مبلغ واحد</th>
           <th style="${th};width:110px">جمع</th>
         </tr>
       </thead>
@@ -117,6 +143,11 @@ function buildItemsTable(items: any[] | null | undefined): string {
     </table>`;
 }
 
+/**
+ * F3: Render a template HTML string using a contract object as context.
+ * Values are HTML-escaped before substitution.
+ * Final HTML is sanitized with DOMPurify.
+ */
 export function renderContractTemplate(
   html: string | null | undefined,
   contract: AnyRecord | null | undefined,
@@ -125,16 +156,21 @@ export function renderContractTemplate(
   if (!html) return '';
   const fallback = options?.fallback ?? '—';
 
-  // جایگزینی ویژه {{itemsTable}}
-  html = html.replace(/\{\{\s*itemsTable\s*\}\}/g, buildItemsTable(contract?.items));
+  // ۱) {{itemsTable}}
+  let out = html.replace(/\{\{\s*itemsTable\s*\}\}/g, buildItemsTable(contract?.items));
 
-  return html.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, path: string) => {
+  // ۲) {{path.to.value}} — with escape
+  out = out.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, path: string) => {
     const value = resolvePath(contract, path);
     if (value === undefined || value === null || value === '') {
-      return options?.throwOnMissing ? match : fallback;
+      return options?.throwOnMissing ? match : escapeHtml(fallback);
     }
-    return formatValue(value, path);
+    const formatted = formatValue(value, path);
+    return escapeHtml(String(formatted));
   });
+
+  // ۳) sanitize
+  return DOMPurify.sanitize(out, PURIFY_CONFIG);
 }
 
 /**

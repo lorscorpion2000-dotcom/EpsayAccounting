@@ -56,7 +56,7 @@ export default function StatementFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, watch, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
       statementNumber: 1,
       periodStart: todayLocalISO(),

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
-import { X, Loader2, Save, DollarSign, Lock, Unlock } from 'lucide-react';
+import { X, Save, DollarSign, Lock } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { WbsItem, ProjectBudget } from '@/types/project';
-import { WBS_LEVEL_LABELS } from '@/types/project';
-import { formatNumber } from '@/utils/format';
+
 import { todayLocalISO } from '@/utils/local-date';
 
 interface Props {

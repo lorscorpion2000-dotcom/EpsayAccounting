@@ -1,8 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString,
-  MaxLength, Min, ValidateNested,
-} from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum PriceListStatusEnum {

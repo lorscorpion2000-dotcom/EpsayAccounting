@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
@@ -60,7 +60,6 @@ export class ReceiptsController {
   reject(@Param('id') id: string, @Body() dto: RejectDto) {
     return this.s.reject(id, dto.reason);
   }
-
 
   @Patch(':id/post')
   @RequirePermissions('warehouse.update')

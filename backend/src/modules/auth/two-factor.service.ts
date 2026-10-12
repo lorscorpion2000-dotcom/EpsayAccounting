@@ -74,7 +74,7 @@ function otpKeyuri(username: string, issuer: string, secret: string): string {
 @Injectable()
 export class TwoFactorService {
   constructor(
-    private prisma: PrismaService,
+    _prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
   ) {}

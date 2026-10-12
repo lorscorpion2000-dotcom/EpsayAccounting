@@ -6,11 +6,8 @@ import {
   Wallet, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Bell,
   ClipboardList, ShoppingCart, FileSpreadsheet, Clock,
 } from 'lucide-react';
-import clsx from 'clsx';
-import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
-} from 'recharts';
+
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { dashboardExecApi } from '../services/dashboard-exec.api';
 import type { DashboardExecutive } from '@/types/dashboard-exec';
 import { toPersianDigits, formatJalaliDate } from '@/utils/format';

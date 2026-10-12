@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, User, Printer, Calendar, Briefcase,
-  TrendingUp, Download, Users, Clock, AlertCircle, BadgeCheck,
-} from 'lucide-react';
+import { ArrowRight, Loader2, User, Printer, Calendar, Download } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
 import { useReactToPrint } from 'react-to-print';

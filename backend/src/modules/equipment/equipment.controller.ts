@@ -103,7 +103,7 @@ export class EquipmentController {
 
   @Patch('logs/:id/confirm')
   @RequirePermissions('equipment.logs.manage')
-  confirmLog(@Param('id') id: string) { return this.svc.confirmDailyLog(id); }
+  confirmLog(@Param('id') id: string, @CurrentUser('id') userId: string) { return this.svc.confirmDailyLog(id, userId); }
 
   // ═══════════════════════════════════════════
   // MAINTENANCE

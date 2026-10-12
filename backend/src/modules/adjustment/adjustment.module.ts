@@ -5,8 +5,10 @@ import { MaterialPriceDiffService } from './material-price-diff.service';
 import { AdjustmentIndexController } from './adjustment-index.controller';
 import { AdjustmentController } from './adjustment.controller';
 import { MaterialPriceDiffController } from './material-price-diff.controller';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
+  imports: [AccountingModule],
   controllers: [AdjustmentIndexController, AdjustmentController, MaterialPriceDiffController],
   providers: [AdjustmentIndexService, AdjustmentService, MaterialPriceDiffService],
   exports: [AdjustmentIndexService, AdjustmentService, MaterialPriceDiffService],

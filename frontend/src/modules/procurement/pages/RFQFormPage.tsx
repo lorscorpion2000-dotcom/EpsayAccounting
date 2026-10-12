@@ -30,7 +30,7 @@ export default function RFQFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
       prId: prIdFromQuery,
       rfqDate: todayLocalISO(),

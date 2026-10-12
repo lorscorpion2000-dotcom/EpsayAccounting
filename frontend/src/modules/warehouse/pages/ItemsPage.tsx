@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
-import type { Item, ItemType } from '@/types/warehouse';
+import type { Item } from '@/types/warehouse';
 import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, ITEM_UNIT_LABELS } from '@/types/warehouse';
 import { formatNumber, toPersianDigits } from '@/utils/format';
 import ItemFormModal from '../components/ItemFormModal';

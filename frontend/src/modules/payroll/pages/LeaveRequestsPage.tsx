@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, CalendarOff, RefreshCw, Edit, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Loader2, CalendarOff, RefreshCw, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { LeaveRequest, Employee } from '@/types/payroll';
@@ -15,7 +15,7 @@ export default function LeaveRequestsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<LeaveRequest | null>(null);
+  const [, setEditing] = useState<LeaveRequest | null>(null);
   const [actionItem, setActionItem] = useState<{ item: LeaveRequest; action: 'approve' | 'reject' | 'delete' } | null>(null);
   const [reason, setReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);

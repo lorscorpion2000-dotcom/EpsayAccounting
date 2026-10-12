@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Save, X, Loader2, Calculator, TrendingUp, Info } from 'lucide-react';
+import { X, Loader2, Calculator, Info } from 'lucide-react';
 import { adjustmentApi } from '../services/adjustment.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';

@@ -2,45 +2,64 @@ import { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Save, X, Loader2, Plus, Trash2, Calculator, Percent, DollarSign,
-  AlertCircle, FileText,
-} from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Save, X, Loader2, Plus, Trash2, Calculator, DollarSign } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project } from '@/types/project';
 import {
-  ContractType, ContractStatus,
   CONTRACT_TYPE_LABELS, CONTRACT_STATUS_LABELS,
 } from '@/types/project';
 import { formatNumber } from '@/utils/format';
+import { getApiErrorMessage, applyApiErrorsToForm } from '@/utils/api-error';
 
-interface OtherDeduction {
-  name: string;
-  percent: number;
-}
+const contractSchema = z
+  .object({
+    type: z.string().min(1, 'نوع قرارداد الزامی است'),
+    status: z.string().min(1, 'وضعیت الزامی است'),
+    baseAmount: z
+      .number({ invalid_type_error: 'مبلغ نامعتبر است' })
+      .positive('مبلغ باید بزرگ‌تر از صفر باشد'),
+    coefficient: z
+      .number({ invalid_type_error: 'ضریب نامعتبر است' })
+      .positive('ضریب باید بزرگ‌تر از صفر باشد'),
+    signDate: z.string().optional(),
+    durationValue: z
+      .number({ invalid_type_error: 'مدت نامعتبر است' })
+      .nonnegative('مدت باید ≥ ۰ باشد')
+      .optional(),
+    durationUnit: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    paymentTerms: z.string().optional(),
+    prepaymentPercent: z
+      .number({ invalid_type_error: 'درصد پیش‌پرداخت نامعتبر است' })
+      .min(0, 'درصد باید ≥ ۰ باشد')
+      .max(100, 'درصد باید ≤ ۱۰۰ باشد')
+      .optional(),
+    prepaymentAmount: z
+      .number({ invalid_type_error: 'مبلغ پیش‌پرداخت نامعتبر است' })
+      .nonnegative('مبلغ باید ≥ ۰ باشد')
+      .optional(),
+    useManualPrepayment: z.boolean().optional(),
+    prepaymentDepreciationPercent: z
+      .number({ invalid_type_error: 'درصد استهلاک نامعتبر است' })
+      .min(0)
+      .max(100)
+      .optional(),
+    insurancePercent: z.number({ invalid_type_error: 'بیمه نامعتبر است' }).min(0).max(100),
+    taxPercent: z.number({ invalid_type_error: 'مالیات نامعتبر است' }).min(0).max(100),
+    retentionPercent: z.number({ invalid_type_error: 'حسن انجام نامعتبر است' }).min(0).max(100),
+    otherDeductions: z.array(z.any()).optional(),
+    description: z.string().optional(),
+  })
+  .refine((d) => !d.startDate || !d.endDate || d.endDate >= d.startDate, {
+    message: 'تاریخ پایان نمی‌تواند قبل از شروع باشد',
+    path: ['endDate'],
+  });
 
-interface FormData {
-  type: ContractType;
-  status: ContractStatus;
-  baseAmount: number;
-  coefficient: number;
-  signDate?: string;
-  durationValue?: number;
-  durationUnit?: string;
-  startDate?: string;
-  endDate?: string;
-  paymentTerms?: string;
-  prepaymentPercent?: number;
-  prepaymentAmount?: number;
-  useManualPrepayment?: boolean;
-  prepaymentDepreciationPercent?: number;
-  insurancePercent: number;
-  taxPercent: number;
-  retentionPercent: number;
-  otherDeductions: OtherDeduction[];
-  description?: string;
-}
+type FormData = z.infer<typeof contractSchema>;
 
 export default function ContractFormPage() {
   const { projectId, contractId } = useParams<{ projectId: string; contractId: string }>();
@@ -51,7 +70,8 @@ export default function ContractFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, watch, setError, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(contractSchema),
     defaultValues: {
       type: 'LUMP_SUM',
       status: 'ACTIVE',
@@ -199,8 +219,8 @@ export default function ContractFormPage() {
       }
       navigate('/projects/' + projectId + '/contracts');
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در ذخیره‌سازی');
+      const failed = applyApiErrorsToForm(e, setError);
+      if (failed.length === 0) toast.error(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -289,10 +309,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="1"
-                {...register('baseAmount', {
-                  required: 'مبلغ الزامی است',
-                  min: { value: 1, message: 'مبلغ باید بزرگ‌تر از صفر باشد' },
-                })}
+                {...register('baseAmount', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num text-lg"
                 dir="ltr"
                 placeholder="0"
@@ -312,7 +329,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.0001"
-                {...register('coefficient')}
+                {...register('coefficient', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num text-lg"
                 dir="ltr"
                 placeholder="1.07"
@@ -381,7 +398,7 @@ export default function ContractFormPage() {
               <div className="flex gap-2">
                 <input
                   type="number"
-                  {...register('durationValue')}
+                  {...register('durationValue', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                   className="input num flex-1"
                   dir="ltr"
                   placeholder="تعداد"
@@ -423,7 +440,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.01"
-                {...register('insurancePercent')}
+                {...register('insurancePercent', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num"
                 dir="ltr"
               />
@@ -433,7 +450,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.01"
-                {...register('taxPercent')}
+                {...register('taxPercent', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num"
                 dir="ltr"
               />
@@ -443,7 +460,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.01"
-                {...register('retentionPercent')}
+                {...register('retentionPercent', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num"
                 dir="ltr"
               />
@@ -481,7 +498,7 @@ export default function ContractFormPage() {
                     <input
                       type="number"
                       step="0.01"
-                      {...register(`otherDeductions.${idx}.percent`)}
+                      {...register(`otherDeductions.${idx}.percent`, { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                       className="input w-32 num"
                       dir="ltr"
                       placeholder="%"
@@ -514,7 +531,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.01"
-                {...register('prepaymentPercent')}
+                {...register('prepaymentPercent', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num"
                 dir="ltr"
                 placeholder="0"
@@ -527,7 +544,7 @@ export default function ContractFormPage() {
               <input
                 type="number"
                 step="0.01"
-                {...register('prepaymentDepreciationPercent')}
+                {...register('prepaymentDepreciationPercent', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                 className="input num"
                 dir="ltr"
                 placeholder="0"
@@ -556,7 +573,7 @@ export default function ContractFormPage() {
                 <input
                   type="number"
                   step="1"
-                  {...register('prepaymentAmount')}
+                  {...register('prepaymentAmount', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })}
                   className="input num"
                   dir="ltr"
                   placeholder="0"

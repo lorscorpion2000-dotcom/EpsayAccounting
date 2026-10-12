@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { toast } from 'sonner';
 import {
   Plus, Search, Loader2, Warehouse as WarehouseIcon, Edit, Trash2, FolderOpen, MapPin, RefreshCw,
@@ -8,12 +8,12 @@ import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
 import type { Warehouse } from '@/types/warehouse';
 import { WAREHOUSE_TYPE_LABELS } from '@/types/warehouse';
-import { formatNumber, toPersianDigits } from '@/utils/format';
+import { toPersianDigits } from '@/utils/format';
 import WarehouseFormModal from '../components/WarehouseFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 export default function WarehousesListPage() {
-  const navigate = useNavigate();
+
   const [items, setItems] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -22,7 +22,7 @@ export default function WarehousesListPage() {
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -42,7 +42,7 @@ export default function WarehousesListPage() {
     if (!deleting) return;
     setForceError(null);
     try {
-      const res = await warehouseApi.warehouses.remove(deleting.id, force);
+
       toast.success(force ? 'انبار به‌طور کامل حذف شد' : 'انبار غیرفعال شد');
       setDeleting(null);
       setForceConfirm(false);

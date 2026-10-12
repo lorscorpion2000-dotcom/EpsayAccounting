@@ -7,3 +7,16 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+_*.mjs
+!_seed-all.mjs
+!_seed-extra.mjs
+!_b3-0.mjs
+!_scan-perms.mjs
+!_b15-3-seed.mjs
+!_f6-scan.mjs
+!_f6-move.mjs
+*.bak*
+*.broken*
+*.orig
+*.old
+*.tsbuildinfo

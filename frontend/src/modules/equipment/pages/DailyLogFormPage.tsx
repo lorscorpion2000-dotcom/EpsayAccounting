@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Save, X, Loader2, Clock } from 'lucide-react';
 import { equipmentApi } from '../services/equipment.api';
@@ -21,7 +21,7 @@ export default function DailyLogFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<CreateDailyLogPayload>({
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<CreateDailyLogPayload>({
     defaultValues: {
       equipmentId: equipmentIdFromQuery,
       logDate: todayISO(),

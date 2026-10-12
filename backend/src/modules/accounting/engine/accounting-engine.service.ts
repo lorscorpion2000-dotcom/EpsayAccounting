@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { JournalsService } from '../journals.service';
+import { FiscalYearsService } from '../fiscal-years.service';
 import { PostEventPayload } from './dto/post-event.dto';
 
 @Injectable()
@@ -10,12 +12,13 @@ export class AccountingEngineService {
   constructor(
     private prisma: PrismaService,
     private journals: JournalsService,
+    private fiscalYears: FiscalYearsService,
   ) {}
 
   /**
    * هستهٔ موتور: با گرفتن type رویداد + payload، سند خودکار می‌سازد.
    */
-  async postEvent(sourceType: string, payload: PostEventPayload) {
+  async postEvent(sourceType: string, payload: PostEventPayload, tx?: Prisma.TransactionClient) {
     const mapping = await this.prisma.accountMapping.findUnique({
       where: { code: sourceType },
       include: { debitAccount: true, creditAccount: true },
@@ -38,7 +41,7 @@ export class AccountingEngineService {
       : await this.resolveAccount(mapping.creditAccount, payload, payload.creditDetailId);
 
     const entryDate = new Date(payload.entryDate);
-    const fy = await this.findFiscalYear(entryDate);
+    const fy = await this.fiscalYears.assertPeriodOpen(entryDate, tx);
 
     const dto: any = {
       fiscalYearId: fy.id,
@@ -68,7 +71,22 @@ export class AccountingEngineService {
     const entry = await this.journals.create(dto, payload.userId, {
       sourceType,
       sourceId: payload.sourceId,
-    });
+    }, tx);
+
+    // B3.a: auto-post (in tx if provided)
+    if (payload.autoPost && payload.userId) {
+      if (tx) {
+        const posted = await tx.journalEntry.update({
+          where: { id: entry.id },
+          data: { status: 'POSTED', postedAt: new Date() },
+        });
+        this.logger.log('[' + sourceType + '] Auto-posted ' + posted.code + ' (in tx)');
+        return posted;
+      }
+      const posted = await this.journals.post(entry.id, payload.userId);
+      this.logger.log('[' + sourceType + '] Auto-posted ' + posted.code);
+      return posted;
+    }
 
     this.logger.log(
       `[${sourceType}] Journal ${entry.code} created (Dr ${debitAcc.code} / Cr ${creditAcc.code})`,
@@ -98,6 +116,7 @@ export class AccountingEngineService {
       }>;
       userId?: string;
     },
+    tx?: Prisma.TransactionClient,
   ) {
     if (!payload.lines || payload.lines.length < 2) {
       throw new BadRequestException('سند باید حداقل دو خط داشته باشد');
@@ -126,7 +145,7 @@ export class AccountingEngineService {
     }
 
     const entryDate = new Date(payload.entryDate);
-    const fy = await this.findFiscalYear(entryDate);
+    const fy = await this.fiscalYears.assertPeriodOpen(entryDate, tx);
 
     const dto: any = {
       fiscalYearId: fy.id,
@@ -148,21 +167,26 @@ export class AccountingEngineService {
     const entry = await this.journals.create(dto, payload.userId, {
       sourceType,
       sourceId: payload.sourceId,
-    });
+    }, tx);
 
     // ═══ auto-post: سند خودکار مستقیماً قطعی می‌شود ═══
+    // B3.b: multi-line auto-post in tx
     const autoPost = (payload as any).autoPost !== false;
     if (autoPost && payload.userId) {
+      if (tx) {
+        const posted = await tx.journalEntry.update({
+          where: { id: entry.id },
+          data: { status: 'POSTED', postedAt: new Date() },
+        });
+        this.logger.log('[' + sourceType + '] Auto-posted ' + posted.code + ' (in tx)');
+        return posted;
+      }
       try {
         const posted = await this.journals.post(entry.id, payload.userId);
-        this.logger.log(
-          '[' + sourceType + '] Auto-posted ' + posted.code,
-        );
+        this.logger.log('[' + sourceType + '] Auto-posted ' + posted.code);
         return posted;
       } catch (e: any) {
-        this.logger.warn(
-          '[' + sourceType + '] Auto-post failed for ' + entry.code + ': ' + e?.message,
-        );
+        this.logger.warn('[' + sourceType + '] Auto-post failed for ' + entry.code + ': ' + e?.message);
         return entry;
       }
     }
@@ -237,20 +261,4 @@ export class AccountingEngineService {
     );
   }
 
-  private async findFiscalYear(date: Date) {
-    const fy = await this.prisma.fiscalYear.findFirst({
-      where: {
-        status: 'OPEN',
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
-    if (!fy) {
-      throw new BadRequestException(
-        `No open fiscal year covers ${date.toISOString().slice(0, 10)}`,
-      );
-    }
-    return fy;
-  }
 }

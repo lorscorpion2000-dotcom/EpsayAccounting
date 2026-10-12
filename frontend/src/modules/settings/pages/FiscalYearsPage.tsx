@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { toast } from 'sonner';
 import { Lock as LockIcon, Unlock as UnlockIcon, FileMinus, FilePlus } from 'lucide-react';
 import {
@@ -20,7 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function FiscalYearsPage() {
-  const nav = useNavigate();
+
   const [items, setItems] = useState<FiscalYear[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -29,8 +29,8 @@ export default function FiscalYearsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [closing, setClosing] = useState<FiscalYear | null>(null);
   const [reopening, setReopening] = useState<FiscalYear | null>(null);
-  const [generatingClosing, setGeneratingClosing] = useState<FiscalYear | null>(null);
-  const [generatingOpening, setGeneratingOpening] = useState<FiscalYear | null>(null);
+  const [, setGeneratingClosing] = useState<FiscalYear | null>(null);
+  const [, setGeneratingOpening] = useState<FiscalYear | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -67,7 +67,6 @@ export default function FiscalYearsPage() {
     } finally { setActionLoading(false); }
   };
 
-
   const handleClose = async () => {
     if (!closing) return;
     setActionLoading(true);
@@ -90,35 +89,6 @@ export default function FiscalYearsPage() {
       toast.success('سال مالی بازگشایی شد');
       setReopening(null);
       load();
-    } catch (e: any) {
-      const m = e?.response?.data?.message;
-      toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
-    } finally { setActionLoading(false); }
-  };
-
-
-  const handleGenerateClosing = async () => {
-    if (!generatingClosing) return;
-    setActionLoading(true);
-    try {
-      const entry = await accountingApi.fiscalYears.generateClosing(generatingClosing.id);
-      toast.success('سند اختتامیه ساخته شد — کد: ' + entry.code);
-      setGeneratingClosing(null);
-      setTimeout(() => nav('/accounting/journals'), 800);
-    } catch (e: any) {
-      const m = e?.response?.data?.message;
-      toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
-    } finally { setActionLoading(false); }
-  };
-
-  const handleGenerateOpening = async () => {
-    if (!generatingOpening) return;
-    setActionLoading(true);
-    try {
-      const entry = await accountingApi.fiscalYears.generateOpening(generatingOpening.id);
-      toast.success('سند افتتاحیه ساخته شد — کد: ' + entry.code);
-      setGeneratingOpening(null);
-      setTimeout(() => nav('/accounting/journals'), 800);
     } catch (e: any) {
       const m = e?.response?.data?.message;
       toast.error(Array.isArray(m) ? m[0] : m || 'خطا');

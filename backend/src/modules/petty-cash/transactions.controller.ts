@@ -56,8 +56,12 @@ export class PettyCashTransactionsController {
 
   @Patch(':id/approve')
   @RequirePermissions('approvals.update')
-  approve(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.service.approve(id, userId);
+  approve(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body() body: { sourceAccountId?: string },
+  ) {
+    return this.service.approve(id, userId, body?.sourceAccountId);
   }
 
   @Patch(':id/reject')

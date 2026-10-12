@@ -83,3 +83,26 @@ backup/
 
 # === Env prod (we use vite proxy) ===
 .env.production
+
+!_seed-all.mjs
+!_seed-extra.mjs
+!_b3-0.mjs
+!_scan-perms.mjs
+!_b15-3-seed.mjs
+!_f6-scan.mjs
+!_f6-move.mjs
+*.bak*
+*.broken*
+*.orig
+*.old
+# === Session cleanup (F8) ===
+logs/
+backend/prisma/_*.ts
+_f6-*.mjs
+scripts/_archive/
+tools/*.enc.json
+prompt-next-chat.md
+
+# === Uploads/attachments ===
+**/uploads/
+

@@ -4,12 +4,15 @@ import { Response } from 'express';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Uploads - فایل‌ها')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('uploads')
 export class UploadsController {
+  @RequirePermissions('attachment.read')
+
   @Get(':filename')
   async serve(@Param('filename') filename: string, @Res() res: Response) {
     const safe = basename(filename);

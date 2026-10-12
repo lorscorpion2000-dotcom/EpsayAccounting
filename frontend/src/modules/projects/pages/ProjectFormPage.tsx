@@ -3,34 +3,50 @@ import { api } from '@/services/api';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Save, X, Loader2, Plus } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
+import { getApiErrorMessage, applyApiErrorsToForm } from '@/utils/api-error';
 import { partnersApi } from '@/modules/partners/services/partners.api';
 import QuickPartnerModal from '@/modules/partners/components/QuickPartnerModal';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Partner } from '@/types/project';
 import {
-  ProjectType, ProjectStatus, ProjectUsage,
   PROJECT_TYPE_LABELS, PROJECT_STATUS_LABELS, PROJECT_USAGE_LABELS,
 } from '@/types/project';
 
-interface FormData {
-  name: string;
-  type: ProjectType;
-  status: ProjectStatus;
-  usage?: ProjectUsage;
-  clientId?: string;
-  consultantId?: string;
-  purchasingOfficerId?: string;
-  addressProvince?: string;
-  addressCity?: string;
-  addressFull?: string;
-  totalArea?: number;
-  floorsCount?: number;
-  startDate?: string;
-  plannedEndDate?: string;
-  description?: string;
-}
+const projectSchema = z
+  .object({
+    name: z.string().trim().min(2, 'نام پروژه حداقل ۲ کاراکتر است'),
+    type: z.string().min(1, 'نوع پروژه الزامی است'),
+    status: z.string().min(1, 'وضعیت الزامی است'),
+    usage: z.string().optional(),
+    clientId: z.string().optional(),
+    consultantId: z.string().optional(),
+    purchasingOfficerId: z.string().optional(),
+    addressProvince: z.string().optional(),
+    addressCity: z.string().optional(),
+    addressFull: z.string().optional(),
+    totalArea: z
+      .number({ invalid_type_error: 'متراژ نامعتبر است' })
+      .nonnegative('متراژ باید ≥ ۰ باشد')
+      .optional(),
+    floorsCount: z
+      .number({ invalid_type_error: 'تعداد طبقات نامعتبر است' })
+      .int('تعداد طبقات باید عدد صحیح باشد')
+      .nonnegative('تعداد طبقات باید ≥ ۰ باشد')
+      .optional(),
+    startDate: z.string().optional(),
+    plannedEndDate: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .refine((d) => !d.startDate || !d.plannedEndDate || d.plannedEndDate >= d.startDate, {
+    message: 'تاریخ پایان نمی‌تواند قبل از شروع باشد',
+    path: ['plannedEndDate'],
+  });
+
+type FormData = z.infer<typeof projectSchema>;
 
 export default function ProjectFormPage() {
   const { id } = useParams();
@@ -43,7 +59,8 @@ export default function ProjectFormPage() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [showConsultantModal, setShowConsultantModal] = useState(false);
 
-  const { register, handleSubmit, reset, control, formState: { errors }, setValue, watch } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors }, setValue, setError, watch: _watch } = useForm<FormData>({
+    resolver: zodResolver(projectSchema),
     defaultValues: {
       type: 'MAIN_CONTRACTOR',
       status: 'PLANNING',
@@ -95,8 +112,6 @@ export default function ProjectFormPage() {
         ...data,
         clientId: data.clientId || undefined,
         consultantId: data.consultantId || undefined,
-        totalArea: data.totalArea ? Number(data.totalArea) : undefined,
-        floorsCount: data.floorsCount ? Number(data.floorsCount) : undefined,
       };
       if (isEdit && id) {
         await projectsApi.update(id, payload);
@@ -107,14 +122,13 @@ export default function ProjectFormPage() {
       }
       navigate('/projects');
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در ذخیره‌سازی');
+      const failed = applyApiErrorsToForm(e, setError);
+      if (failed.length === 0) toast.error(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
   };
 
-  const currentClientId = watch('clientId');
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
@@ -142,7 +156,7 @@ export default function ProjectFormPage() {
               <label className="label">نام پروژه *</label>
               <input
                 type="text"
-                {...register('name', { required: 'نام پروژه الزامی است' })}
+                {...register('name')}
                 className="input"
                 placeholder="مثال: بیمارستان شفا"
               />
@@ -175,11 +189,11 @@ export default function ProjectFormPage() {
             </div>
             <div>
               <label className="label">متراژ کل (مترمربع)</label>
-              <input type="number" step="0.01" {...register('totalArea')} className="input num" />
+              <input type="number" step="0.01" {...register('totalArea', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })} className="input num" />
             </div>
             <div>
               <label className="label">تعداد طبقات</label>
-              <input type="number" {...register('floorsCount')} className="input num" />
+              <input type="number" {...register('floorsCount', { setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)) })} className="input num" />
             </div>
           </div>
         </div>

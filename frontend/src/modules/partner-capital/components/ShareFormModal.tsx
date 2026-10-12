@@ -31,7 +31,7 @@ export default function ShareFormModal({ isOpen, editing, onClose, onSaved }: Pr
   const [partners, setPartners] = useState<Partner[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: { effectiveFrom: todayLocalISO() },
   });
 

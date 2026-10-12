@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, ShoppingBag, RefreshCw, Eye, Trash2,
-  CheckCircle2, Send, Printer,
-} from 'lucide-react';
+import { Plus, Search, Loader2, ShoppingBag, RefreshCw, Eye, Trash2, CheckCircle2, Send } from 'lucide-react';
 import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
 import type { PurchaseOrder, POStatus } from '@/types/procurement';

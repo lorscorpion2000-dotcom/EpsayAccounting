@@ -47,7 +47,7 @@ export default function DocumentFormModal({ isOpen, editing, onClose, onSaved }:
   const [projects, setProjects] = useState<Project[]>([]);
   const [pendingFiles, setPendingFiles] = useState<AttachmentInput[]>([]);
 
-  const { register, handleSubmit, watch, setValue, reset, control} = useForm<FormData>({
+  const { register, handleSubmit, reset, control } = useForm<FormData>({
     defaultValues: { type: 'ARCHITECTURE', phase: 'PHASE_1', version: '1.0', isApproved: false },
   });
 

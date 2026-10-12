@@ -9,7 +9,6 @@ import {
   purchaseInvoicesApi, type CreatePIInput, type PIItemInput,
   type ProjectRef, type PartnerRef,
 } from '../services/purchase-invoices.api';
-import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
 
 const toISO = (d: string) => d ? new Date(d).toISOString() : '';
 const fromISO = (iso?: string | null) => {

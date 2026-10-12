@@ -14,8 +14,10 @@ import { ReceiptsController } from './receipts.controller';
 import { IssuesController } from './issues.controller';
 import { StockController } from './stock.controller';
 import { WarehouseReportsController } from './reports.controller';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
+  imports: [AccountingModule],
   controllers: [
     WarehousesController,
     CategoriesController,

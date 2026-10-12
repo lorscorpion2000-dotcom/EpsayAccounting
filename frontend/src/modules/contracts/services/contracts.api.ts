@@ -35,6 +35,18 @@ export interface LegalContractParty {
   createdAt: string;
 }
 
+export interface WageBreakdown {
+  baseSalary?: number | string;
+  housingAllow?: number | string;
+  foodAllow?: number | string;
+  childAllow?: number | string;
+  missionAllow?: number | string;
+  overtimeAllow?: number | string;
+  attractionAllow?: number | string;
+  positionAllow?: number | string;
+  seniority?: number | string;
+  insuranceShare?: number | string;
+}
 export interface LegalContract {
   id: string;
   code: string;
@@ -53,6 +65,7 @@ export interface LegalContract {
   salaryMonthly?: string;
   salaryDaily?: string;
   salaryHourly?: string;
+  wageBreakdown?: WageBreakdown;
   workHoursPerWeek?: number;
   startDate?: string;
   endDate?: string;

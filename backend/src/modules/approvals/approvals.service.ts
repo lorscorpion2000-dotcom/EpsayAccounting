@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { SiteOpsService } from '../site-ops/site-ops.service';
 
 @Injectable()
 export class ApprovalsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private siteOps: SiteOpsService,
+  ) {}
 
   async getPending(userId?: string) {
     const [
@@ -406,10 +410,8 @@ export class ApprovalsService {
         return this.approvePurchaseOrderWithBudgetCheck(id, userId, force);
 
       case 'daily-report':
-        return this.prisma.dailyReport.update({
-          where: { id },
-          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
-        });
+        // B13: delegate to site-ops (section check + self-approve check)
+        return this.siteOps.approve(id, userId);
 
       case 'goods-receipt':
         return this.prisma.goodsReceipt.update({
@@ -477,10 +479,8 @@ export class ApprovalsService {
         });
 
       case 'daily-report':
-        return this.prisma.dailyReport.update({
-          where: { id },
-          data: { status: 'REJECTED', rejectedReason: reason },
-        });
+        // B13: delegate to site-ops (unified REJECTED)
+        return this.siteOps.reject(id, reason);
 
       case 'goods-receipt':
         return this.prisma.goodsReceipt.update({
@@ -579,7 +579,7 @@ export class ApprovalsService {
   // ============================================================
   private async approvePurchaseOrderWithBudgetCheck(
     poId: string,
-    userId: string,
+    _userId: string,
     force?: boolean,
   ) {
     const check = await this.checkBudgetForPurchaseOrder(poId);

@@ -8,13 +8,13 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
-import { api } from '@/services/api';
-import type { PurchaseRequest, PRStatus } from '@/types/procurement';
+
+import type { PurchaseRequest } from '@/types/procurement';
 import {
   PR_STATUS_LABELS, PR_STATUS_COLORS, PR_PRIORITY_LABELS,
   PR_PRIORITY_COLORS, PR_UNIT_LABELS,
 } from '@/types/procurement';
-import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 

@@ -39,7 +39,7 @@ export default function IssueFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, watch, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
       issueDate: todayLocalISO(),
       items: [{ itemId: '', quantity: 1 }],

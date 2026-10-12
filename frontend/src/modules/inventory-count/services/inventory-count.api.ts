@@ -1,8 +1,5 @@
 import { api } from '@/services/api';
-import type {
-  InventoryCount, InventoryCountItem,
-  WarehouseTransfer, WarehouseTransferItem,
-} from '@/types/inventory-count';
+import type { InventoryCount, WarehouseTransfer } from '@/types/inventory-count';
 
 export const inventoryCountApi = {
   // ─── Inventory Counts ───

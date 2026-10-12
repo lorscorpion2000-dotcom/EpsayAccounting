@@ -2,26 +2,14 @@ import { useEffect, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Save, X, Loader2, Plus, Trash2, ClipboardList,
-  Users, Truck, Package, TrendingUp, Cloud, AlertCircle,
-  UserCheck, ShoppingCart, Bell,
-} from 'lucide-react';
+import { Save, X, Loader2, Plus, Trash2, ClipboardList, Users, Truck, Package, TrendingUp, Cloud, UserCheck, ShoppingCart, Bell } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
-import { warehouseApi } from '@/modules/warehouse/services/warehouse.api';
-import { ITEM_UNIT_LABELS } from '@/types/warehouse';
-import { partnersApi } from '@/modules/partners/services/partners.api';
+
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project } from '@/types/project';
-import {
-  WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS,
-  ENTRY_EXIT_KIND_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS,
-  EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS,
-  WeatherCondition, AttendanceStatus, EquipmentStatus,
-  EntryExitKind, RequestType, EventType,
-} from '@/types/site-ops';
+import { WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS, ENTRY_EXIT_KIND_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS, WeatherCondition } from '@/types/site-ops';
 import { toPersianDigits } from '@/utils/format';
 
 type Tab =
@@ -85,15 +73,15 @@ export default function DailyReportFormPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [wbsItems, setWbsItems] = useState<any[]>([]);
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
-  const [itemList, setItemList] = useState<any[]>([]);
-  const [warehouseList, setWarehouseList] = useState<any[]>([]);
+  const [itemList] = useState<any[]>([]);
+  const [warehouseList] = useState<any[]>([]);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
   const [contractorList, setContractorList] = useState<any[]>([]);
-  const [pettyCashAccountList, setPettyCashAccountList] = useState<any[]>([]);
+  const [pettyCashAccountList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, watch, setValue, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
       reportDate: todayISO(),
       workers: [], equipments: [], materials: [], progresses: [],

@@ -1,20 +1,22 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from './stock.service';
+import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class ReceiptsService {
   constructor(
     private prisma: PrismaService,
     private stock: StockService,
+    private engine: AccountingEngineService,
   ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.goodsReceipt.count();
-    return 'GRN-' + year + '-' + String(count + 1).padStart(4, '0');
+    return generateCode(this.prisma, 'goodsReceipt', 'code', 'GRN-' + year + '-', { pad: 4 });
   }
 
   /**
@@ -247,7 +249,7 @@ export class ReceiptsService {
     });
   }
 
-  async approve(id: string, userId: string) {
+  async approve(id: string, _userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
     return this.prisma.goodsReceipt.update({
@@ -256,7 +258,7 @@ export class ReceiptsService {
     });
   }
 
-  async reject(id: string, reason: string) {
+  async reject(id: string, _reason: string) {
     const r = await this.findOne(id);
     if (r.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل رد است');
     return this.prisma.goodsReceipt.update({
@@ -265,16 +267,38 @@ export class ReceiptsService {
     });
   }
 
-
-
   /**
-   * ثبت رسید → اعمال موجودی
+   * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
+   */
+  /**
+   * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
+   */
+  /**
+   * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
    */
   async post(id: string, userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'APPROVED') throw new BadRequestException('ابتدا رسید باید تایید شود');
 
+    // B3.a: idempotency — اگر قبلاً سند ثبت شده
+    const existing = await this.prisma.journalEntry.findFirst({
+      where: { sourceType: 'GOODS_RECEIPT', sourceId: r.id },
+      select: { id: true, code: true },
+    });
+    if (existing) {
+      if ((r.status as string) !== 'POSTED') {
+        await this.prisma.goodsReceipt.update({
+          where: { id },
+          data: { status: 'POSTED', postedAt: new Date() },
+        });
+      }
+      return { success: true, alreadyPosted: true, journalCode: existing.code };
+    }
+
+    const totalValue = Number(r.totalValue);
+
     return this.prisma.$transaction(async (tx) => {
+      // ۱) اعمال موجودی
       for (const it of r.items) {
         await this.stock.applyMovement({
           warehouseId: r.warehouseId,
@@ -294,10 +318,30 @@ export class ReceiptsService {
         });
       }
 
-      return tx.goodsReceipt.update({
+      // ۲) سند حسابداری Dr 1.1.3.01 / Cr 2.1.8.01
+      let journalCode: string | null = null;
+      if (totalValue > 0.01) {
+        const je = await this.engine.postEvent('GOODS_RECEIPT', {
+          amount: totalValue,
+          entryDate: r.receiptDate,
+          description: 'رسید انبار ' + r.code,
+          reference: r.code,
+          projectId: r.projectId || undefined,
+          partnerId: r.supplierId || undefined,
+          sourceId: r.id,
+          userId,
+          autoPost: true,
+        }, tx);
+        journalCode = je.code;
+      }
+
+      // ۳) تغییر وضعیت
+      await tx.goodsReceipt.update({
         where: { id },
         data: { status: 'POSTED', postedAt: new Date() },
       });
+
+      return { success: true, journalCode, totalValue };
     });
   }
 }

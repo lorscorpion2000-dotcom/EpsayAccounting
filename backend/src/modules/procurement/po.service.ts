@@ -188,7 +188,7 @@ export class PurchaseOrdersService {
     return { success: true };
   }
 
-  async approve(id: string, userId: string) {
+  async approve(id: string, _userId: string) {
     const po = await this.findOne(id);
     if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تایید است');
     return this.prisma.purchaseOrder.update({
@@ -206,8 +206,7 @@ export class PurchaseOrdersService {
     });
   }
 
-
-  async softDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
     if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');

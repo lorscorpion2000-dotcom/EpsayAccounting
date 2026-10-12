@@ -48,7 +48,7 @@ export class UnitsService {
   }
 
   async update(id: string, dto: { name?: string; symbol?: string; sortOrder?: number; isActive?: boolean }) {
-    const unit = await this.findOne(id);
+    await this.findOne(id);
     const data: any = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
     if (dto.symbol !== undefined) data.symbol = dto.symbol?.trim() || null;

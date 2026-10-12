@@ -2,15 +2,19 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
+import { FiscalYearsService } from '../accounting/fiscal-years.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
 export class SalesInvoicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private fiscalYears: FiscalYearsService,
+  ) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.salesInvoice.count();
-    return 'SI-' + year + '-' + String(count + 1).padStart(5, '0');
+    return generateCode(this.prisma, 'salesInvoice', 'code', 'SI-' + year + '-', { pad: 5 });
   }
 
   private computeTotals(items: any[], taxPercent: number, discountAmount: number) {
@@ -244,56 +248,59 @@ export class SalesInvoicesService {
     }
 
     // 4) Fiscal year + شماره سند
-    const fy = await this.prisma.fiscalYear.findFirst({
-      where: { startDate: { lte: inv.invoiceDate }, endDate: { gte: inv.invoiceDate } },
-      orderBy: { startDate: 'desc' },
-    });
-    if (!fy) throw new BadRequestException('سال مالی برای تاریخ سند پیدا نشد');
-
-    const last = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: fy.id }, orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
-    });
-    const entryNumber = (last?.entryNumber ?? 0) + 1;
-    const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+    // B2.4: period lock
+    const fy = await this.fiscalYears.assertPeriodOpen(inv.invoiceDate);
 
     const totalDebit  = lines.reduce((s, l) => s + Number(l.debit  ?? 0), 0);
     const totalCredit = lines.reduce((s, l) => s + Number(l.credit ?? 0), 0);
 
-    const je = await this.prisma.journalEntry.create({
-      data: {
-        code: jeCode,
-        entryNumber,
-        entryDate: inv.invoiceDate,
-        fiscalYearId: fy.id,
-        description: 'فاکتور فروش ' + inv.code + ' — ' + inv.customer.fullName,
-        status: 'POSTED',
-        sourceType: 'SALES_INVOICE',
-        sourceId: inv.id,
-        totalDebit: Math.round(totalDebit * 100) / 100,
-        totalCredit: Math.round(totalCredit * 100) / 100,
-        createdById: userId ?? null,
-        lines: {
-          create: lines.map((l, i) => ({
-            accountId: l.accountId,
-            debit: Number(l.debit ?? 0),
-            credit: Number(l.credit ?? 0),
-            description: l.description ?? null,
-            projectId: l.projectId ?? null,
-            sortOrder: i + 1,
-          })),
-        },
-      },
-    });
+    // B4.c: atomic approve — JE + invoice update in one tx
+    return this.prisma.$transaction(
+      async (tx) => {
+        const last = await tx.journalEntry.findFirst({
+          where: { fiscalYearId: fy.id }, orderBy: { entryNumber: 'desc' },
+          select: { entryNumber: true },
+        });
+        const entryNumber = (last?.entryNumber ?? 0) + 1;
+        const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
 
-    return this.prisma.salesInvoice.update({
-      where: { id },
-      data: {
-        status: 'APPROVED',
-        journalEntryId: je.id,
-        approvedAt: new Date(),
-        approvedBy: userId ?? null,
+        const je = await tx.journalEntry.create({
+          data: {
+            code: jeCode,
+            entryNumber,
+            entryDate: inv.invoiceDate,
+            fiscalYearId: fy.id,
+            description: 'فاکتور فروش ' + inv.code + ' — ' + inv.customer.fullName,
+            status: 'POSTED',
+            sourceType: 'SALES_INVOICE',
+            sourceId: inv.id,
+            totalDebit: Math.round(totalDebit * 100) / 100,
+            totalCredit: Math.round(totalCredit * 100) / 100,
+            createdById: userId ?? null,
+            lines: {
+              create: lines.map((l, i) => ({
+                accountId: l.accountId,
+                debit: Number(l.debit ?? 0),
+                credit: Number(l.credit ?? 0),
+                description: l.description ?? null,
+                projectId: l.projectId ?? null,
+                sortOrder: i + 1,
+              })),
+            },
+          },
+        });
+
+        return tx.salesInvoice.update({
+          where: { id },
+          data: {
+            status: 'APPROVED',
+            journalEntryId: je.id,
+            approvedAt: new Date(),
+            approvedBy: userId ?? null,
+          },
+        });
       },
-    });
+      { isolationLevel: 'Serializable' },
+    );
   }
 }

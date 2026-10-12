@@ -9,7 +9,7 @@ import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
 import type { PurchaseRequest, PRStatus } from '@/types/procurement';
 import { PR_STATUS_LABELS, PR_STATUS_COLORS } from '@/types/procurement';
-import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
+import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 

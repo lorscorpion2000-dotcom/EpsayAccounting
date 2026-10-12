@@ -41,7 +41,7 @@ export default function AdvancedLedgerPage() {
 
   const [data, setData] = useState<AdvLedgerResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [accountsLoaded, setAccountsLoaded] = useState(false);
+  const [, setAccountsLoaded] = useState(false);
 
   // Filters
   const [accountId, setAccountId] = useState('');

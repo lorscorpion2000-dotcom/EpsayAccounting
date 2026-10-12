@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, FileText, Eye, Trash2, RefreshCw,
-  Send, CheckCircle2, XCircle, FileSpreadsheet,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Eye, Trash2, RefreshCw, Send, FileSpreadsheet } from 'lucide-react';
 import clsx from 'clsx';
 import { clientStatementApi } from '../services/client-statement.api';
 import { api } from '@/services/api';

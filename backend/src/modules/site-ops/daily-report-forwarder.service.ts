@@ -82,6 +82,7 @@ export class DailyReportForwarderService {
       case 'MATERIALS': return report.materials || [];
       case 'REQUESTS': return report.requests || [];
       case 'EVENTS': return report.events || [];
+      case 'ENTRY_EXIT': return report.entryExits || []; // B11: archive
       default: return [];
     }
   }
@@ -121,6 +122,7 @@ export class DailyReportForwarderService {
         if (et === 'INCIDENT' || et === 'STOP') return [{ type: 'OTHER', notify: true }];
         return [{ type: 'OTHER' }];
       }
+      case 'ENTRY_EXIT': return [{ type: 'OTHER', archived: true }]; // B11
       default:
         return [{ type: 'OTHER' }];
     }
@@ -532,8 +534,13 @@ export class DailyReportForwarderService {
         case 'OTHER': {
           if (target.notify) {
             await this.createNotification(report, section, row);
+            targetModel = 'Notification';
+          } else if (target.archived) {
+            // B11: archive — no document, just mark forwarded
+            targetModel = 'Archived';
+          } else {
+            targetModel = 'PENDING_IMPLEMENTATION';
           }
-          targetModel = target.notify ? 'Notification' : 'PENDING_IMPLEMENTATION';
           break;
         }
 

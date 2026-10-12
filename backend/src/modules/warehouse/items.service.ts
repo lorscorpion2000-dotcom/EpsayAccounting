@@ -102,7 +102,7 @@ export class ItemsService {
   }
 
   async remove(id: string, options?: { force?: boolean }) {
-    const item = await this.findOne(id);
+    await this.findOne(id);
     const force = options?.force === true;
 
     const [moves, receipts, issues, stocks, invCounts, transfers] = await Promise.all([

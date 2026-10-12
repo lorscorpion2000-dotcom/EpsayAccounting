@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Save, X, Loader2, Plus, Trash2, PackagePlus, Calculator } from 'lucide-react';
 import { warehouseApi } from '../services/warehouse.api';
 import { api } from '@/services/api';
@@ -11,33 +13,37 @@ import { ITEM_UNIT_LABELS } from '@/types/warehouse';
 import type { Project, Partner } from '@/types/project';
 import { formatNumber } from '@/utils/format';
 import { todayLocalISO } from '@/utils/local-date';
+import { getApiErrorMessage, applyApiErrorsToForm } from '@/utils/api-error';
 
-interface ItemForm {
-  itemId: string;
-  quantity: number;
-  unitCost: number;
-  discountPercent?: number;
-  discountAmount?: number;
-  additionAmount?: number;
-  deductionAmount?: number;
-  taxPercent?: number;
-  taxAmount?: number;
-  shippingCost?: number;
-  loadingCost?: number;
-  notes?: string;
-}
+const itemSchema = z.object({
+  itemId: z.string().min(1, 'انتخاب کالا الزامی است'),
+  quantity: z.number({ invalid_type_error: 'مقدار نامعتبر است' }).positive('مقدار باید بزرگ‌تر از صفر باشد'),
+  unitCost: z.number({ invalid_type_error: 'بهای واحد نامعتبر است' }).nonnegative('بهای واحد باید ≥ ۰ باشد'),
+  discountPercent: z.number().optional(),
+  discountAmount: z.number().optional(),
+  additionAmount: z.number().optional(),
+  deductionAmount: z.number().optional(),
+  taxPercent: z.number().optional(),
+  taxAmount: z.number().optional(),
+  shippingCost: z.number().optional(),
+  loadingCost: z.number().optional(),
+  notes: z.string().optional(),
+});
 
-interface FormData {
-  warehouseId: string;
-  projectId?: string;
-  supplierId?: string;
-  receiptDate?: string;
-  reference?: string;
-  driverName?: string;
-  vehiclePlate?: string;
-  notes?: string;
-  items: ItemForm[];
-}
+const receiptSchema = z.object({
+  warehouseId: z.string().min(1, 'انبار مقصد الزامی است'),
+  projectId: z.string().optional(),
+  supplierId: z.string().optional(),
+  receiptDate: z.string().min(1, 'تاریخ رسید الزامی است'),
+  reference: z.string().optional(),
+  driverName: z.string().optional(),
+  vehiclePlate: z.string().optional(),
+  notes: z.string().optional(),
+  items: z.array(itemSchema).min(1, 'حداقل یک قلم لازم است'),
+});
+
+type ItemForm = z.infer<typeof itemSchema>;
+type FormData = z.infer<typeof receiptSchema>;
 
 const emptyItem = (): ItemForm => ({
   itemId: '',
@@ -91,7 +97,8 @@ export default function ReceiptFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, reset, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, reset, watch, setError, formState: { errors: _errors } } = useForm<FormData>({
+    resolver: zodResolver(receiptSchema),
     defaultValues: {
       receiptDate: todayLocalISO(),
       items: [emptyItem()],
@@ -193,8 +200,8 @@ export default function ReceiptFormPage() {
       }
       navigate('/warehouse/receipts');
     } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
+      const failed = applyApiErrorsToForm(e, setError);
+      if (failed.length === 0) toast.error(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -219,7 +226,7 @@ export default function ReceiptFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">انبار مقصد *</label>
-              <select {...register('warehouseId', { required: true })} className="input">
+              <select {...register('warehouseId')} className="input">
                 <option value="">— انتخاب کنید —</option>
                 {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
@@ -300,7 +307,7 @@ export default function ReceiptFormPage() {
                     <tr key={f.id} className="hover:bg-slate-50/50">
                       <td className="px-2 py-2 text-center text-slate-500 num">{idx + 1}</td>
                       <td className="px-2 py-2">
-                        <select {...register(`items.${idx}.itemId`, { required: true })} className="input text-xs py-1.5">
+                        <select {...register(`items.${idx}.itemId`)} className="input text-xs py-1.5">
                           <option value="">— انتخاب کالا —</option>
                           {items.map((it) => (
                             <option key={it.id} value={it.id}>

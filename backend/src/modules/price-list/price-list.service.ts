@@ -141,7 +141,7 @@ export class PriceListService {
   }
 
   async removeItem(id: string) {
-    const item = await this.getItem(id);
+    await this.getItem(id);
     const wbsCount = await this.prisma.wbsItem.count({
       where: { priceListItemId: id },
     });

@@ -7,10 +7,8 @@ import { Save, X, Loader2, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { procurementApi } from '../services/procurement.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import type { Project, WbsItem } from '@/types/project';
-import {
-  PR_PRIORITY_LABELS, PR_UNIT_LABELS, PRPriority, PRItemUnit,
-} from '@/types/procurement';
+import type { Project } from '@/types/project';
+import { PR_PRIORITY_LABELS, PRPriority, PRItemUnit } from '@/types/procurement';
 import { todayLocalISO } from '@/utils/local-date';
 
 interface ItemForm {

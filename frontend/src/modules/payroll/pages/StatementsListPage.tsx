@@ -8,7 +8,7 @@ import {
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import { api } from '@/services/api';
-import type { SubcontractorStatement, StatementStatus } from '@/types/payroll';
+import type { SubcontractorStatement } from '@/types/payroll';
 import { STATEMENT_STATUS_LABELS, STATEMENT_STATUS_COLORS } from '@/types/payroll';
 import type { Project } from '@/types/project';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';

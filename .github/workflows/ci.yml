@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   frontend:
-    name: Frontend (build + typecheck)
+    name: Frontend (build + typecheck + test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -29,9 +29,10 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run build
+      - run: npm test
 
   backend:
-    name: Backend (build + typecheck)
+    name: Backend (build + typecheck + test)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -48,3 +49,5 @@ jobs:
       - run: npx prisma generate
       - run: npx tsc --noEmit
       - run: npm run build
+      - run: npm test
+      - run: npm run test:coverage

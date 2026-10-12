@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  ArrowRight, Loader2, Truck, Edit, Plus, Calendar, Clock, Fuel, Wrench,
-  AlertCircle, CheckCircle2, CircleDollarSign,
-} from 'lucide-react';
+import { ArrowRight, Loader2, Truck, Edit, Plus, Clock, Fuel, Wrench, CircleDollarSign } from 'lucide-react';
 import clsx from 'clsx';
 import { equipmentApi } from '../services/equipment.api';
 import type {

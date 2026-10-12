@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { Save, X, Loader2, TrendingUp } from 'lucide-react';
 import { adjustmentApi } from '../services/adjustment.api';
 import { PERSIAN_MONTHS_ADJ } from '@/types/adjustment';
-import { toPersianDigits } from '@/utils/format';
 
 export default function AdjustmentIndexFormPage() {
   const { id } = useParams<{ id: string }>();

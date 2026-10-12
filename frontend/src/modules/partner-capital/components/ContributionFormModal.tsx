@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { X, Save, TrendingUp } from 'lucide-react';
 import { partnerCapitalApi } from '../services/partner-capital.api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
-import { api } from '@/services/api';
+
 import type { CapitalAccount, Contribution } from '../services/partner-capital.api';
 import { formatNumber } from '@/utils/format';
 import { todayLocalISO } from '@/utils/local-date';
@@ -93,7 +93,7 @@ export default function ContributionFormModal({ isOpen, editing, onClose, onSave
   // وقتی حساب انتخاب شد، partnerId و projectId ست می‌شوند
   useEffect(() => {
     if (selectedAccount) {
-      const form = document.querySelector('form');
+
       // استفاده از setValue از طریق یک trick ساده
     }
   }, [selectedAccount]);

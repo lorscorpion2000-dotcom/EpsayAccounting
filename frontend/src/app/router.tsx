@@ -6,12 +6,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { RequirePermission } from '@/components/RequirePermission';
 import { getRoutePermission } from '@/config/route-permissions';
 const ExecutiveDashboardPage = lazy(() => import('@/modules/dashboard/pages/ExecutiveDashboardPage'));
-import WarehouseFormModal from '@/modules/warehouse/components/WarehouseFormModal';
-
-
-
-
-
 
 // ─── Lazy-loaded pages ─────────────────────────────────────
 const CapitalAccountsPage = lazy(() => import('@/modules/partner-capital/pages/CapitalAccountsPage'));
@@ -20,7 +14,7 @@ const WithdrawalsPage = lazy(() => import('@/modules/partner-capital/pages/Withd
 const SharesPage = lazy(() => import('@/modules/partner-capital/pages/SharesPage'));
 const BalanceSheetPage = lazy(() => import('@/modules/partner-capital/pages/BalanceSheetPage'));
 const LoginPage = lazy(() => import('@/modules/auth/pages/LoginPage'));
-const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
+
 const ReportsHubPage = lazy(() => import('@/modules/reports/pages/ReportsHubPage'));
 const ProjectReportsPage = lazy(() => import('@/modules/reports/pages/ProjectReportsPage'));
 const ProjectReportsPickerPage = lazy(() => import('@/modules/reports/pages/ProjectReportsPickerPage'));
@@ -191,7 +185,6 @@ const AuditTrailPage = lazy(() => import('@/modules/audit/pages/AuditTrailPage')
 const BackupPage = lazy(() => import('@/modules/backup/pages/BackupPage'));
 const NotificationsPage = lazy(() => import('@/modules/notifications/pages/NotificationsPage'));
 const RecycleBinPage = lazy(() => import('@/modules/recycle-bin/pages/RecycleBinPage'));
-
 
 function PermissionGuard() {
   const location = useLocation();
@@ -440,7 +433,6 @@ export default function AppRouter() {
                 <Route path="/recycle-bin" element={<RecycleBinPage />} />
         </Route>
       </Route>
-
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Save, X, Loader2, Plus, Trash2, CheckCircle2, AlertCircle,
   FileText, Printer, ClipboardPaste, Copy, ArrowUp, ArrowDown,
@@ -17,21 +19,25 @@ import PasteDialog from '../components/PasteDialog';
 import type { Account, FiscalYear } from '@/types/accounting';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import { todayLocalISO } from '@/utils/local-date';
+import { getApiErrorMessage, applyApiErrorsToForm } from '@/utils/api-error';
 
-interface LineForm {
-  accountId: string;
-  description?: string;
-  debit: number;
-  credit: number;
-}
+const lineSchema = z.object({
+  accountId: z.string(),
+  description: z.string().optional(),
+  debit: z.number({ invalid_type_error: 'مبلغ بدهکار نامعتبر است' }).nonnegative(),
+  credit: z.number({ invalid_type_error: 'مبلغ بستانکار نامعتبر است' }).nonnegative(),
+});
 
-interface FormData {
-  entryDate?: string;
-  fiscalYearId: string;
-  description: string;
-  reference?: string;
-  lines: LineForm[];
-}
+const journalSchema = z.object({
+  entryDate: z.string().optional(),
+  fiscalYearId: z.string().min(1, 'سال مالی الزامی است'),
+  description: z.string().trim().min(1, 'شرح سند الزامی است'),
+  reference: z.string().optional(),
+  lines: z.array(lineSchema),
+});
+
+type LineForm = z.infer<typeof lineSchema>;
+type FormData = z.infer<typeof journalSchema>;
 
 const emptyLine = (): LineForm => ({ accountId: '', debit: 0, credit: 0, description: '' });
 
@@ -70,7 +76,8 @@ export default function JournalFormPage() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  const { register, control, handleSubmit, reset, setValue, getValues } = useForm<FormData>({
+  const { register, control, handleSubmit, reset, setValue, setError, getValues } = useForm<FormData>({
+    resolver: zodResolver(journalSchema),
     defaultValues: {
       entryDate: todayLocalISO(),
       fiscalYearId: '',
@@ -262,8 +269,8 @@ export default function JournalFormPage() {
       }
       navigate('/accounting/journals');
     } catch (e: any) {
-      const m = e?.response?.data?.message;
-      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در ذخیره‌سازی');
+      const failed = applyApiErrorsToForm(e, setError);
+      if (failed.length === 0) toast.error(getApiErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -328,7 +335,7 @@ export default function JournalFormPage() {
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-slate-700 mb-1">شرح سند *</label>
-              <input {...register('description', { required: true })} className="input w-full" placeholder="شرح کلی سند..." />
+              <input {...register('description')} className="input w-full" placeholder="شرح کلی سند..." />
             </div>
             <div className="md:col-span-4">
               <label className="block text-xs font-medium text-slate-700 mb-1">مرجع (اختیاری)</label>

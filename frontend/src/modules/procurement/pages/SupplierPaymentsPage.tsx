@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Wallet, Search, Trash2 } from 'lucide-react';
+import { RefreshCw, Wallet, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   supplierPaymentsApi, type SupplierPayment, type PayMethod,

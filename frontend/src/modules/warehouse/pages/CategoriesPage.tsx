@@ -17,7 +17,7 @@ export default function CategoriesPage() {
   const [deleting, setDeleting] = useState<ItemCategory | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  useState(false);
 
   const load = async () => {
     setLoading(true);

@@ -8,7 +8,7 @@ import { procurementApi } from '../services/procurement.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project, Partner } from '@/types/project';
-import { PR_UNIT_LABELS, PRItemUnit } from '@/types/procurement';
+import { PRItemUnit } from '@/types/procurement';
 import { formatNumber } from '@/utils/format';
 import clsx from 'clsx';
 import { todayLocalISO } from '@/utils/local-date';
@@ -44,7 +44,7 @@ export default function POFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, watch, reset, setValue, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
       prId: prIdQuery || undefined,
       poDate: todayLocalISO(),
@@ -144,7 +144,7 @@ export default function POFormPage() {
         toast.success('دستور خرید ویرایش شد');
         navigate('/procurement/orders/' + id);
       } else {
-        const created = await procurementApi.po.create(payload);
+
         toast.success('دستور خرید ایجاد شد و به کارتابل مدیر ارسال گردید');
         setTimeout(() => navigate('/approvals'), 600);
       }

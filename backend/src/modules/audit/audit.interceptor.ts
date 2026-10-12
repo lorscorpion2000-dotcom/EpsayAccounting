@@ -62,17 +62,4 @@ export class AuditInterceptor implements NestInterceptor {
     return s ? s[1] : 'unknown';
   }
 
-  private sanitize(body: any): any {
-    if (!body || typeof body !== 'object') return body;
-    const copy = JSON.parse(JSON.stringify(body));
-    const sensitive = ['password', 'passwordHash', 'token', 'jwt', 'secret'];
-    const clean = (obj: any) => {
-      for (const key of Object.keys(obj)) {
-        if (sensitive.some((s) => key.toLowerCase().indexOf(s) !== -1)) obj[key] = '***REDACTED***';
-        else if (typeof obj[key] === 'object' && obj[key] !== null) clean(obj[key]);
-      }
-    };
-    clean(copy);
-    return copy;
-  }
 }

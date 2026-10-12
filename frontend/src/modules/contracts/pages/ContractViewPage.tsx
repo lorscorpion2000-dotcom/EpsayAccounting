@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Printer, Play, CheckCircle2, Ban, FileText } from 'lucide-react';
+import { ArrowRight, Loader2, Play, CheckCircle2, Ban, FileText } from 'lucide-react';
 import { contractsApi, LegalContract, LegalContractKind, LegalContractStatus } from '../services/contracts.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import { numberToWords as formatNumberToWords } from '@/utils/number-to-words';
@@ -10,6 +10,7 @@ import PrintButton from '@/components/PrintButton';
 import { exportHtmlToWord } from '@/utils/word-export';
 import { renderContractTemplate } from '@/utils/contract-template';
 import CancelDialog from '../components/CancelDialog';
+import { COMPANY } from '../company-info';
 
 const KIND_LABELS: Record<LegalContractKind, string> = {
   WORKER_EMPLOYMENT: 'قرارداد کارگری',
@@ -100,7 +101,7 @@ const PRINT_STYLES = `
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 20mm !important;
+    height: 22mm !important;
     padding: 1mm 12mm 1mm !important;
     background: white !important;
     border-bottom: 1px solid #cbd5e1 !important;
@@ -118,6 +119,18 @@ const PRINT_STYLES = `
     width: auto !important;
     object-fit: contain !important;
     visibility: visible !important;
+  }
+  .print-header-fixed .print-header-meta {
+    font-size: 9px !important;
+    color: #1e3a8a !important;
+    margin-top: 0.4mm !important;
+    display: flex !important;
+    gap: 8mm !important;
+    justify-content: center !important;
+  }
+  .print-header-fixed .print-header-meta span {
+    white-space: nowrap !important;
+    font-weight: bold !important;
   }
   .print-header-fixed .brand-name {
     font-size: 15px !important;
@@ -271,22 +284,22 @@ export default function ContractViewPage() {
     });
   };
 
-  const handlePrint = () => {
-    if (!data) return;
-    window.print();
-  };
-
   const renderedBody = data?.bodyHtml
-    ? renderContractTemplate(data.bodyHtml, data)
+    ? renderContractTemplate(data.bodyHtml, { ...data, company: COMPANY, wage: data.wageBreakdown || {} } as any)
     : '';
 
   // ─── Portalها برای سربرگ و فوتر چاپ ───
+  // B15.4: print meta — کد و تاریخ
   const printHeaderEl = (
     <div className='print-header-fixed'>
       <div className='logo-wrap'>
         <img src={window.location.origin + '/images/logo.png'} alt='لوگو' />
       </div>
-      <div className='brand-name'>استودیو معماری اپسای</div>
+      <div className='brand-name'>{COMPANY.name}</div>
+      <div className='print-header-meta'>
+        <span>شماره: {data?.code || '—'}</span>
+        <span>تاریخ: {data?.registrationDate ? formatJalaliDate(data.registrationDate) : '—'}</span>
+      </div>
     </div>
   );
 

@@ -17,7 +17,7 @@ export default function SalesCustomersPage() {
   const [deleting, setDeleting] = useState<SalesCustomer | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -32,7 +32,7 @@ export default function SalesCustomersPage() {
     if (!deleting) return;
     setForceError(null);
     try {
-      const res = await salesApi.customers.remove(deleting.id, force);
+
       toast.success(force ? 'مشتری به‌طور کامل حذف شد' : 'مشتری غیرفعال شد');
       setDeleting(null);
       setForceConfirm(false);

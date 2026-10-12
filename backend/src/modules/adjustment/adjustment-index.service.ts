@@ -70,7 +70,7 @@ export class AdjustmentIndexService {
 
   async remove(id: string) {
     await this.get(id);
-    const used = await this.prisma.adjustmentCalculation.count({
+    await this.prisma.adjustmentCalculation.count({
       where: { baseIndex: { not: 0 } },
     });
     // ساده: اگر جایی استفاده شده، فقط غیرفعال شود
