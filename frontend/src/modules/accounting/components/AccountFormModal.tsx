@@ -98,7 +98,7 @@ export default function AccountFormModal({
   useEffect(() => {
     if (!form.detailType) { setDetailOptions([]); return; }
     loadDetailOptions(form.detailType);
-    // eslint-disable-next-line
+     
   }, [form.detailType]);
 
   // â”€â”€ NOW early return is safe â”€â”€

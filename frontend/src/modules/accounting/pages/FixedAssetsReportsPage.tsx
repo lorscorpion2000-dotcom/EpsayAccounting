@@ -246,7 +246,7 @@ function ScheduleTab({ items }: { items: FixedAsset[] }) {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [assetId]);
+  useEffect(() => { load();   }, [assetId]);
 
   return (
     <>

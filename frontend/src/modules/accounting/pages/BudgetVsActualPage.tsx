@@ -61,7 +61,7 @@ export default function BudgetVsActualPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { if (projectId) load(); /* eslint-disable-next-line */ }, [projectId]);
+  useEffect(() => { if (projectId) load();   }, [projectId]);
 
   const health = useMemo(() => {
     if (!data) return 'unknown';

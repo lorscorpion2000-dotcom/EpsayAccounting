@@ -105,7 +105,7 @@ export default function AttendanceGridPage() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [year, month, projectId]);
+  useEffect(() => { load();   }, [year, month, projectId]);
 
   const yearOptions = useMemo(() => {
     const y = today.year;
@@ -237,7 +237,7 @@ export default function AttendanceGridPage() {
       : 'همه پرسنل';
 
     // رندر HTML چاپ
-    let tableHtml = `
+    const tableHtml = `
       <table class="grid-table">
         <thead>
           <tr>

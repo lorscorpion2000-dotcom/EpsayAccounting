@@ -60,7 +60,7 @@ export default function PurchaseInvoiceDetailPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load();   }, [id]);
 
   const approve = async () => {
     if (!id) return;

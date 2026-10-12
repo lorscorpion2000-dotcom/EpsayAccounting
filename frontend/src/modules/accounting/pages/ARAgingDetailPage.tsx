@@ -25,7 +25,7 @@ export default function ARAgingDetailPage() {
     catch (e: any) { toast.error(e?.response?.data?.message ?? 'خطا'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load();   }, []);
 
   const toggle = (id: string) => {
     setExpanded((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });

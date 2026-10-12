@@ -75,7 +75,7 @@ export default function CashFlowPage() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load();   }, []);
 
   const isBalanced = useMemo(() => {
     if (!data) return true;

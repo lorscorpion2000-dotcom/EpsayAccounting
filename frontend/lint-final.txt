@@ -1,0 +1,328 @@
+﻿
+> epsay-accounting-frontend@0.0.1 lint
+> eslint .
+
+
+E:\EpsayAccounting\frontend\src\components\FileUploadMulti.tsx
+  52:16  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+E:\EpsayAccounting\frontend\src\modules\accounting\components\MoneyInput.tsx
+  36:6  warning  React Hook useEffect has a missing dependency: 'display'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\APAgingDetailPage.tsx
+  43:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\APAgingPage.tsx
+  28:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\ARAgingDetailPage.tsx
+  28:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\ARAgingPage.tsx
+  28:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\BalanceSheetPage.tsx
+  29:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\BudgetVsActualPage.tsx
+  64:49  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\CashFlowPage.tsx
+  78:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\ChequesPage.tsx
+  94:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\DetailedTrialBalancePage.tsx
+  30:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\FixedAssetsPage.tsx
+  81:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\FixedAssetsReportsPage.tsx
+  249:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  364:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\JournalBookPage.tsx
+  46:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\JournalFormPage.tsx
+  166:16  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\JournalViewPage.tsx
+  37:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\ProfitLossPage.tsx
+  27:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\accounting\pages\VatReportPage.tsx
+  38:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\adjustment\pages\AdjustmentDetailPage.tsx
+  27:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\adjustment\pages\AdjustmentIndicesListPage.tsx
+  34:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\adjustment\pages\AdjustmentsListPage.tsx
+  43:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\adjustment\pages\MaterialPriceDiffDetailPage.tsx
+  28:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\adjustment\pages\MaterialPriceDiffListPage.tsx
+  40:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\approvals\pages\ApprovalsPage.tsx
+  155:6  warning  React Hook useEffect has a missing dependency: 'tab'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  173:6  warning  React Hook useEffect has a missing dependency: 'tab'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\audit\pages\AuditTrailPage.tsx
+  70:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  93:6   warning  React Hook useEffect has a missing dependency: 'loadSecurity'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\client-statement\pages\ClientStatementDetailPage.tsx
+  47:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\client-statement\pages\ClientStatementsListPage.tsx
+  41:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\contracts\pages\ContractViewPage.tsx
+  232:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\contracts\pages\ContractsListPage.tsx
+  68:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\dashboard\pages\DashboardPage.tsx
+  64:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+E:\EpsayAccounting\frontend\src\modules\equipment\pages\DailyLogsListPage.tsx
+  55:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\equipment\pages\EquipmentListPage.tsx
+  54:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\equipment\pages\EquipmentReportPage.tsx
+  46:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\equipment\pages\MaintenanceListPage.tsx
+  55:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\help\pages\WorkflowsGuidePage.tsx
+  316:21  warning  Unnecessary escape character: \E  no-useless-escape
+
+E:\EpsayAccounting\frontend\src\modules\inventory-count\pages\InventoryCountDetailPage.tsx
+  33:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\inventory-count\pages\InventoryCountsListPage.tsx
+  41:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\inventory-count\pages\TransferDetailPage.tsx
+  30:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\inventory-count\pages\TransfersListPage.tsx
+  44:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\material-report\pages\MaterialConsumptionPage.tsx
+  40:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\material-report\pages\WbsUnitCostPage.tsx
+  23:6  warning  React Hook useEffect has a missing dependency: 'projectId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  28:6  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array       react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\notifications\components\NotificationBell.tsx
+  35:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+E:\EpsayAccounting\frontend\src\modules\notifications\pages\NotificationsPage.tsx
+  30:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u                             @typescript-eslint/no-unused-vars
+  35:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  43:14  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u                             @typescript-eslint/no-unused-vars
+
+E:\EpsayAccounting\frontend\src\modules\overhead\pages\OverheadDetailPage.tsx
+  28:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\overhead\pages\OverheadListPage.tsx
+  41:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\partner-capital\pages\ContributionsPage.tsx
+  53:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\partner-capital\pages\WithdrawalsPage.tsx
+  45:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\AttendanceGridPage.tsx
+  108:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\AttendancePage.tsx
+  51:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\EmployeeCardPage.tsx
+  60:36  warning  React Hook useEffect has a missing dependency: 'loadCard'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+  64:6   warning  React Hook useEffect has a missing dependency: 'loadMonthly'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\EmployeesListPage.tsx
+  57:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\PayrollPeriodDetailPage.tsx
+  34:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\StatementDetailPage.tsx
+  49:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\StatementFormPage.tsx
+  75:9  warning  The 'items' logical expression could make the dependencies of useMemo Hook (at line 93) change on every render. To fix this, wrap the initialization of 'items' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\StatementsListPage.tsx
+  48:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\WorkLogsPage.tsx
+  49:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\WorkerStatementDetailPage.tsx
+  47:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\payroll\pages\WorkerStatementsListPage.tsx
+  57:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\petty-cash\pages\PettyCashAccountsPage.tsx
+   64:21  warning  Unexpected constant truthiness on the left-hand side of a `||` expression  no-constant-binary-expression
+  222:28  warning  Unexpected constant truthiness on the left-hand side of a `||` expression  no-constant-binary-expression
+
+E:\EpsayAccounting\frontend\src\modules\petty-cash\pages\PettyCashDetailPage.tsx
+  52:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\price-list\pages\PriceListDetailPage.tsx
+  80:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\price-list\pages\PriceListsPage.tsx
+  43:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\price-list\pages\WbsBoqMapperPage.tsx
+  68:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  80:6   warning  React Hook useEffect has a missing dependency: 'loadBoqItems'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PODetailPage.tsx
+  34:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\POFormPage.tsx
+  57:9  warning  The 'items' logical expression could make the dependencies of useMemo Hook (at line 64) change on every render. To fix this, wrap the initialization of 'items' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\POListPage.tsx
+  37:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PRDetailPage.tsx
+  43:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PRListPage.tsx
+  43:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PurchaseInvoiceDetailPage.tsx
+  63:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PurchaseInvoiceFormPage.tsx
+  141:6  warning  React Hook useMemo has an unnecessary dependency: 'taxPercent'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\PurchaseInvoicesListPage.tsx
+  61:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\procurement\pages\RFQDetailPage.tsx
+  37:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\projects\pages\BudgetsTab.tsx
+  44:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\projects\pages\ContractFormPage.tsx
+  103:9  warning  The 'otherDeductions' logical expression could make the dependencies of useMemo Hook (at line 137) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'otherDeductions' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\projects\pages\ContractsTab.tsx
+  45:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\projects\pages\ProjectsListPage.tsx
+  44:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\projects\pages\WbsTab.tsx
+  42:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\recycle-bin\pages\RecycleBinPage.tsx
+  59:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\reports\pages\ProjectReportsPage.tsx
+  75:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesContractDetailPage.tsx
+  31:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesContractFormPage.tsx
+  48:6  warning  React Hook useEffect has a missing dependency: 'isEdit'. Either include it or remove the dependency array           react-hooks/exhaustive-deps
+  59:6  warning  React Hook useEffect has a missing dependency: 'form.finalPrice'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesContractsListPage.tsx
+  39:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesCustomersPage.tsx
+  29:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesInvoiceDetailPage.tsx
+  54:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesInvoicesListPage.tsx
+  52:34  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\sales\pages\SalesUnitsPage.tsx
+   50:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                    react-hooks/exhaustive-deps
+  184:6   warning  React Hook useEffect has a missing dependency: 'projects'. Either include it or remove the dependency array. If 'setForm' needs the current value of 'projects', you can also switch to useReducer instead of useState and read 'projects' in the reducer  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\settings\pages\PeriodLockPage.tsx
+  66:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\settings\pages\ProfilePage.tsx
+  34:6  warning  React Hook useEffect has a missing dependency: 'profileForm'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\settings\pages\UnitsPage.tsx
+  34:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\site-ops\pages\DailyReportDetailPage.tsx
+  187:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  197:40  warning  React Hook useEffect has a missing dependency: 'loadSections'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\site-ops\pages\DailyReportsListPage.tsx
+  55:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\timeline\pages\ChecklistsPage.tsx
+  55:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\timeline\pages\DocumentsPage.tsx
+  48:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\timeline\pages\GuaranteesPage.tsx
+  43:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\timeline\pages\InsurancesPage.tsx
+  43:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\timeline\pages\PermitsPage.tsx
+  51:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\IssuesListPage.tsx
+  37:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\ItemsPage.tsx
+  42:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\KardexPage.tsx
+  42:54  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\ReceiptDetailPage.tsx
+  27:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\ReceiptFormPage.tsx
+  109:9  warning  The 'lines' logical expression could make the dependencies of useMemo Hook (at line 126) change on every render. To fix this, wrap the initialization of 'lines' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\warehouse\pages\ReceiptsListPage.tsx
+  36:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\EpsayAccounting\frontend\src\modules\wip\pages\SCurvePage.tsx
+  28:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Γ£û 115 problems (0 errors, 115 warnings)
+

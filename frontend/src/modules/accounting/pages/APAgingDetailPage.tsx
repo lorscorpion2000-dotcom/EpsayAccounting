@@ -40,7 +40,7 @@ export default function APAgingDetailPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load();   }, []);
 
   const toggle = (id: string) => {
     setExpanded((prev) => {

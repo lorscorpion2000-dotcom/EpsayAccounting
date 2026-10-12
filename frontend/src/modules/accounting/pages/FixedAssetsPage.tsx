@@ -78,7 +78,7 @@ export default function FixedAssetsPage() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filterStatus]);
+  useEffect(() => { load();   }, [filterStatus]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return items;

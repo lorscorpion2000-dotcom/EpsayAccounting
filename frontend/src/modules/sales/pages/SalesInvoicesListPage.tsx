@@ -49,7 +49,7 @@ export default function SalesInvoicesListPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filters]);
+  useEffect(() => { load();   }, [filters]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return items;

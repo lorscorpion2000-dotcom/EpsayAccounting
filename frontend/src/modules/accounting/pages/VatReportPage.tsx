@@ -35,7 +35,7 @@ export default function VatReportPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load();   }, []);
 
   return (
     <div className="p-6" dir="rtl">

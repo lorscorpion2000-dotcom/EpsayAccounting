@@ -91,7 +91,7 @@ export default function ChequesPage() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
+  useEffect(() => { load();   }, [filter]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return items;

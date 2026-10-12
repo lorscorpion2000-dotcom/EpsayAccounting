@@ -88,7 +88,7 @@ export default function PurchaseInvoiceFormPage() {
         } as any)));
       }
     }).catch(() => toast.error('خطا در بارگذاری فاکتور'));
-    /* eslint-disable-next-line */
+     
   }, [editId]);
   useEffect(() => {
     if (!poId) return;
@@ -109,7 +109,7 @@ export default function PurchaseInvoiceFormPage() {
         })));
       }
     }).catch(() => toast.error('خطا در بارگذاری PO'));
-    /* eslint-disable-next-line */
+     
   }, [poId]);
 
   const totals = useMemo(() => {
