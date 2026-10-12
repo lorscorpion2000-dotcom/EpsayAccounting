@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SiteOpsService } from './site-ops.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
@@ -9,6 +9,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ReportStatus } from '@prisma/client';
 
 @ApiTags('Site Operations - عملیات کارگاه')
 @ApiBearerAuth()
@@ -22,7 +23,7 @@ export class SiteOpsController {
   @RequirePermissions('site-ops.read')
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(ReportStatus, { optional: true })) status?: ReportStatus,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) { return this.s.findAll({ projectId, status, fromDate, toDate }); }

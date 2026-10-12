@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SalesService } from './sales.service';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
@@ -16,6 +16,7 @@ import {
 import { CreateSalesPaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ReasonDto } from '../../common/dto';
+import { SalesUnitStatus } from '@prisma/client';
 
 // ═══════════════════════════════════════════════
 // Units
@@ -32,7 +33,7 @@ export class SalesUnitsController {
   @RequirePermissions('sales.read')
   list(
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(SalesUnitStatus, { optional: true })) status?: SalesUnitStatus,
     @Query('search') search?: string,
   ) {
     return this.svc.listUnits({ projectId, status, search });

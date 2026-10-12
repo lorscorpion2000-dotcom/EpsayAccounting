@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SubcontractorStatementsService } from './subcontractor-statements.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { StatementStatus } from '@prisma/client';
 
 @ApiTags('Subcontractor Statements - صورت‌وضعیت پیمانکاران')
 @ApiBearerAuth()
@@ -19,7 +20,7 @@ export class SubcontractorStatementsController {
   findAll(
     @Query('projectId') projectId?: string,
     @Query('contractorId') contractorId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(StatementStatus, { optional: true })) status?: StatementStatus,
   ) {
     return this.s.findAll({ projectId, contractorId, status });
   }
