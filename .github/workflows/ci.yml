@@ -33,12 +33,35 @@ jobs:
       - run: npm test
 
   backend:
-    name: Backend (build + typecheck + test)
+    name: Backend (build + typecheck + test + e2e)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: epsay_test
+          POSTGRES_PASSWORD: epsay_test
+          POSTGRES_DB: epsay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U epsay_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://epsay_test:epsay_test@localhost:5432/epsay_test?schema=public
+      JWT_SECRET: ci-test-jwt-secret-must-be-at-least-32-chars
+      JWT_REFRESH_SECRET: ci-test-jwt-refresh-must-be-at-least-32-chars
+      CONFIG_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      BACKUP_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      API_PREFIX: api
+      PORT: 3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,3 +76,11 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:coverage
+      - name: Create schema in test DB
+        run: npx prisma db push --accept-data-loss --skip-generate
+      - name: Seed test DB
+        run: node _seed-all.mjs
+      - name: Ensure admin password (CI safety)
+        run: node _ci-ensure-admin.mjs
+      - name: Run e2e tests
+        run: npm run test:e2e

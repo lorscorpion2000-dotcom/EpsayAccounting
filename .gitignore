@@ -110,3 +110,6 @@ backend/_*.mjs
 backend/_*.txt
 backend/lint-*.txt
 backend/lint-*.json
+!backend/_b15-3-seed.mjs
+!backend/_b3-0.mjs
+!backend/_ci-ensure-admin.mjs

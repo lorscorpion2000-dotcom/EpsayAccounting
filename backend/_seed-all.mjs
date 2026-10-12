@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const cwd = 'E:\\EpsayAccounting\\backend';
+const cwd = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'));
 
 const steps = [
   {
@@ -65,7 +65,9 @@ console.log('');
 if (failed === 0) {
   console.log('═══ ALL DONE ═══');
   console.log('اکنون سرویس را ری‌استارت کن:');
-  console.log('  powershell -ExecutionPolicy Bypass -File E:\\EpsayAccounting\\rebuild-restart.ps1');
+  if (process.platform === 'win32') {
+    console.log('  powershell -ExecutionPolicy Bypass -File E:\\EpsayAccounting\\rebuild-restart.ps1');
+  }
 } else {
   console.log('═══ ' + failed + ' STEP(S) FAILED ═══');
   console.log('دستور خطادار را دستی بررسی کن.');
