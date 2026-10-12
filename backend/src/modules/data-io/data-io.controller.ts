@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { ImportRowsDto } from '../../common/dto/import-rows.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DataIoService } from './data-io.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -29,25 +30,25 @@ export class DataIoController {
   // ═══ Import ═══
   @Post('partners/import')
   @RequirePermissions('data-io.manage')
-  importPartners(@Body() body: { rows: any[] }) {
+  importPartners(@Body() body: ImportRowsDto) {
     return this.service.importPartners(body.rows || []);
   }
 
   @Post('items/import')
   @RequirePermissions('data-io.manage')
-  importItems(@Body() body: { rows: any[] }) {
+  importItems(@Body() body: ImportRowsDto) {
     return this.service.importItems(body.rows || []);
   }
 
   @Post('wbs/import')
   @RequirePermissions('data-io.manage')
-  importWbs(@Body() body: { rows: any[] }) {
+  importWbs(@Body() body: ImportRowsDto) {
     return this.service.importWbs(body.rows || []);
   }
 
   @Post('accounts/import')
   @RequirePermissions('data-io.manage')
-  importAccounts(@Body() body: { rows: any[] }) {
+  importAccounts(@Body() body: ImportRowsDto) {
     return this.service.importAccounts(body.rows || []);
   }
 }

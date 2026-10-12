@@ -2,6 +2,8 @@ import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/comm
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { TwoFactorCodeDto, TwoFactorDisableDto, TwoFactorVerifyLoginDto } from './dto/two-factor.dto';
@@ -93,7 +95,7 @@ export class AuthController {
   @Patch('change-password')
   changePassword(
     @CurrentUser('id') userId: string,
-    @Body() body: { oldPassword: string; newPassword: string },
+    @Body() body: ChangePasswordDto,
   ) {
     return this.auth.changePassword(userId, body.oldPassword, body.newPassword);
   }
@@ -101,7 +103,7 @@ export class AuthController {
   @Patch('profile')
   updateProfile(
     @CurrentUser('id') userId: string,
-    @Body() body: { fullName?: string; email?: string; mobile?: string },
+    @Body() body: UpdateProfileDto,
   ) {
     return this.auth.updateProfile(userId, body);
   }

@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
+import { CreateAccountMappingDto, UpdateAccountMappingDto } from './dto/account-mapping.dto';
 
 @ApiTags('Account Mappings - نگاشت حساب‌ها')
 @ApiBearerAuth()
@@ -32,13 +33,13 @@ export class AccountMappingController {
 
   @Post()
   @RequirePermissions('accounting.create')
-  create(@Body() dto: any) {
+  create(@Body() dto: CreateAccountMappingDto) {
     return this.prisma.accountMapping.create({ data: dto });
   }
 
   @Patch(':id')
   @RequirePermissions('accounting.update')
-  update(@Param('id') id: string, @Body() dto: any) {
+  update(@Param('id') id: string, @Body() dto: UpdateAccountMappingDto) {
     return this.prisma.accountMapping.update({ where: { id }, data: dto });
   }
 

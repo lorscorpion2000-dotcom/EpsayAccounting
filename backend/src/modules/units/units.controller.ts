@@ -4,6 +4,7 @@ import { UnitsService } from './units.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { CreateUnitDto, UpdateUnitDto } from './dto/unit.dto';
 
 @ApiTags('Units - \u0648\u0627\u062d\u062f\u0647\u0627\u06cc \u0627\u0646\u062f\u0627\u0632\u0647\u200c\u06af\u06cc\u0631\u06cc')
 @ApiBearerAuth()
@@ -28,11 +29,11 @@ export class UnitsController {
 
   @Post()
   @RequirePermissions('settings.create')
-  create(@Body() dto: any) { return this.svc.create(dto); }
+  create(@Body() dto: CreateUnitDto) { return this.svc.create(dto); }
 
   @Patch(':id')
   @RequirePermissions('settings.update')
-  update(@Param('id') id: string, @Body() dto: any) { return this.svc.update(id, dto); }
+  update(@Param('id') id: string, @Body() dto: UpdateUnitDto) { return this.svc.update(id, dto); }
 
   @Delete(':id')
   @RequirePermissions('settings.delete')

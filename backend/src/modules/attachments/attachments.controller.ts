@@ -4,6 +4,7 @@ import { AttachmentsService } from './attachments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
+import { CreateAttachmentBatchDto } from './dto/attachment.dto';
 
 @ApiTags('Attachments - پیوست‌ها')
 @ApiBearerAuth()
@@ -23,7 +24,7 @@ export class AttachmentsController {
 
   @Post()
   @RequirePermissions('attachment.create')
-  create(@Body() body: any) {
+  create(@Body() body: CreateAttachmentBatchDto) {
     return this.svc.createMany(body);
   }
 
