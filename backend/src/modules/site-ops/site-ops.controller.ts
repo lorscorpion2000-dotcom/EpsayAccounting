@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SiteOpsService } from './site-ops.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
@@ -145,13 +145,13 @@ export class SiteOpsController {
   @Get('deleted/list')
   @RequirePermissions('site-ops.update')
   listDeleted(
-    @Query('take') take?: string,
-    @Query('skip') skip?: string,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'dailyReport',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 

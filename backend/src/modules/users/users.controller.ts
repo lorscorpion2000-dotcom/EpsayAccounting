@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -80,13 +80,13 @@ export class UsersController {
   @Get('deleted/list')
   @RequirePermissions('users.update')
   listDeleted(
-    @Query('take') take?: string,
-    @Query('skip') skip?: string,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'user',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 

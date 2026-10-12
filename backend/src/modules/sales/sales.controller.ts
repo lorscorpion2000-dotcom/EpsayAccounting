@@ -1,6 +1,4 @@
-import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SalesService } from './sales.service';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
@@ -42,11 +40,11 @@ export class SalesUnitsController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take') take?: string, @Query('skip') skip?: string) {
+  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesUnit',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 
@@ -123,11 +121,11 @@ export class SalesCustomersController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take') take?: string, @Query('skip') skip?: string) {
+  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesCustomer',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 
@@ -222,11 +220,11 @@ export class SalesContractsController {
 
   @Get('deleted/list')
   @RequirePermissions('sales.update')
-  listDeleted(@Query('take') take?: string, @Query('skip') skip?: string) {
+  listDeleted(@Query('take', new ParseIntPipe({ optional: true })) take?: number, @Query('skip', new ParseIntPipe({ optional: true })) skip?: number) {
     return this.softDelete.listDeleted({
       model: 'salesContract',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 

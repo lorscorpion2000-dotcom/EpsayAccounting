@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SalesInvoicesService } from './sales-invoices.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
@@ -92,13 +92,13 @@ export class SalesInvoicesController {
   @Get('deleted/list')
   @RequirePermissions('sales.update')
   listDeleted(
-    @Query('take') take?: string,
-    @Query('skip') skip?: string,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
+    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'salesInvoice',
-      take: take ? parseInt(take, 10) : 100,
-      skip: skip ? parseInt(skip, 10) : 0,
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 
