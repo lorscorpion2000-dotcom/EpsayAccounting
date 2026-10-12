@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PriceListService } from './price-list.service';
 import {
@@ -9,6 +9,7 @@ import {
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { PriceListStatus } from '@prisma/client';
 
 @ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
 @ApiBearerAuth()
@@ -22,7 +23,7 @@ export class PriceListController {
   @RequirePermissions('price-list.read')
   list(
     @Query('year') year?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(PriceListStatus, { optional: true })) status?: PriceListStatus,
     @Query('search') search?: string,
   ) {
     return this.svc.list({

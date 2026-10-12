@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PurchaseRequestsService } from './pr.service';
 import { CreatePRDto } from './dto/create-pr.dto';
@@ -7,6 +7,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { PRStatus } from '@prisma/client';
 
 @ApiTags('Purchase Requests - درخواست‌های خرید')
 @ApiBearerAuth()
@@ -20,7 +21,7 @@ export class PurchaseRequestsController {
   @ApiQuery({ name: 'projectId', required: false })
   @ApiQuery({ name: 'search', required: false })
   findAll(
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(PRStatus, { optional: true })) status?: PRStatus,
     @Query('projectId') projectId?: string,
     @Query('search') search?: string,
   ) { return this.service.findAll({ status, projectId, search }); }

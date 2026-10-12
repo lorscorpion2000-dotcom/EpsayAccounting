@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;
 import { ContractsService } from './contracts.service';
 import {
   CreateLegalContractDto,
@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
+import { LegalContractKind, LegalContractStatus } from '@prisma/client';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -21,8 +22,8 @@ export class ContractsController {
   @Get()
   @RequirePermissions('contracts.read')
   list(
-    @Query('kind') kind?: string,
-    @Query('status') status?: string,
+    @Query('kind', new ParseEnumPipe(LegalContractKind, { optional: true })) kind?: LegalContractKind,
+    @Query('status', new ParseEnumPipe(LegalContractStatus, { optional: true })) status?: LegalContractStatus,
     @Query('search') search?: string,
     @Query('projectId') projectId?: string,
   ) {
@@ -76,7 +77,7 @@ export class ContractsController {
   @RequirePermissions('contracts.read')
   listByParty(
     @Param('partyId') partyId: string,
-    @Query('kind') kind?: string,
+    @Query('kind', new ParseEnumPipe(LegalContractKind, { optional: true })) kind?: LegalContractKind,
   ) {
     return this.svc.listByParty(partyId, kind);
   }

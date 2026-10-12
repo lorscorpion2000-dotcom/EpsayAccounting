@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsString, IsOptional, IsDateString, MaxLength } from 'class-validator';
 import { PurchaseInvoicesService } from './purchase-invoices.service';
@@ -7,6 +7,7 @@ import { UpdatePurchaseInvoiceDto } from './dto/update-purchase-invoice.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { PurchaseInvoiceStatus } from '@prisma/client';
 
 class FromPODto {
   @IsString() @MaxLength(64) invoiceNumber!: string;
@@ -28,7 +29,7 @@ export class PurchaseInvoicesController {
   findAll(
     @Query('supplierId') supplierId?: string,
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(PurchaseInvoiceStatus, { optional: true })) status?: PurchaseInvoiceStatus,
   ) {
     return this.service.findAll({ supplierId, projectId, status });
   }

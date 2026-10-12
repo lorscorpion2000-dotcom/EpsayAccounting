@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PettyCashTransactionsService } from './transactions.service';
 import { CreatePettyCashTransactionDto } from './dto/create-transaction.dto';
@@ -7,6 +7,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { PettyCashTxStatus, PettyCashTxType } from '@prisma/client';
 
 @ApiTags('Petty Cash Transactions - تراکنش‌های تنخواه')
 @ApiBearerAuth()
@@ -23,8 +24,8 @@ export class PettyCashTransactionsController {
   @ApiQuery({ name: 'toDate', required: false })
   findAll(
     @Query('accountId') accountId?: string,
-    @Query('type') type?: string,
-    @Query('status') status?: string,
+    @Query('type', new ParseEnumPipe(PettyCashTxType, { optional: true })) type?: PettyCashTxType,
+    @Query('status', new ParseEnumPipe(PettyCashTxStatus, { optional: true })) status?: PettyCashTxStatus,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) {

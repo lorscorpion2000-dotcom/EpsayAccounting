@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { LeaveRequestsService } from './leave-requests.service';
 import { CreateLeaveRequestDto } from './dto/leave-request.dto';
@@ -7,6 +7,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { RequestStatus } from '@prisma/client';
 
 @ApiTags('Leave Requests - مرخصی‌ها')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class LeaveRequestsController {
   @ApiQuery({ name: 'status', required: false })
   findAll(
     @Query('employeeId') employeeId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(RequestStatus, { optional: true })) status?: RequestStatus,
   ) {
     return this.s.findAll({ employeeId, status });
   }

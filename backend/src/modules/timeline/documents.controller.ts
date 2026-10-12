@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto, UpdateDocumentDto } from './dto/document.dto';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { DocumentType } from '@prisma/client';
 
 @ApiTags('Timeline Documents - آرشیو نقشه‌ها')
 @ApiBearerAuth()
@@ -22,7 +23,7 @@ export class DocumentsController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(DocumentType, { optional: true })) type?: DocumentType,
     @Query('phase') phase?: string,
     @Query('search') search?: string,
   ) { return this.s.findAll({ projectId, type, phase, search }); }

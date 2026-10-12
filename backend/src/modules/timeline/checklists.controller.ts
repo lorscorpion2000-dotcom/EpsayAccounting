@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ChecklistsService } from './checklists.service';
 import { CreateChecklistDto, UpdateChecklistDto, RejectChecklistDto } from './dto/checklist.dto';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ChecklistStatus, ChecklistType } from '@prisma/client';
 
 @ApiTags('Timeline Checklists - چک‌لیست‌های پیش‌نیاز')
 @ApiBearerAuth()
@@ -22,8 +23,8 @@ export class ChecklistsController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
-    @Query('status') status?: string,
+    @Query('type', new ParseEnumPipe(ChecklistType, { optional: true })) type?: ChecklistType,
+    @Query('status', new ParseEnumPipe(ChecklistStatus, { optional: true })) status?: ChecklistStatus,
     @Query('search') search?: string,
   ) { return this.s.findAll({ projectId, type, status, search }); }
 

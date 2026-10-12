@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
@@ -8,6 +8,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ReceiptStatus } from '@prisma/client';
 
 @ApiTags('Goods Receipts - رسیدهای انبار')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class ReceiptsController {
   findAll(
     @Query('warehouseId') warehouseId?: string,
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(ReceiptStatus, { optional: true })) status?: ReceiptStatus,
   ) { return this.s.findAll({ warehouseId, projectId, status }); }
 
   @Get(':id')

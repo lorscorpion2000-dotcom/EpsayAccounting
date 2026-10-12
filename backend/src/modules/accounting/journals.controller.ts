@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { JournalsService } from './journals.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
@@ -7,6 +7,7 @@ import { ReverseJournalDto } from './dto/reverse-journal.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto, ReasonForceDto } from '../../common/dto';
+import { JournalStatus } from '@prisma/client';
 
 @ApiTags('Journals - اسناد حسابداری')
 @ApiBearerAuth()
@@ -23,7 +24,7 @@ export class JournalsController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('fiscalYearId') fiscalYearId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(JournalStatus, { optional: true })) status?: JournalStatus,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
     @Query('search') search?: string,

@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import {
@@ -8,6 +6,7 @@ import {
 } from './dto/inventory-count.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { WarehouseTransferStatus } from '@prisma/client';
 
 @ApiTags('Warehouse Transfer - انتقال بین کارگاه‌ها')
 @ApiBearerAuth()
@@ -20,7 +19,7 @@ export class WarehouseTransferController {
   list(
     @Query('fromWarehouseId') fromWarehouseId?: string,
     @Query('toWarehouseId') toWarehouseId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(WarehouseTransferStatus, { optional: true })) status?: WarehouseTransferStatus,
     @Query('projectId') projectId?: string,
   ) { return this.service.list({ fromWarehouseId, toWarehouseId, status, projectId }); }
 

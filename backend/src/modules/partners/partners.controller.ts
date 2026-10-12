@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
@@ -7,6 +7,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { PartnerType } from '@prisma/client';
 
 @ApiTags('Partners - اشخاص')
 @ApiBearerAuth()
@@ -19,7 +20,7 @@ export class PartnersController {
   @RequirePermissions('directory.read')
   @ApiQuery({ name: 'type', required: false })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@Query('type') type?: string, @Query('search') search?: string) {
+  findAll(@Query('type', new ParseEnumPipe(PartnerType, { optional: true })) type?: PartnerType, @Query('search') search?: string) {
     return this.partners.findAll(type, search);
   }
 

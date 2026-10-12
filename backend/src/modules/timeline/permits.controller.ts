@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PermitsService } from './permits.service';
 import { CreatePermitDto, UpdatePermitDto } from './dto/permit.dto';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { PermitStatus, PermitType } from '@prisma/client';
 
 @ApiTags('Timeline Permits - مجوزها و پروانه‌ها')
 @ApiBearerAuth()
@@ -22,8 +23,8 @@ export class PermitsController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
-    @Query('status') status?: string,
+    @Query('type', new ParseEnumPipe(PermitType, { optional: true })) type?: PermitType,
+    @Query('status', new ParseEnumPipe(PermitStatus, { optional: true })) status?: PermitStatus,
     @Query('search') search?: string,
   ) { return this.s.findAll({ projectId, type, status, search }); }
 

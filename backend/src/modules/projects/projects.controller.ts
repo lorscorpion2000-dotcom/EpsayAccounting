@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -6,6 +6,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ProjectStatus } from '@prisma/client';
 
 @ApiTags('Projects - پروژه‌ها')
 @ApiBearerAuth()
@@ -18,7 +19,7 @@ export class ProjectsController {
   @RequirePermissions('projects.read')
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@Query('status') status?: string, @Query('search') search?: string) {
+  findAll(@Query('status', new ParseEnumPipe(ProjectStatus, { optional: true })) status?: ProjectStatus, @Query('search') search?: string) {
     return this.projects.findAll({ status, search });
   }
 

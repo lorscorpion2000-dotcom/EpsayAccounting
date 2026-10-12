@@ -1,11 +1,10 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { InventoryCountService } from './inventory-count.service';
 import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { InventoryCountStatus } from '@prisma/client';
 
 @ApiTags('Inventory Count - انبارگردانی')
 @ApiBearerAuth()
@@ -17,7 +16,7 @@ export class InventoryCountController {
   @RequirePermissions('inventory-count.read')
   list(
     @Query('warehouseId') warehouseId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(InventoryCountStatus, { optional: true })) status?: InventoryCountStatus,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) { return this.service.list({ warehouseId, status, fromDate, toDate }); }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FixedAssetsService } from './fixed-assets.service';
 import { CreateFixedAssetDto } from './dto/create-fixed-asset.dto';
@@ -9,6 +9,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { FixedAssetStatus } from '@prisma/client';
 
 @ApiTags('Fixed Assets - دارایی‌های ثابت')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class FixedAssetsController {
   @RequirePermissions('accounting.read')
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'projectId', required: false })
-  findAll(@Query('status') status?: string, @Query('projectId') projectId?: string) {
+  findAll(@Query('status', new ParseEnumPipe(FixedAssetStatus, { optional: true })) status?: FixedAssetStatus, @Query('projectId') projectId?: string) {
     return this.service.findAll({ status, projectId });
   }
 

@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ContributionsService } from './contributions.service';
 import { CreateContributionDto, UpdateContributionDto } from './dto/contribution.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { CapitalTransactionStatus } from '@prisma/client';
 
 @ApiTags('Capital Contributions - آورده شرکا')
 @ApiBearerAuth()
@@ -20,7 +21,7 @@ export class ContributionsController {
   findAll(
     @Query('partnerId') partnerId?: string,
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(CapitalTransactionStatus, { optional: true })) status?: CapitalTransactionStatus,
   ) { return this.s.findAll({ partnerId, projectId, status }); }
 
   @Get(':id')

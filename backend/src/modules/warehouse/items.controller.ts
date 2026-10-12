@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ItemsService } from './items.service';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -7,6 +7,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ItemType } from '@prisma/client';
 
 @ApiTags('Items - کالاها')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class ItemsController {
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'search', required: false })
   findAll(
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(ItemType, { optional: true })) type?: ItemType,
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
   ) { return this.s.findAll({ type, categoryId, search }); }

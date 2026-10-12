@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { EquipmentService } from './equipment.service';
 import {
@@ -10,6 +10,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { EquipmentLogStatus, EquipmentOwnership, EquipmentStatus, MaintenanceType } from '@prisma/client';;
 
 @ApiTags('Equipment - ماشین‌آلات و تجهیزات')
 @ApiBearerAuth()
@@ -25,8 +26,8 @@ export class EquipmentController {
   @RequirePermissions('equipment.read')
   list(
     @Query('search') search?: string,
-    @Query('ownership') ownership?: string,
-    @Query('status') status?: string,
+    @Query('ownership', new ParseEnumPipe(EquipmentOwnership, { optional: true })) ownership?: EquipmentOwnership,
+    @Query('status', new ParseEnumPipe(EquipmentStatus, { optional: true })) status?: EquipmentStatus,
     @Query('projectId') projectId?: string,
     @Query('isActive') isActive?: string,
   ) {
@@ -75,7 +76,7 @@ export class EquipmentController {
   listLogs(
     @Query('equipmentId') equipmentId?: string,
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(EquipmentLogStatus, { optional: true })) status?: EquipmentLogStatus,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) {
@@ -114,7 +115,7 @@ export class EquipmentController {
   listMaintenances(
     @Query('equipmentId') equipmentId?: string,
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(MaintenanceType, { optional: true })) type?: MaintenanceType,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) {

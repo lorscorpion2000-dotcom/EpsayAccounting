@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ClientStatementService } from './client-statement.service';
 import {
@@ -8,6 +6,7 @@ import {
 } from './dto/client-statement.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ClientStatementStatus } from '@prisma/client';
 
 @ApiTags('Client Statement')
 @ApiBearerAuth()
@@ -19,7 +18,7 @@ export class ClientStatementController {
   @RequirePermissions('client-statement.read')
   list(
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(ClientStatementStatus, { optional: true })) status?: ClientStatementStatus,
     @Query('search') search?: string,
   ) { return this.service.list({ projectId, status, search }); }
 

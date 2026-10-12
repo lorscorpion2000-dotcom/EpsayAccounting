@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
@@ -8,6 +8,7 @@ import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { EmployeeType } from '@prisma/client';
 
 @ApiTags('Employees - پرسنل')
 @ApiBearerAuth()
@@ -24,7 +25,7 @@ export class EmployeesController {
   @ApiQuery({ name: 'department', required: false })
   findAll(
     @Query('active') active?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(EmployeeType, { optional: true })) type?: EmployeeType,
     @Query('search') search?: string,
     @Query('department') department?: string,
   ) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { PettyCashRequestsService } from './requests.service';
 import { CreatePettyCashRequestDto } from './dto/create-request.dto';
@@ -6,6 +6,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { PettyCashRequestStatus } from '@prisma/client';
 
 @ApiTags('Petty Cash Requests - درخواست‌های شارژ')
 @ApiBearerAuth()
@@ -19,7 +20,7 @@ export class PettyCashRequestsController {
   @ApiQuery({ name: 'status', required: false })
   findAll(
     @Query('accountId') accountId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(PettyCashRequestStatus, { optional: true })) status?: PettyCashRequestStatus,
   ) {
     return this.service.findAll({ accountId, status });
   }

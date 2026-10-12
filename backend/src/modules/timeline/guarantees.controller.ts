@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { GuaranteesService } from './guarantees.service';
 import { CreateGuaranteeDto, UpdateGuaranteeDto } from './dto/guarantee.dto';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { GuaranteeType } from '@prisma/client';
 
 @ApiTags('Timeline Guarantees - تضامین')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class GuaranteesController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(GuaranteeType, { optional: true })) type?: GuaranteeType,
     @Query('search') search?: string,
   ) { return this.s.findAll({ projectId, type, search }); }
 

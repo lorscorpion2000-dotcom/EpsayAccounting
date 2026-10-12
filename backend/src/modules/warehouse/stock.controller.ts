@@ -1,7 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, ParseEnumPipe, Query } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { StockService } from './stock.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { MovementType } from '@prisma/client';
 
 @ApiTags('Stock - موجودی‌ها')
 @ApiBearerAuth()
@@ -30,7 +31,7 @@ export class StockController {
     @Query('itemId') itemId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(MovementType, { optional: true })) type?: MovementType,
   ) {
     return this.s.movements({ warehouseId, itemId, fromDate, toDate, type });
   }

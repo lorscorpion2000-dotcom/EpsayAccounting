@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './po.service';
 import { CreatePODto } from './dto/create-po.dto';
@@ -6,6 +6,7 @@ import { UpdatePODto } from './dto/update-po.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { POStatus } from '@prisma/client';
 
 @ApiTags('Purchase Orders - دستورات خرید')
 @ApiBearerAuth()
@@ -20,7 +21,7 @@ export class PurchaseOrdersController {
   @ApiQuery({ name: 'supplierId', required: false })
   @ApiQuery({ name: 'search', required: false })
   findAll(
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(POStatus, { optional: true })) status?: POStatus,
     @Query('projectId') projectId?: string,
     @Query('supplierId') supplierId?: string,
     @Query('search') search?: string,

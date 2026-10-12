@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ChequesService } from './cheques.service';
 import { CreateChequeDto } from './dto/create-cheque.dto';
@@ -8,6 +8,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { ChequeDirection, ChequeStatus } from '@prisma/client';
 
 @ApiTags('Cheques - چک‌ها')
 @ApiBearerAuth()
@@ -25,8 +26,8 @@ export class ChequesController {
   @ApiQuery({ name: 'fromDueDate', required: false })
   @ApiQuery({ name: 'toDueDate', required: false })
   findAll(
-    @Query('direction') direction?: string,
-    @Query('status') status?: string,
+    @Query('direction', new ParseEnumPipe(ChequeDirection, { optional: true })) direction?: ChequeDirection,
+    @Query('status', new ParseEnumPipe(ChequeStatus, { optional: true })) status?: ChequeStatus,
     @Query('partnerId') partnerId?: string,
     @Query('bankAccountId') bankAccountId?: string,
     @Query('fromDueDate') fromDueDate?: string,

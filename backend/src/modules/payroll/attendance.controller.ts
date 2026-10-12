@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { CreateAttendanceDto, BulkAttendanceDto } from './dto/attendance.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { AttendanceStatus } from '@prisma/client';
 
 @ApiTags('Attendance - حضور و غیاب')
 @ApiBearerAuth()
@@ -22,7 +23,7 @@ export class AttendanceController {
     @Query('employeeId') employeeId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(AttendanceStatus, { optional: true })) status?: AttendanceStatus,
   ) {
     return this.s.findAll({ employeeId, fromDate, toDate, status });
   }

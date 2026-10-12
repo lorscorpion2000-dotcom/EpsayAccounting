@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { InsurancesService } from './insurances.service';
 import { CreateInsuranceDto, UpdateInsuranceDto } from './dto/insurance.dto';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { InsuranceType } from '@prisma/client';
 
 @ApiTags('Timeline Insurances - بیمه‌نامه‌ها')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class InsurancesController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('type') type?: string,
+    @Query('type', new ParseEnumPipe(InsuranceType, { optional: true })) type?: InsuranceType,
     @Query('search') search?: string,
   ) { return this.s.findAll({ projectId, type, search }); }
 

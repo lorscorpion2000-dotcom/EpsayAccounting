@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PayrollPeriodsService } from './payroll-periods.service';
 import { PayrollCalculationService } from './payroll-calculation.service';
@@ -7,6 +7,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { PayrollPeriodStatus } from '@prisma/client';
 
 @ApiTags('Payroll Periods - دوره‌های حقوق')
 @ApiBearerAuth()
@@ -23,7 +24,7 @@ export class PayrollPeriodsController {
   @ApiQuery({ name: 'projectId', required: false })
   findAll(
     @Query('year') year?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(PayrollPeriodStatus, { optional: true })) status?: PayrollPeriodStatus,
     @Query('projectId') projectId?: string,
   ) {
     return this.s.findAll({

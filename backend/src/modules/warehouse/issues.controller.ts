@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IssuesService } from './issues.service';
 import { CreateIssueDto } from './dto/create-issue.dto';
@@ -8,6 +8,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { IssueStatus } from '@prisma/client';
 
 @ApiTags('Goods Issues - حواله‌های انبار')
 @ApiBearerAuth()
@@ -21,7 +22,7 @@ export class IssuesController {
   findAll(
     @Query('warehouseId') warehouseId?: string,
     @Query('projectId') projectId?: string,
-    @Query('status') status?: string,
+    @Query('status', new ParseEnumPipe(IssueStatus, { optional: true })) status?: IssueStatus,
   ) { return this.s.findAll({ warehouseId, projectId, status }); }
 
   @Get(':id')
