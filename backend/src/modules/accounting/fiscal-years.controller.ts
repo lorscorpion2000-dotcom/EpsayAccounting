@@ -6,6 +6,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Fiscal Years - سال‌های مالی')
 @ApiBearerAuth()
@@ -133,8 +134,8 @@ export class FiscalYearsController {
   @Get('deleted/list')
   @RequirePermissions('accounting.update')
   listDeleted(
-    @Query('take', new ParseIntPipe({ optional: true })) take?: number,
-    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
   ) {
     return this.softDelete.listDeleted({
       model: 'fiscalYear',
