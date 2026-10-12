@@ -49,6 +49,11 @@ import { HealthController } from './common/health/health.controller';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      envFilePath: ['.env.local', '.env'],
+    }),
     ThrottlerModule.forRoot([
       { ttl: 60_000, limit: 1000 },
     ]),
@@ -58,11 +63,6 @@ import { HealthController } from './common/health/health.controller';
     NotificationModule,
     BackupModule,
     AuditModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configuration],
-      envFilePath: ['.env.local', '.env'],
-    }),
     PrismaModule,
     UploadModule,
     AttachmentsModule,

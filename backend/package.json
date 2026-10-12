@@ -14,7 +14,8 @@
     "test:coverage": "node --test test/permissions-coverage.test.mjs",
     "test:all": "npm run test && npm run test:coverage",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:e2e": "node --require ts-node/register/transpile-only --test \"test/e2e/*.test.ts\""
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",
@@ -59,8 +60,10 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/qrcode": "^1.5.6",
+    "@types/supertest": "^7.2.1",
     "eslint": "^9.39.5",
     "prisma": "^5.20.0",
+    "supertest": "^7.3.1",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
