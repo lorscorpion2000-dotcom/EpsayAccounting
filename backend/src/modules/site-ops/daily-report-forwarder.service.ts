@@ -278,12 +278,10 @@ export class DailyReportForwarderService {
           // همچنین ثبت در Attendance برای نمایش در گرید ماهانه و محاسبه حقوق
           try {
             const attStatus = this.mapAttendanceStatus(row.status);
-            const existingAtt = await this.prisma.attendance.findUnique({
+            const existingAtt = await this.prisma.attendance.findFirst({
               where: {
-                employeeId_attendanceDate: {
-                  employeeId: row.employeeId,
-                  attendanceDate: report.reportDate,
-                },
+                employeeId: row.employeeId,
+                attendanceDate: report.reportDate,
               },
             });
 
