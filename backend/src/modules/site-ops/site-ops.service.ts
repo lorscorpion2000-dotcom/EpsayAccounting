@@ -3,7 +3,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateDailyReportDto } from './dto/create-report.dto';
 import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { DailyReportSectionsService } from './daily-report-sections.service';
-import { generateCode } from '../../shared/utils/code-generator';
+import { generateCode, withUniqueRetry } from '../../shared/utils/code-generator';
 import * as jalaali from 'jalaali-js';
 
 @Injectable()
@@ -154,16 +154,16 @@ export class SiteOpsService {
     });
     if (!project) throw new BadRequestException('پروژه یافت نشد');
 
-    const code = await this.generateCode(dto.projectId);
     const reportDate = new Date(dto.reportDate);
 
+    // چک تکراری (پروژه + تاریخ) قبل از هر تلاش
     const exists = await this.prisma.dailyReport.findFirst({
       where: { projectId: dto.projectId, reportDate },
     });
     if (exists) throw new BadRequestException('برای این پروژه در این تاریخ گزارش ثبت شده است');
 
-    const data: any = {
-      code,
+    // داده‌های پایه یک‌بار ساخته می‌شوند
+    const baseData: any = {
       projectId: dto.projectId,
       reportDate,
       weather: dto.weather as any,
@@ -178,20 +178,25 @@ export class SiteOpsService {
       createdById: userId,
     };
 
-    if (dto.workers?.length) data.workers = { create: this.buildWorkers(dto.workers) };
-    if (dto.equipments?.length) data.equipments = { create: this.buildEquipments(dto.equipments) };
-    if (dto.materials?.length) data.materials = { create: this.buildMaterials(dto.materials) };
-    if (dto.progresses?.length) data.progresses = { create: this.buildProgresses(dto.progresses) };
-    if (dto.requests?.length) data.requests = { create: this.buildRequests(dto.requests) };
-    if (dto.events?.length) data.events = { create: this.buildEvents(dto.events) };
+    if (dto.workers?.length) baseData.workers = { create: this.buildWorkers(dto.workers) };
+    if (dto.equipments?.length) baseData.equipments = { create: this.buildEquipments(dto.equipments) };
+    if (dto.materials?.length) baseData.materials = { create: this.buildMaterials(dto.materials) };
+    if (dto.progresses?.length) baseData.progresses = { create: this.buildProgresses(dto.progresses) };
+    if (dto.requests?.length) baseData.requests = { create: this.buildRequests(dto.requests) };
+    if (dto.events?.length) baseData.events = { create: this.buildEvents(dto.events) };
 
-    const created = await this.prisma.dailyReport.create({
-      data,
-      include: {
-        workers: true, equipments: true, materials: true, progresses: true,
-        requests: true, events: true,
-      },
-    });
+    // B-race-fix: اگر بین generateCode و create، کاربر دیگری همان کد را بگیرد،
+    // با P2002 روبرو می‌شویم. withUniqueRetry کد را دوباره می‌سازد و تلاش می‌کند.
+    const created = await withUniqueRetry(async () => {
+      const code = await this.generateCode(dto.projectId);
+      return this.prisma.dailyReport.create({
+        data: { ...baseData, code },
+        include: {
+          workers: true, equipments: true, materials: true, progresses: true,
+          requests: true, events: true,
+        },
+      });
+    }, 5);
 
     // ساخت ۹ بخش اولیه
     await this.sections.initSections(created.id);
