@@ -144,6 +144,13 @@ const ClientStatementsListPage   = lazy(() => import('@/modules/client-statement
 const ClientStatementFormPage   = lazy(() => import('@/modules/client-statement/pages/ClientStatementFormPage'));
 const ClientStatementDetailPage = lazy(() => import('@/modules/client-statement/pages/ClientStatementDetailPage'));
 
+
+// Expense (F15)
+const ExpensesListPage          = lazy(() => import('@/modules/expenses/pages/ExpensesListPage'));
+const ExpenseFormPage           = lazy(() => import('@/modules/expenses/pages/ExpenseFormPage'));
+const ExpenseDetailPage         = lazy(() => import('@/modules/expenses/pages/ExpenseDetailPage'));
+const ExpenseCategoriesPage     = lazy(() => import('@/modules/expenses/pages/ExpenseCategoriesPage'));
+
 // WIP
 const WipReportPage = lazy(() => import('@/modules/wip/pages/WipReportPage'));
 const SCurvePage    = lazy(() => import('@/modules/wip/pages/SCurvePage'));
@@ -356,6 +363,13 @@ export default function AppRouter() {
         <Route path="/client-statements/new" element={<ClientStatementFormPage />} />
         <Route path="/client-statements/:id" element={<ClientStatementDetailPage />} />
         <Route path="/client-statements/:id/edit" element={<ClientStatementFormPage />} />
+        {/* Expenses (F15) */}
+        <Route path="/expenses" element={<ExpensesListPage />} />
+        <Route path="/expenses/new" element={<ExpenseFormPage />} />
+        <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
+        <Route path="/expenses/:id/edit" element={<ExpenseFormPage />} />
+        <Route path="/settings/expense-categories" element={<ExpenseCategoriesPage />} />
+
 
         {/* WIP */}
         <Route path="/wip" element={<WipReportPage />} />

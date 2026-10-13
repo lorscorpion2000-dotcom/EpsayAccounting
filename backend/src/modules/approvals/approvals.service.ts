@@ -4,6 +4,7 @@ import { SiteOpsService } from '../site-ops/site-ops.service';
 import { SubcontractorStatementsService } from '../payroll/subcontractor-statements.service';
 import { WorkerStatementsService } from '../payroll/worker-statements.service';
 import { ClientStatementService } from '../client-statement/client-statement.service';
+import { ExpensesService } from '../expenses/expenses.service';
 
 @Injectable()
 export class ApprovalsService {
@@ -13,6 +14,7 @@ export class ApprovalsService {
     private subcontractorStatements: SubcontractorStatementsService,
     private workerStatements: WorkerStatementsService,
     private clientStatements: ClientStatementService,
+    private expenses: ExpensesService,
   ) {}
 
   /**
@@ -63,6 +65,7 @@ export class ApprovalsService {
       advanceRequests,
       clientStatementsPending,
       workerStatementsPending,
+      expensesPending,
     ] = await Promise.all([
       this.prisma.pettyCashTransaction.findMany({
         where: { status: 'SUBMITTED' },
@@ -186,6 +189,16 @@ export class ApprovalsService {
           partner: { select: { id: true, code: true, name: true } },
           project: { select: { id: true, code: true, name: true } },
           _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.expense.findMany({
+        where: { status: 'SUBMITTED', deletedAt: null },
+        include: {
+          category: { select: { id: true, code: true, name: true } },
+          project: { select: { id: true, code: true, name: true } },
+          supplier: { select: { id: true, code: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -400,6 +413,25 @@ export class ApprovalsService {
         createdAt: s.createdAt,
         raw: s,
       })),
+
+      expenses: expensesPending.map((e) => ({
+        id: e.id,
+        module: 'expense',
+        type: 'EXPENSE',
+        code: e.code,
+        title: 'هزینه ' + (e.category?.name || ''),
+        description: (e.description || '').slice(0, 120),
+        amount: Number(e.totalAmount),
+        date: e.expenseDate,
+        status: e.status,
+        requester: e.supplier?.name || '—',
+        supplierName: e.supplier?.name || null,
+        projectName: e.project?.name || null,
+        projectCode: e.project?.code,
+        categoryName: e.category?.name || null,
+        createdAt: e.createdAt,
+        raw: e,
+      })),
     };
   }
 
@@ -416,6 +448,7 @@ export class ApprovalsService {
       advanceRequestCount,
       clientStatementCount,
       workerStatementCount,
+      expenseCount,
       pettyCashTxAmount,
       pettyCashReqAmount,
       purchaseOrderAmount,
@@ -431,6 +464,7 @@ export class ApprovalsService {
       this.prisma.advanceRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.workerStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.expense.count({ where: { status: 'SUBMITTED', deletedAt: null } }),
       this.prisma.pettyCashTransaction.aggregate({
         where: { status: 'SUBMITTED' },
         _sum: { amount: true },
@@ -502,6 +536,11 @@ export class ApprovalsService {
           count: workerStatementCount,
           amount: 0,
         },
+
+        expenses: {
+          count: expenseCount,
+          amount: 0,
+        },
       },
     };
   }
@@ -546,7 +585,10 @@ export class ApprovalsService {
 
       case 'worker-statement':
         // F13: delegate to service (approve + JE)
-        return this.workerStatements.approve(id, userId);
+        return this.workerStatements.approve(id, userId);      case 'expense':
+        return this.expenses.approve(id, userId);
+
+
 
       case 'leave-request':
         return this.prisma.leaveRequest.update({
@@ -620,6 +662,9 @@ export class ApprovalsService {
 
       case 'worker-statement':
         return this.workerStatements.reject(id, reason);
+
+      case 'expense':
+        return this.expenses.reject(id, reason, userId);
 
       default:
         throw new Error('ماژول نامعتبر: ' + module);

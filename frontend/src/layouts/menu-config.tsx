@@ -130,6 +130,8 @@ const MENU: MenuSection[] = [
     items: [
       { to: '/accounting/cheques', label: 'چک‌ها', icon: FileCheck2 },
       { to: '/petty-cash', label: 'تنخواه و هزینه‌های جاری', icon: Wallet },
+      { to: '/expenses',                    label: 'هزینه‌ها',                icon: ReceiptText },
+      { to: '/settings/expense-categories', label: 'دسته‌بندی هزینه‌ها',       icon: FolderTree },
       { to: '/accounting/reports/cash-flow', label: 'جریان نقدی', icon: Wallet },
     ],
   },

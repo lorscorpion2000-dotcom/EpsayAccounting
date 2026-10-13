@@ -34,6 +34,7 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
 import { PriceListModule } from './modules/price-list/price-list.module';
 import { OverheadModule } from './modules/overhead/overhead.module';
 import { ClientStatementModule } from './modules/client-statement/client-statement.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
 import { WipModule } from './modules/wip/wip.module';
 import { DataIoModule } from './modules/data-io/data-io.module';
 import { MaterialReportModule } from './modules/material-report/material-report.module';
@@ -49,6 +50,7 @@ import { HealthController } from './common/health/health.controller';
 
 @Module({
   imports: [
+    ExpensesModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],

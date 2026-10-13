@@ -1,5 +1,6 @@
 // F13: resolve partner-specific DETAIL accounts (per-partner payable/employee)
 // و resolve پیش‌فرض برای حساب‌های عمومی (VAT, Insurance, Retainage)
+import { AccountLevel, AccountNature, AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type PartnerNature = 'DEBIT' | 'CREDIT';
@@ -46,12 +47,12 @@ export async function resolvePartnerDetailAccount(
     data: {
       code: nextCode,
       name: partner.name,
-      level: 'DETAIL' as any,
-      nature: nature as any,
+      level: AccountLevel.DETAIL,
+      nature: nature as AccountNature,
       parentId: parent.id,
       isPostable: true,
       isActive: true,
-      detailType: detailType as any,
+      detailType: detailType as AccountDetailType,
       detailId: partner.id,
     },
   });

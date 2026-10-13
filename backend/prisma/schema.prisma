@@ -50,24 +50,24 @@ enum SalesReceiptMethod {
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  username     String    @unique @db.VarChar(64)
-  email        String?   @unique @db.VarChar(128)
-  mobile       String?   @unique @db.VarChar(20)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  fullName     String    @map("full_name") @db.VarChar(128)
-  nationalCode String?   @map("national_code") @db.VarChar(10)
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLoginAt         DateTime? @map("last_login_at")
-  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
-  lockedUntil         DateTime? @map("locked_until")
-  mustChangePassword  Boolean   @default(false) @map("must_change_password")
-  twoFactorEnabled    Boolean   @default(false) @map("two_factor_enabled")
-  twoFactorSecret     String?   @map("two_factor_secret") @db.Text
-  twoFactorRecoveryCodes Json?  @map("two_factor_recovery_codes")
-  twoFactorEnabledAt  DateTime? @map("two_factor_enabled_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id                     String    @id @default(uuid()) @db.Uuid
+  username               String    @unique @db.VarChar(64)
+  email                  String?   @unique @db.VarChar(128)
+  mobile                 String?   @unique @db.VarChar(20)
+  passwordHash           String    @map("password_hash") @db.VarChar(255)
+  fullName               String    @map("full_name") @db.VarChar(128)
+  nationalCode           String?   @map("national_code") @db.VarChar(10)
+  isActive               Boolean   @default(true) @map("is_active")
+  lastLoginAt            DateTime? @map("last_login_at")
+  failedLoginAttempts    Int       @default(0) @map("failed_login_attempts")
+  lockedUntil            DateTime? @map("locked_until")
+  mustChangePassword     Boolean   @default(false) @map("must_change_password")
+  twoFactorEnabled       Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret        String?   @map("two_factor_secret") @db.Text
+  twoFactorRecoveryCodes Json?     @map("two_factor_recovery_codes")
+  twoFactorEnabledAt     DateTime? @map("two_factor_enabled_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   roles                       UserRole[]
   pettyCashAccountsAsHolder   PettyCashAccount[]       @relation("PCHolder")
@@ -86,16 +86,18 @@ model User {
   themePreference             String?                  @map("theme_preference") @db.VarChar(64)
 
   attachmentsUploaded Attachment[] @relation("AttachmentUploader")
+  expensesCreated     Expense[]    @relation("ExpenseCreator")
+  expensesApproved    Expense[]    @relation("ExpenseApprover")
 
   purchasingOfficerFor   Project[]       @relation("ProjectPurchasingOfficer")
   purchaseOrdersAssigned PurchaseOrder[] @relation("POAssignedTo")
   notifications          Notification[]
 
-  @@index([isActive])
-  @@map("users")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([isActive])
+  @@map("users")
 }
 
 model Role {
@@ -110,10 +112,10 @@ model Role {
   users       UserRole[]
   permissions RolePermission[]
 
-  @@map("roles")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@map("roles")
 }
 
 model Permission {
@@ -222,6 +224,7 @@ model Partner {
   capitalWithdrawals               PartnerCapitalWithdrawal[]
   pettyCashAccountsAsPartnerHolder PettyCashAccount[]           @relation("PCPartnerHolder")
   cheques                          Cheque[]                     @relation("ChequePartner")
+  expensesAsSupplier               Expense[]                    @relation("ExpenseSupplier")
   purchaseInvoices                 PurchaseInvoice[]            @relation("PurchaseInvoiceSupplier")
   supplierPayments                 SupplierPayment[]            @relation("SupplierPaymentSupplier")
   salesInvoicesAsPartner           SalesInvoice[]               @relation("SIPartner")
@@ -229,13 +232,13 @@ model Partner {
   // Equipment relations
   equipmentAsOwner                 Equipment[]                  @relation("EquipmentOwner")
   equipmentLogsAsOperator          EquipmentDailyLog[]          @relation("EquipmentLogOperator")
-
-  @@index([type])
-  @@map("partners")
-  workerContractorReports DailyReportWorker[] @relation("WorkerContractor")
+  workerContractorReports          DailyReportWorker[]          @relation("WorkerContractor")
 
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([type])
+  @@map("partners")
 }
 
 // ============================================================
@@ -337,14 +340,15 @@ model Project {
   wbsProgressSnapshots    WbsProgressSnapshot[]    @relation("WbsProgressProject")
   adjustmentCalculations  AdjustmentCalculation[]  @relation("AdjustmentProject")
   materialPriceDiffs      MaterialPriceDiff[]      @relation("MPDProject")
+  expenses                Expense[]                @relation("ExpenseProject")
+  employees               EmployeeProfile[]        @relation("EmployeeProject")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([status])
   @@index([clientId])
   @@map("projects")
-  employees EmployeeProfile[] @relation("EmployeeProject")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -401,12 +405,12 @@ model Contract {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([status])
   @@map("contracts")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -427,11 +431,11 @@ model Unit {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([isActive])
-  @@map("units")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([isActive])
+  @@map("units")
 }
 
 enum WbsLevel {
@@ -480,6 +484,7 @@ model WbsItem {
   priceListItem        PriceListItem?        @relation("WbsPriceListItem", fields: [priceListItemId], references: [id], onDelete: SetNull)
   clientStatementItems ClientStatementItem[] @relation("ClientStatementItemWbs")
   progressSnapshots    WbsProgressSnapshot[] @relation("WbsProgressItem")
+  expenses             Expense[]             @relation("ExpenseWbs")
 
   @@index([projectId])
   @@index([parentId])
@@ -573,6 +578,9 @@ model Account {
   fixedAssetsAsAccumulatedDeprec FixedAsset[]          @relation("FixedAssetAccumGL")
   purchaseInvoiceItems           PurchaseInvoiceItem[] @relation("PIItemAccount")
   salesInvoiceItems              SalesInvoiceItem[]    @relation("SIItemAccount")
+  expenseCategories              ExpenseCategory[]     @relation("ExpenseCategoryAccount")
+  expensesAsPayFrom              Expense[]             @relation("ExpensePayFrom")
+  expensesAsDr                   Expense[]             @relation("ExpenseAccountDr")
 
   @@index([parentId])
   @@index([level])
@@ -601,10 +609,10 @@ model FiscalYear {
   journalEntries      JournalEntry[]
   overheadAllocations OverheadAllocation[] @relation("OverheadFiscalYear")
 
-  @@map("fiscal_years")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@map("fiscal_years")
 }
 
 enum JournalStatus {
@@ -660,6 +668,7 @@ model JournalEntry {
   clientStatements       ClientStatement[]      @relation("ClientStatementJE")
   adjustmentCalculation  AdjustmentCalculation? @relation("AdjustmentJE")
   materialPriceDiff      MaterialPriceDiff?     @relation("MPDJE")
+  expenses               Expense[]              @relation("ExpenseJournal")
 
   @@unique([fiscalYearId, entryNumber])
   @@index([entryDate])
@@ -748,14 +757,14 @@ model Cheque {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([direction])
   @@index([status])
   @@index([dueDate])
   @@index([partnerId])
   @@map("cheques")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model CostCenter {
@@ -777,6 +786,7 @@ model CostCenter {
 
   journalLines JournalLine[]
   fixedAssets  FixedAsset[]  @relation("FixedAssetCostCenter")
+  expenses     Expense[]     @relation("ExpenseCostCenter")
 
   @@index([parentId])
   @@index([projectId])
@@ -887,12 +897,12 @@ model PettyCashAccount {
   transactions PettyCashTransaction[]
   requests     PettyCashRequest[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([holderId])
   @@index([projectId])
   @@map("petty_cash_accounts")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model PettyCashTransaction {
@@ -1257,11 +1267,11 @@ model Warehouse {
   transfersFrom   WarehouseTransfer[] @relation("TransferFrom")
   transfersTo     WarehouseTransfer[] @relation("TransferTo")
 
-  @@index([isActive])
-  @@map("warehouses")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([isActive])
+  @@map("warehouses")
 }
 
 model ItemCategory {
@@ -1278,10 +1288,10 @@ model ItemCategory {
 
   items Item[]
 
-  @@map("item_categories")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@map("item_categories")
 }
 
 model Item {
@@ -1307,12 +1317,12 @@ model Item {
   inventoryCountItems InventoryCountItem[]    @relation("InvCountItem")
   transferItems       WarehouseTransferItem[] @relation("TransferItem")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([type])
   @@index([categoryId])
   @@map("items")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model Stock {
@@ -1389,21 +1399,21 @@ model GoodsReceipt {
   totalLoading   Decimal @default(0) @map("total_loading") @db.Decimal(24, 2)
   grandTotal     Decimal @default(0) @map("grand_total") @db.Decimal(24, 2)
 
-  createdById String?  @map("created_by_id") @db.Uuid
-  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy   User?   @relation(fields: [createdById], references: [id])
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   items            GoodsReceiptItem[]
   purchaseInvoices PurchaseInvoice[]  @relation("PIFromGR")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([warehouseId])
   @@index([status])
   @@map("goods_receipts")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model GoodsReceiptItem {
@@ -1463,12 +1473,12 @@ model GoodsIssue {
 
   items GoodsIssueItem[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([warehouseId])
   @@index([status])
   @@map("goods_issues")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model GoodsIssueItem {
@@ -1559,18 +1569,18 @@ model DailyReport {
   equipments  DailyReportEquipment[]
   materials   DailyReportMaterial[]
   progresses  DailyReportProgress[]
-requests    DailyReportRequest[]
+  requests    DailyReportRequest[]
   events      DailyReportEvent[]
   sections    DailyReportSection[]
   attachments DailyReportAttachment[]
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([projectId, reportDate])
   @@index([reportDate])
   @@index([status])
   @@map("daily_reports")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -2004,12 +2014,12 @@ model EmployeeProfile {
 
   payrollRecords PayrollRecord[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([isActive])
   @@index([employeeType])
   @@map("employee_profiles")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model PayrollPeriod {
@@ -2045,12 +2055,12 @@ model PayrollPeriod {
 
   records PayrollRecord[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([year, month, projectId])
   @@index([status])
   @@map("payroll_periods")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model PayrollRecord {
@@ -2101,13 +2111,13 @@ model PayrollRecord {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([periodId, employeeId])
   @@index([periodId])
   @@index([employeeId])
   @@map("payroll_records")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model Attendance {
@@ -2153,12 +2163,12 @@ model DailyWorkLog {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([employeeId, workDate])
   @@index([workDate])
   @@map("daily_work_logs")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model LeaveRequest {
@@ -2183,12 +2193,12 @@ model LeaveRequest {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([employeeId])
   @@index([status])
   @@map("leave_requests")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model AdvanceRequest {
@@ -2213,12 +2223,12 @@ model AdvanceRequest {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([employeeId])
   @@index([status])
   @@map("advance_requests")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model SubcontractorStatement {
@@ -2497,13 +2507,13 @@ model Permit {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([status])
   @@index([expiryDate])
   @@map("permits")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 enum InsuranceType {
@@ -2538,12 +2548,12 @@ model Insurance {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([expiryDate])
   @@map("insurances")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 enum GuaranteeType {
@@ -2575,12 +2585,12 @@ model Guarantee {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([expiryDate])
   @@map("guarantees")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 enum DocumentType {
@@ -2617,12 +2627,12 @@ model TechnicalDocument {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([type])
   @@map("technical_documents")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 enum ChecklistType {
@@ -2667,13 +2677,13 @@ model PhaseChecklist {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([status])
   @@index([checklistDate])
   @@map("phase_checklists")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2878,12 +2888,12 @@ model SalesUnit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([projectId, unitNumber, block])
   @@index([projectId])
   @@index([status])
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model SalesCustomer {
@@ -2906,10 +2916,10 @@ model SalesCustomer {
   salesInvoices SalesInvoice[] @relation("SIFromCustomer")
   salesReceipts SalesReceipt[] @relation("SRFromCustomer")
 
-  @@index([fullName])
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([fullName])
 }
 
 model SalesContract {
@@ -2944,13 +2954,13 @@ model SalesContract {
   updatedAt     DateTime       @updatedAt
   salesInvoices SalesInvoice[] @relation("SIFromContract")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([code])
   @@index([status])
   @@index([customerId])
   @@index([unitId])
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model SalesInstallment {
@@ -3094,13 +3104,13 @@ model FixedAsset {
 
   depreciationEntries DepreciationEntry[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([status])
   @@index([projectId])
   @@index([acquisitionDate])
   @@map("fixed_assets")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model DepreciationEntry {
@@ -3311,13 +3321,13 @@ model SalesInvoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([customerId])
   @@index([contractId])
   @@index([status])
   @@map("sales_invoices")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model SalesInvoiceItem {
@@ -3438,13 +3448,13 @@ model Equipment {
   maintenances     EquipmentMaintenance[]
   dailyReportLinks DailyReportEquipment[] @relation("DailyReportEquipmentLink")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([ownership])
   @@index([status])
   @@index([currentProjectId])
   @@map("equipment")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model EquipmentDailyLog {
@@ -3488,14 +3498,14 @@ model EquipmentDailyLog {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([equipmentId, logDate, shift])
   @@index([logDate])
   @@index([projectId])
   @@index([status])
   @@map("equipment_daily_logs")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model EquipmentMaintenance {
@@ -3525,12 +3535,12 @@ model EquipmentMaintenance {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([equipmentId])
   @@index([maintenanceDate])
   @@map("equipment_maintenances")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 // ============================================================
@@ -3558,12 +3568,12 @@ model PriceList {
 
   items PriceListItem[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([year])
   @@index([status])
   @@map("price_lists")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model PriceListItem {
@@ -3627,12 +3637,12 @@ model OverheadAllocation {
 
   items OverheadAllocationItem[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([fiscalYearId, periodMonth])
   @@index([status])
   @@map("overhead_allocations")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model OverheadAllocationItem {
@@ -3753,7 +3763,6 @@ model ClientStatementItem {
 // ============================================================
 // SITE OPERATIONS v2 — sections و، ز، ح، ط
 // ============================================================
-
 
 model DailyReportRequest {
   id       String      @id @default(uuid()) @db.Uuid
@@ -3966,12 +3975,12 @@ model AdjustmentIndex {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([year, month, category])
   @@index([category])
   @@map("adjustment_indices")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model AdjustmentCalculation {
@@ -4108,13 +4117,13 @@ model WorkerStatement {
 
   items WorkerStatementItem[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([partnerId, periodStart, periodEnd])
   @@index([status])
   @@index([partnerId])
   @@map("worker_statements")
-
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
 }
 
 model WorkerStatementItem {
@@ -4135,11 +4144,11 @@ model WorkerStatementItem {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([statementId])
-  @@map("worker_statement_items")
-
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
+
+  @@index([statementId])
+  @@map("worker_statement_items")
 }
 
 // ============================================================
@@ -4230,4 +4239,116 @@ model JournalDeletionLog {
   @@index([deletedAt])
   @@index([deletedBy])
   @@map("journal_deletion_logs")
+}
+
+// ═══════════════════════════════════════════════
+// F15: Expense module
+// ═══════════════════════════════════════════════
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  POSTED
+  REJECTED
+  CANCELLED
+}
+
+enum ExpensePayFromType {
+  BANK
+  CASH
+  PETTY_CASH
+}
+
+model ExpenseCategory {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @db.VarChar(32)
+  name String @db.VarChar(200)
+
+  parentId String?           @map("parent_id") @db.Uuid
+  parent   ExpenseCategory?  @relation("ECParent", fields: [parentId], references: [id])
+  children ExpenseCategory[] @relation("ECParent")
+
+  accountId String?  @map("account_id") @db.Uuid
+  account   Account? @relation("ExpenseCategoryAccount", fields: [accountId], references: [id])
+
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([parentId])
+  @@index([isActive])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(32)
+  expenseDate DateTime @map("expense_date") @db.Date
+
+  categoryId String          @map("category_id") @db.Uuid
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  projectId String?  @map("project_id") @db.Uuid
+  project   Project? @relation("ExpenseProject", fields: [projectId], references: [id])
+
+  wbsItemId String?  @map("wbs_item_id") @db.Uuid
+  wbsItem   WbsItem? @relation("ExpenseWbs", fields: [wbsItemId], references: [id])
+
+  costCenterId String?     @map("cost_center_id") @db.Uuid
+  costCenter   CostCenter? @relation("ExpenseCostCenter", fields: [costCenterId], references: [id])
+
+  supplierId String?  @map("supplier_id") @db.Uuid
+  supplier   Partner? @relation("ExpenseSupplier", fields: [supplierId], references: [id])
+
+  amount      Decimal @db.Decimal(20, 2)
+  taxAmount   Decimal @default(0) @map("tax_amount") @db.Decimal(20, 2)
+  totalAmount Decimal @map("total_amount") @db.Decimal(20, 2)
+
+  description String @db.VarChar(500)
+
+  payFromType      ExpensePayFromType @map("pay_from_type")
+  payFromAccountId String             @map("pay_from_account_id") @db.Uuid
+  payFromAccount   Account            @relation("ExpensePayFrom", fields: [payFromAccountId], references: [id])
+
+  expenseAccountId String  @map("expense_account_id") @db.Uuid
+  expenseAccount   Account @relation("ExpenseAccountDr", fields: [expenseAccountId], references: [id])
+
+  status ExpenseStatus @default(DRAFT)
+
+  approvedById   String?   @map("approved_by_id") @db.Uuid
+  approvedBy     User?     @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  approvedAt     DateTime? @map("approved_at")
+  rejectedReason String?   @map("rejected_reason") @db.VarChar(500)
+  rejectedById   String?   @map("rejected_by_id") @db.Uuid
+  rejectedAt     DateTime? @map("rejected_at")
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("ExpenseJournal", fields: [journalEntryId], references: [id])
+
+  attachmentUrl String? @map("attachment_url") @db.VarChar(500)
+  invoiceNumber String? @map("invoice_number") @db.VarChar(64)
+  notes         String? @db.VarChar(500)
+
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy   User?   @relation("ExpenseCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([status])
+  @@index([projectId])
+  @@index([categoryId])
+  @@index([expenseDate])
+  @@map("expenses")
 }
