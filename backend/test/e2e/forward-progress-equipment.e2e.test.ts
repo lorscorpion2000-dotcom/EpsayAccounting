@@ -10,7 +10,6 @@ let prisma: any;
 let adminToken: string;
 let svToken: string;
 let svUserId: string;
-let adminUserId: string;
 let projectId: string;
 let wbsItemId: string;
 let equipmentId: string;
@@ -139,7 +138,6 @@ before(async () => {
       roles: { create: [{ roleId: superRole.id }] },
     },
   });
-  adminUserId = admin.id;
   createdAdminId = admin.id;
 
   const adminLogin = await request(app.getHttpServer())
