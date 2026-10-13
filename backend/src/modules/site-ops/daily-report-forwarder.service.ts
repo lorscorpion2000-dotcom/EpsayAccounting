@@ -95,8 +95,8 @@ export class DailyReportForwarderService {
       case 'WORKERS': {
         const kind = String(row.kind || 'OWN').toUpperCase();
         if (kind === 'CONTRACTOR') {
-          if (!row.contractorId) return [{ type: 'OTHER' }];
-          return [{ type: 'SUBCONTRACTOR_LABOR' }];
+          // پرسنل پیمانکار: فقط در گزارش ذخیره می‌شود — سندی ساخته نمی‌شود (تنها در چاپ دیده می‌شود)
+          return [{ type: 'OTHER', archived: true }];
         }
         if (!row.employeeId) return [{ type: 'OTHER' }];
         return [{ type: 'PAYROLL_ATTENDANCE' }];
@@ -316,112 +316,6 @@ export class DailyReportForwarderService {
             this.logger?.warn?.('[forwarder] attendance sync failed: ' + e?.message);
           }
 
-          break;
-        }
-
-        // ═══ پرسنل پیمانکار (ثبت در صورت‌وضعیت پیمانکار) ═══
-        case 'SUBCONTRACTOR_LABOR': {
-          if (!report.projectId) throw new Error('گزارش بدون پروژه — برای صورت‌وضعیت پیمانکار پروژه الزامی است');
-          if (!row.contractorId) throw new Error('پیمانکار مشخص نشده');
-
-          const workHours = Number(row.workHours) || 0;
-          const workersCount = Number(row.workerCount) || 0;
-          const totalHours = workHours * workersCount;
-          const rate = Number(row.contractorRate) || 0;
-          const totalAmount = totalHours * rate;
-
-          // یک صورت‌وضعیت باز برای این پیمانکار در این ماه پیدا یا بساز
-          const reportDate = new Date(report.reportDate);
-          const monthStart = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
-          const monthEnd = new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 0);
-
-          let statement = await this.prisma.subcontractorStatement.findFirst({
-            where: {
-              contractorId: row.contractorId,
-              projectId: report.projectId,
-              periodStart: monthStart,
-              periodEnd: monthEnd,
-              status: { in: ['DRAFT', 'SUBMITTED'] },
-            },
-          });
-
-          const itemDescription = (row.teamName || 'اکیپ') +
-            (row.description ? ' — ' + row.description : '') +
-            ' (گزارش ' + report.code + ')';
-
-          if (statement) {
-            // اضافه کردن آیتم جدید
-            const maxRow = await this.prisma.subcontractorStatementItem.aggregate({
-              where: { statementId: statement.id },
-              _max: { rowNumber: true },
-            });
-            const nextRow = (maxRow._max.rowNumber || 0) + 1;
-
-            await this.prisma.subcontractorStatementItem.create({
-              data: {
-                statementId: statement.id,
-                rowNumber: nextRow,
-                wbsItemId: row.wbsItemId || null,
-                description: itemDescription,
-                unit: 'ساعت-نفر',
-                quantity: totalHours,
-                unitPrice: rate,
-                totalPrice: totalAmount,
-                notes: 'نفرات: ' + workersCount + ' × ' + workHours + ' ساعت',
-              },
-            });
-
-            // بروزرسانی جمع
-            const items = await this.prisma.subcontractorStatementItem.findMany({
-              where: { statementId: statement.id },
-            });
-            const newTotal = items.reduce((s: any, it: any) => s + Number(it.totalPrice), 0);
-            await this.prisma.subcontractorStatement.update({
-              where: { id: statement.id },
-              data: { totalAmount: newTotal },
-            });
-
-            targetId = statement.id;
-            targetCode = statement.code;
-            targetModel = 'SubcontractorStatement';
-          } else {
-            // ساخت صورت‌وضعیت جدید
-            const code = await this.genCode('subcontractorStatement', 'SS', 'code');
-            const statementNumber = await this.prisma.subcontractorStatement.count({
-              where: { projectId: report.projectId },
-            }) + 1;
-
-            const created = await this.prisma.subcontractorStatement.create({
-              data: {
-                code,
-                contractorId: row.contractorId,
-                projectId: report.projectId,
-                statementNumber,
-                periodStart: monthStart,
-                periodEnd: monthEnd,
-                totalAmount: totalAmount,
-                status: 'DRAFT' as any,
-                description: 'صورت‌وضعیت خودکار از گزارش‌های روزانه',
-                createdById: report.createdById || null,
-                items: {
-                  create: [{
-                    rowNumber: 1,
-                    wbsItemId: row.wbsItemId || null,
-                    description: itemDescription,
-                    unit: 'ساعت-نفر',
-                    quantity: totalHours,
-                    unitPrice: rate,
-                    totalPrice: totalAmount,
-                    notes: 'نفرات: ' + workersCount + ' × ' + workHours + ' ساعت',
-                  }],
-                },
-              },
-            });
-
-            targetId = created.id;
-            targetCode = created.code;
-            targetModel = 'SubcontractorStatement';
-          }
           break;
         }
 
