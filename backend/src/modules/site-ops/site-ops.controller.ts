@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SiteOpsService } from './site-ops.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
@@ -28,6 +28,19 @@ export class SiteOpsController {
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
   ) { return this.s.findAll({ projectId, status, fromDate, toDate }); }
+
+  @Get('suggested-workers')
+  @RequirePermissions('site-ops.read')
+  @ApiQuery({ name: 'year', required: true, description: 'سال شمسی، مثال 1405' })
+  @ApiQuery({ name: 'month', required: true, description: 'ماه شمسی 1 تا 12' })
+  @ApiQuery({ name: 'projectId', required: false })
+  suggestedWorkers(
+    @Query('year', ParseIntPipe) year: number,
+    @Query('month', ParseIntPipe) month: number,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.s.suggestedWorkers(year, month, projectId);
+  }
 
   @Get('stats')
   @RequirePermissions('site-ops.read')

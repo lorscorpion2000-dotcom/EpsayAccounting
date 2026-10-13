@@ -4,6 +4,7 @@ import { CreateDailyReportDto } from './dto/create-report.dto';
 import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { DailyReportSectionsService } from './daily-report-sections.service';
 import { generateCode } from '../../shared/utils/code-generator';
+import * as jalaali from 'jalaali-js';
 
 @Injectable()
 export class SiteOpsService {
@@ -359,6 +360,106 @@ export class SiteOpsService {
 
   sectionsSummary(reportId: string) {
     return this.sections.summary(reportId);
+  }
+
+  /**
+   * لیست پیشنهادی پرسنل خودی از گرید ماهانه حضور و غیاب
+   * طبق سناریو: پیش‌فرض از گرید ماهانه — امکان افزودن دستی هم هست
+   * ورودی: سال/ماه شمسی + فیلتر پروژه اختیاری
+   * خروجی: پرسنل با حداقل یک رکورد Attendance در آن ماه
+   */
+  async suggestedWorkers(year: number, month: number, projectId?: string) {
+    if (!year || !month || month < 1 || month > 12) {
+      throw new BadRequestException('سال و ماه شمسی معتبر وارد کنید');
+    }
+
+    // تبدیل شمسی به میلادی
+    const { gy, gm, gd } = jalaali.toGregorian(year, month, 1);
+    const startGregorian = new Date(Date.UTC(gy, gm - 1, gd));
+    const daysInMonth = jalaali.jalaaliMonthLength(year, month);
+    const { gy: gy2, gm: gm2, gd: gd2 } = jalaali.toGregorian(year, month, daysInMonth);
+    const endGregorian = new Date(Date.UTC(gy2, gm2 - 1, gd2, 23, 59, 59));
+
+    // رکوردهای Attendance در بازه
+    const attendances = await this.prisma.attendance.findMany({
+      where: {
+        attendanceDate: { gte: startGregorian, lte: endGregorian },
+        deletedAt: null,
+      },
+      orderBy: { attendanceDate: 'desc' },
+    });
+
+    if (attendances.length === 0) {
+      return {
+        year, month,
+        gregorianStart: startGregorian.toISOString().slice(0, 10),
+        gregorianEnd: endGregorian.toISOString().slice(0, 10),
+        employees: [],
+      };
+    }
+
+    // گروه‌بندی بر employeeId (که Partner.id است)
+    const byPartner = new Map<string, { days: number; workHours: number; overtimeHours: number; lastDate: Date }>();
+    for (const a of attendances) {
+      if (!byPartner.has(a.employeeId)) {
+        byPartner.set(a.employeeId, { days: 0, workHours: 0, overtimeHours: 0, lastDate: a.attendanceDate });
+      }
+      const g = byPartner.get(a.employeeId)!;
+      g.days += 1;
+      g.workHours += Number(a.workHours || 0);
+      g.overtimeHours += Number(a.overtimeHours || 0);
+      if (a.attendanceDate > g.lastDate) g.lastDate = a.attendanceDate;
+    }
+
+    const partnerIds = Array.from(byPartner.keys());
+
+    // EmployeeProfile برای آن اشخاص (فیلتر پروژه اختیاری)
+    const profileWhere: any = {
+      partnerId: { in: partnerIds },
+      isActive: true,
+      deletedAt: null,
+    };
+    if (projectId) profileWhere.projectId = projectId;
+
+    const profiles = await this.prisma.employeeProfile.findMany({
+      where: profileWhere,
+      include: {
+        partner: { select: { id: true, name: true, code: true } },
+        project: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    const employees = profiles
+      .map((p) => {
+        const agg = byPartner.get(p.partnerId);
+        if (!agg) return null;
+        return {
+          employeeId: p.partnerId,
+          partnerId: p.partnerId,
+          employeeCode: p.employeeCode,
+          name: p.partner?.name || '—',
+          position: p.position || null,
+          employeeType: p.employeeType,
+          department: p.department || null,
+          projectId: p.projectId,
+          projectName: p.project?.name || null,
+          attendanceDays: agg.days,
+          totalWorkHours: Math.round(agg.workHours * 100) / 100,
+          totalOvertimeHours: Math.round(agg.overtimeHours * 100) / 100,
+          lastAttendanceDate: agg.lastDate.toISOString().slice(0, 10),
+        };
+      })
+      .filter(Boolean);
+
+    employees.sort((a: any, b: any) => b.attendanceDays - a.attendanceDays);
+
+    return {
+      year,
+      month,
+      gregorianStart: startGregorian.toISOString().slice(0, 10),
+      gregorianEnd: endGregorian.toISOString().slice(0, 10),
+      employees,
+    };
   }
 
   async stats(projectId?: string) {
