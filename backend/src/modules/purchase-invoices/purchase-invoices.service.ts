@@ -28,6 +28,9 @@ export class PurchaseInvoicesService {
   createFromPO(poId: string, dto: { invoiceNumber: string; invoiceDate: string; dueDate?: string }, userId?: string) {
     return this.crud.createFromPO(poId, dto, userId);
   }
+  createFromGR(grId: string, dto: { invoiceNumber: string; invoiceDate: string; dueDate?: string }, userId?: string) {
+    return this.crud.createFromGR(grId, dto, userId);
+  }
   update(id: string, dto: UpdatePurchaseInvoiceDto) { return this.crud.update(id, dto); }
   remove(id: string) { return this.crud.remove(id); }
 

@@ -9,7 +9,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
 import { PurchaseInvoiceStatus } from '@prisma/client';
 
-class FromPODto {
+class FromSourceDto {
   @IsString() @MaxLength(64) invoiceNumber!: string;
   @IsDateString() invoiceDate!: string;
   @IsOptional() @IsDateString() dueDate?: string;
@@ -46,9 +46,17 @@ export class PurchaseInvoicesController {
 
   @Post('from-po/:poId')
   @RequirePermissions('accounting.create')
-  createFromPO(@Param('poId') poId: string, @Body() dto: FromPODto, @CurrentUser('id') userId: string) {
+  createFromPO(@Param('poId') poId: string, @Body() dto: FromSourceDto, @CurrentUser('id') userId: string) {
     return this.service.createFromPO(poId, dto, userId);
   }
+
+  @Post('from-gr/:grId')
+  @RequirePermissions('accounting.create')
+  createFromGR(@Param('grId') grId: string, @Body() dto: FromSourceDto, @CurrentUser('id') userId: string) {
+    return this.service.createFromGR(grId, dto, userId);
+  }
+
+
 
   @Patch(':id')
   @RequirePermissions('accounting.update')

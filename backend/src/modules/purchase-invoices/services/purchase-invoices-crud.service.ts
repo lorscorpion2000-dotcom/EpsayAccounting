@@ -216,6 +216,11 @@ export class PurchaseInvoicesCrudService {
     const existing = await this.prisma.purchaseInvoice.findFirst({ where: { poId } });
     if (existing) throw new BadRequestException('قبلاً فاکتوری از این PO ساخته شده: ' + existing.code);
 
+    const postedGr = await this.prisma.goodsReceipt.findFirst({
+      where: { poId, status: 'POSTED' },
+      select: { id: true },
+    });
+
     const code = await this.generateCode();
     const items = po.items.map((it) => ({
       rowNumber: it.rowNumber,
@@ -241,6 +246,7 @@ export class PurchaseInvoicesCrudService {
         supplierId: po.supplierId!,
         projectId: po.projectId,
         poId: po.id,
+        grId: postedGr?.id ?? null,
         taxPercent,
         subtotal, taxAmount, totalAmount,
         createdById: userId ?? null,
@@ -249,6 +255,76 @@ export class PurchaseInvoicesCrudService {
       include: { supplier: true, items: true },
     });
   }
+
+  async createFromGR(grId: string, dto: { invoiceNumber: string; invoiceDate: string; dueDate?: string }, userId?: string) {
+    const gr = await this.prisma.goodsReceipt.findUnique({
+      where: { id: grId },
+      include: {
+        items: {
+          include: { item: { select: { id: true, code: true, name: true, unit: true } } },
+          orderBy: { rowNumber: 'asc' },
+        },
+      },
+    });
+    if (!gr) throw new NotFoundException('GR یافت نشد');
+    if (gr.status !== 'POSTED') throw new BadRequestException('GR باید POSTED باشد (وضعیت فعلی: ' + gr.status + ')');
+    if (!gr.supplierId) throw new BadRequestException('GR تأمین‌کننده ندارد');
+
+    const existing = await this.prisma.purchaseInvoice.findFirst({ where: { grId } });
+    if (existing) throw new BadRequestException('قبلاً فاکتوری از این GR ساخته شده: ' + existing.code);
+
+    const code = await this.generateCode();
+
+    const items = gr.items.map((it) => ({
+      rowNumber: it.rowNumber,
+      description: it.item?.name ?? ('ردیف ' + it.rowNumber),
+      quantity: Number(it.quantity),
+      unit: ((it.item?.unit as any) ?? 'NUMBER'),
+      unitPrice: Number(it.unitCost),
+      totalPrice: Number(it.totalCost),
+      accountId: null,
+      wbsItemId: null,
+      discountPercent: Number(it.discountPercent) || 0,
+      discountAmount: Number(it.discountAmount) || 0,
+      additionAmount: Number(it.additionAmount) || 0,
+      deductionAmount: Number(it.deductionAmount) || 0,
+      taxPercent: Number(it.taxPercent) || 0,
+      taxAmount: Number(it.taxAmount) || 0,
+      shippingCost: Number(it.shippingCost) || 0,
+      loadingCost: Number(it.loadingCost) || 0,
+      notes: it.notes ?? null,
+    }));
+
+    const taxPercent = items[0]?.taxPercent ?? 9;
+    const totals = this.computeTotals(items, taxPercent, 0);
+
+    return this.prisma.purchaseInvoice.create({
+      data: {
+        code,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceDate: new Date(dto.invoiceDate),
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        supplierId: gr.supplierId,
+        projectId: gr.projectId ?? null,
+        poId: gr.poId ?? null,
+        grId: gr.id,
+        taxPercent,
+        subtotal: totals.subtotal,
+        totalDiscount: totals.totalDiscount,
+        totalAddition: totals.totalAddition,
+        totalDeduction: totals.totalDeduction,
+        taxAmount: totals.taxAmount,
+        totalShipping: totals.totalShipping,
+        totalLoading: totals.totalLoading,
+        totalAmount: totals.totalAmount,
+        createdById: userId ?? null,
+        items: { create: items },
+      },
+      include: { supplier: true, items: true },
+    });
+  }
+
+
 
   async update(id: string, dto: UpdatePurchaseInvoiceDto) {
     const inv = await this.findOne(id);

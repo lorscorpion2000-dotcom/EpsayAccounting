@@ -4,6 +4,7 @@ import { StockService } from './stock.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { CreateReceiptFromPoDto } from './dto/create-receipt-from-po.dto';
 import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
@@ -38,7 +39,7 @@ export class ReceiptsService {
     const taxAmount     = taxPercent > 0 ? (afterDiscount * taxPercent) / 100 : 0;
 
     const shippingCost = Number(it.shippingCost) || 0;
-    const loadingCost  = 0;
+    const loadingCost  = Number(it.loadingCost) || 0;
 
     const lineTotal = afterDiscount + additionAmount - deductionAmount + taxAmount + shippingCost + loadingCost;
 
@@ -53,7 +54,7 @@ export class ReceiptsService {
       shippingCost,
       loadingCost,
       lineTotal,
-      totalCost: base, // برای محاسبه‌ی میانگین موزون انبار
+      totalCost: base - discountAmount + additionAmount - deductionAmount + shippingCost + loadingCost, // landed (بدون مالیات)
     };
   }
 
@@ -172,6 +173,68 @@ export class ReceiptsService {
       },
     });
   }
+  /**
+   * ایجاد رسید انبار از PO (دستی). quantity/unitCost پیش‌فرض از PO.
+   * هر PO فقط یک GR قابل post دارد (بلاک دوباره‌شماری).
+   */
+  async createFromPO(poId: string, dto: CreateReceiptFromPoDto, userId: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: poId },
+      include: { items: { orderBy: { rowNumber: 'asc' } } },
+    });
+    if (!po) throw new NotFoundException('PO یافت نشد');
+    if (po.status === 'CANCELLED') throw new BadRequestException('PO لغو شده است');
+    if (!po.supplierId) throw new BadRequestException('PO تأمین‌کننده ندارد');
+
+    const existingPosted = await this.prisma.goodsReceipt.findFirst({
+      where: { poId, status: 'POSTED' },
+      select: { id: true, code: true },
+    });
+    if (existingPosted) {
+      throw new BadRequestException('GR قبلاً post شده برای این PO: ' + existingPosted.code);
+    }
+
+    const poItemMap = new Map(po.items.map((it) => [it.id, it]));
+    for (const it of dto.items) {
+      if (!poItemMap.has(it.poItemId)) {
+        throw new BadRequestException('poItemId ' + it.poItemId + ' متعلق به این PO نیست');
+      }
+    }
+
+    const receiptItems = dto.items.map((it) => {
+      const poItem = poItemMap.get(it.poItemId)!;
+      return {
+        itemId: it.itemId,
+        quantity: it.quantity ?? Number(poItem.quantity),
+        unitCost: it.unitCost ?? Number(poItem.unitPrice),
+        discountPercent: it.discountPercent,
+        discountAmount:  it.discountAmount,
+        additionAmount:  it.additionAmount,
+        deductionAmount: it.deductionAmount,
+        taxPercent:      it.taxPercent,
+        taxAmount:       it.taxAmount,
+        shippingCost:    it.shippingCost,
+        loadingCost:     it.loadingCost,
+        notes: it.notes ?? ('از PO ' + po.code + ' ردیف ' + poItem.rowNumber),
+      };
+    });
+
+    return this.create({
+      warehouseId: dto.warehouseId,
+      projectId:   po.projectId,
+      supplierId:  po.supplierId,
+      poId:        po.id,
+      prId:        po.prId ?? undefined,
+      receiptDate: dto.receiptDate,
+      reference:   dto.reference,
+      driverName:  dto.driverName,
+      vehiclePlate: dto.vehiclePlate,
+      notes:       dto.notes,
+      items:       receiptItems,
+    } as any, userId);
+  }
+
+
 
   async update(id: string, dto: UpdateReceiptDto) {
     const r = await this.findOne(id);
@@ -270,12 +333,6 @@ export class ReceiptsService {
   /**
    * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
    */
-  /**
-   * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
-   */
-  /**
-   * ثبت رسید → اعمال موجودی + سند حسابداری (B3.a)
-   */
   async post(id: string, userId: string) {
     const r = await this.findOne(id);
     if (r.status !== 'APPROVED') throw new BadRequestException('ابتدا رسید باید تایید شود');
@@ -305,7 +362,7 @@ export class ReceiptsService {
           itemId: it.itemId,
           type: 'IN',
           quantity: Number(it.quantity),
-          unitCost: Number(it.unitCost),
+          unitCost: Number(it.quantity) > 0 ? Number(it.totalCost) / Number(it.quantity) : Number(it.unitCost),
           movementDate: r.receiptDate,
           referenceType: 'goods-receipt',
           referenceId: r.id,

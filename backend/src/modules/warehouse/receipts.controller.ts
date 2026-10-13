@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { CreateReceiptFromPoDto } from './dto/create-receipt-from-po.dto';
 import { RejectDto } from '../procurement/dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -35,6 +36,17 @@ export class ReceiptsController {
   create(@Body() dto: CreateReceiptDto, @CurrentUser('id') userId: string) {
     return this.s.create(dto, userId);
   }
+
+  @Post('from-po/:poId')
+  @RequirePermissions('warehouse.create')
+  createFromPO(
+    @Param('poId') poId: string,
+    @Body() dto: CreateReceiptFromPoDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.s.createFromPO(poId, dto, userId);
+  }
+
 
   @Patch(':id')
   @RequirePermissions('warehouse.update')

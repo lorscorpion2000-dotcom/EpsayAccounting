@@ -94,13 +94,13 @@ export class SalesReceiptsService {
     // B4.b: atomic receipt — JE + receipt + invoice update in one tx
     return this.prisma.$transaction(
       async (tx) => {
-        const last = await tx.journalEntry.findFirst({
-          where: { fiscalYearId: fy.id },
-          orderBy: { entryNumber: 'desc' },
-          select: { entryNumber: true },
+        const __alloc = await tx.fiscalYear.update({
+          where: { id: fy.id },
+          data: { nextEntryNumber: { increment: 1 } },
+          select: { code: true, nextEntryNumber: true },
         });
-        const entryNumber = (last?.entryNumber ?? 0) + 1;
-        const jeCode = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+        const entryNumber = __alloc.nextEntryNumber - 1;
+        const jeCode = 'JV-' + (__alloc.code ?? fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
 
         const je = await tx.journalEntry.create({
           data: {

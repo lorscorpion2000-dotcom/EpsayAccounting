@@ -171,11 +171,6 @@ export class DailyReportForwarderService {
             where: { id: pr.id },
             data: { status: 'SUBMITTED' as any },
           });
-          // ارسال به کارتابل خرید برای تایید
-          await this.prisma.purchaseRequest.update({
-            where: { id: pr.id },
-            data: { status: 'SUBMITTED' as any },
-          });
           targetId = pr.id;
           targetCode = pr.code;
           targetModel = 'PurchaseRequest';

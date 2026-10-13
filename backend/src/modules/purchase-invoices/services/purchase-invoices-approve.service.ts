@@ -242,13 +242,15 @@ export class PurchaseInvoicesApproveService {
     });
     if (!fy) throw new BadRequestException('سال مالی برای تاریخ سند پیدا نشد');
 
-    const last = await this.prisma.journalEntry.findFirst({
-      where: { fiscalYearId: fy.id },
-      orderBy: { entryNumber: 'desc' },
-      select: { entryNumber: true },
+    // F6.7 BUG FIX: allocate via atomic increment (consistent with JournalsService.allocateEntryNumber)
+    // Previously used findFirst+1 which didn't update nextEntryNumber → drift → duplicate codes.
+    const allocated = await this.prisma.fiscalYear.update({
+      where: { id: fy.id },
+      data: { nextEntryNumber: { increment: 1 } },
+      select: { code: true, nextEntryNumber: true },
     });
-    const entryNumber = (last?.entryNumber ?? 0) + 1;
-    const code = 'JV-' + (fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
+    const entryNumber = allocated.nextEntryNumber - 1;
+    const code = 'JV-' + (allocated.code ?? fy.code ?? '1405') + '-' + String(entryNumber).padStart(5, '0');
 
     const totalDebit  = args.lines.reduce((s, l) => s + Number(l.debit  ?? 0), 0);
     const totalCredit = args.lines.reduce((s, l) => s + Number(l.credit ?? 0), 0);
