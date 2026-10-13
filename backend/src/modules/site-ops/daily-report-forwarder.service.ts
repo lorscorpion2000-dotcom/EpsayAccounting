@@ -1,6 +1,79 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';;
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  AttendanceStatus2,
+  DailyReportSectionType,
+  EquipmentLogStatus,
+  ForwardingTarget,
+  PRPriority,
+} from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PurchaseRequestsService } from '../procurement/pr.service';
+
+interface ForwardRow {
+  rowNumber: number;
+  wbsItemId?: string | null;
+  kind?: string | null;
+  employeeId?: string | null;
+  equipmentId?: string | null;
+  movementType?: string | null;
+  itemId?: string | null;
+  warehouseId?: string | null;
+  requestType?: string | null;
+  pettyCashAccountId?: string | null;
+  eventType?: string | null;
+  title?: string;
+  description?: string | null;
+  quantity?: unknown;
+  unit?: string | null;
+  priority?: string | null;
+  status?: string | null;
+  workHours?: unknown;
+  overtime?: unknown;
+  teamName?: string | null;
+  hoursWorked?: unknown;
+  fuelLiters?: unknown;
+  stopReason?: string | null;
+  amount?: unknown;
+  progressPct?: unknown;
+  location?: string | null;
+  [k: string]: unknown;
+}
+
+interface ForwardTarget {
+  type: ForwardingTarget;
+  notify?: boolean;
+  archived?: boolean;
+}
+
+interface ForwardDetail {
+  row: number;
+  target: ForwardingTarget;
+  ok: boolean;
+  id?: string | null;
+  code?: string | null;
+  model?: string | null;
+  error?: string;
+}
+
+interface DailyReportShape {
+  id: string;
+  code: string;
+  reportDate: Date;
+  projectId: string;
+  createdById: string | null;
+  progresses?: ForwardRow[];
+  workers?: ForwardRow[];
+  equipments?: ForwardRow[];
+  materials?: ForwardRow[];
+  requests?: ForwardRow[];
+  events?: ForwardRow[];
+}
+
+interface DailyReportSectionShape {
+  id: string;
+  sectionType: DailyReportSectionType;
+  status: string;
+}
 
 @Injectable()
 export class DailyReportForwarderService {
@@ -16,7 +89,7 @@ export class DailyReportForwarderService {
    */
   async forwardSection(reportId: string, sectionType: string) {
     const section = await this.prisma.dailyReportSection.findUnique({
-      where: { reportId_sectionType: { reportId, sectionType: sectionType as any } },
+      where: { reportId_sectionType: { reportId, sectionType: sectionType as DailyReportSectionType } },
     });
     if (!section) throw new NotFoundException('بخش یافت نشد');
     if (section.status !== 'APPROVED' && section.status !== 'FORWARDED' && section.status !== 'FAILED') {
@@ -39,7 +112,7 @@ export class DailyReportForwarderService {
     const rows = this.rowsForSection(report, sectionType);
     let success = 0;
     let failed = 0;
-    const details: any[] = [];
+    const details: ForwardDetail[] = [];
 
     for (const row of rows) {
       const targets = this.targetsFor(sectionType, row);
@@ -55,9 +128,9 @@ export class DailyReportForwarderService {
             code: r?.targetCode || null,
             model: r?.targetModel || null,
           });
-        } catch (e: any) {
+        } catch (e: unknown) {
           failed++;
-          details.push({ row: row.rowNumber, target: t.type, ok: false, error: e?.message || 'error' });
+          details.push({ row: row.rowNumber, target: t.type, ok: false, error: (e instanceof Error ? e.message : String(e)) || 'error' });
         }
       }
     }
@@ -65,7 +138,7 @@ export class DailyReportForwarderService {
     await this.prisma.dailyReportSection.update({
       where: { id: section.id },
       data: {
-        status: failed > 0 && success === 0 ? ('FAILED' as any) : ('FORWARDED' as any),
+        status: failed > 0 && success === 0 ? 'FAILED' : 'FORWARDED',
         forwardedAt: new Date(),
       },
     });
@@ -74,7 +147,7 @@ export class DailyReportForwarderService {
   }
 
   // ═══ rows ═══
-  private rowsForSection(report: any, sectionType: string): any[] {
+  private rowsForSection(report: DailyReportShape, sectionType: string): ForwardRow[] {
     switch (sectionType) {
       case 'PROGRESS': return report.progresses || [];
       case 'WORKERS': return report.workers || [];
@@ -87,7 +160,7 @@ export class DailyReportForwarderService {
   }
 
   // ═══ targets ═══
-  private targetsFor(sectionType: string, row: any): Array<{ type: string; [k: string]: any }> {
+  private targetsFor(sectionType: string, row: ForwardRow): ForwardTarget[] {
     switch (sectionType) {
       case 'PROGRESS':
         if (!row.wbsItemId) return [{ type: 'OTHER' }];
@@ -127,14 +200,14 @@ export class DailyReportForwarderService {
   }
 
   // ═══ forward a single row to a target ═══
-  private async forwardRow(report: any, section: any, row: any, target: any) {
+  private async forwardRow(report: DailyReportShape, section: DailyReportSectionShape, row: ForwardRow, target: ForwardTarget) {
     // Idempotency: چک قبلی
     const existing = await this.prisma.dailyReportForwarding.findFirst({
       where: {
         reportId: report.id,
         sectionType: section.sectionType,
         rowNumber: row.rowNumber,
-        targetType: target.type as any,
+        targetType: target.type as ForwardingTarget,
       },
     });
     if (existing && existing.status === 'SUCCESS') {
@@ -165,11 +238,11 @@ export class DailyReportForwarderService {
                 notes: 'ردیف ' + row.rowNumber + ' گزارش ' + report.code,
               },
             ],
-          } as any, report.createdById);
+          } as unknown as Parameters<typeof this.prService.create>[0], report.createdById);
           // ارسال به کارتابل خرید برای تایید
           await this.prisma.purchaseRequest.update({
             where: { id: pr.id },
-            data: { status: 'SUBMITTED' as any },
+            data: { status: 'SUBMITTED' },
           });
           targetId = pr.id;
           targetCode = pr.code;
@@ -182,13 +255,13 @@ export class DailyReportForwarderService {
           if (!report.createdById) throw new Error('گزارش سازنده ندارد');
           const code = await this.genCode('pettyCashRequest', 'PCR', 'code');
           const account = await this.prisma.pettyCashAccount.findUnique({
-            where: { id: row.pettyCashAccountId },
+            where: { id: row.pettyCashAccountId! },
           });
           if (!account) throw new Error('حساب تنخواه یافت نشد');
           const pcr = await this.prisma.pettyCashRequest.create({
             data: {
               code,
-              accountId: row.pettyCashAccountId,
+              accountId: row.pettyCashAccountId!,
               requestDate: report.reportDate,
               amount: Number(row.amount) || 0,
               currentBalance: Number(account.balance) || 0,
@@ -207,7 +280,7 @@ export class DailyReportForwarderService {
         case 'PROGRESS_RECORD': {
           const snap = await this.prisma.wbsProgressSnapshot.upsert({
             where: {
-              reportId_wbsItemId: { reportId: report.id, wbsItemId: row.wbsItemId },
+              reportId_wbsItemId: { reportId: report.id, wbsItemId: row.wbsItemId! },
             },
             update: {
               quantity: Number(row.quantity) || 0,
@@ -218,7 +291,7 @@ export class DailyReportForwarderService {
             },
             create: {
               projectId: report.projectId,
-              wbsItemId: row.wbsItemId,
+              wbsItemId: row.wbsItemId!,
               reportId: report.id,
               snapshotDate: report.reportDate,
               quantity: Number(row.quantity) || 0,
@@ -241,12 +314,12 @@ export class DailyReportForwarderService {
           // در DailyWorkLog کلید یکتا نداریم، پس findFirst می‌کنیم
           const existingLog = await this.prisma.dailyWorkLog.findFirst({
             where: {
-              employeeId: row.employeeId,
+              employeeId: row.employeeId!,
               workDate: report.reportDate,
             },
           });
           const data = {
-            employeeId: row.employeeId,
+            employeeId: row.employeeId!,
             workDate: report.reportDate,
             projectId: report.projectId,
             wbsItemId: row.wbsItemId || null,
@@ -275,12 +348,12 @@ export class DailyReportForwarderService {
             const attStatus = this.mapAttendanceStatus(row.status);
             const existingAtt = await this.prisma.attendance.findFirst({
               where: {
-                employeeId: row.employeeId,
+                employeeId: row.employeeId!,
                 attendanceDate: report.reportDate,
               },
             });
 
-            const attData: any = {
+            const attData: Record<string, unknown> = {
               checkIn: null,
               checkOut: null,
               workHours: Number(row.workHours) || 0,
@@ -298,15 +371,15 @@ export class DailyReportForwarderService {
               await this.prisma.attendance.create({
                 data: {
                   ...attData,
-                  employeeId: row.employeeId,
+                  employeeId: row.employeeId!,
                   attendanceDate: report.reportDate,
                   createdById: report.createdById || null,
                 },
               });
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             // اگه attendance ثبت نشد، حداقل DailyWorkLog ثبت شده
-            this.logger?.warn?.('[forwarder] attendance sync failed: ' + e?.message);
+            this.logger?.warn?.('[forwarder] attendance sync failed: ' + (e instanceof Error ? e.message : String(e)));
           }
 
           break;
@@ -318,12 +391,12 @@ export class DailyReportForwarderService {
           const code = await this.genCode('equipmentDailyLog', 'EDL', 'code');
           const existingLog = await this.prisma.equipmentDailyLog.findFirst({
             where: {
-              equipmentId: row.equipmentId,
+              equipmentId: row.equipmentId!,
               logDate: report.reportDate,
             },
           });
           const data = {
-            equipmentId: row.equipmentId,
+            equipmentId: row.equipmentId!,
             projectId: report.projectId,
             wbsItemId: row.wbsItemId || null,
             logDate: report.reportDate,
@@ -333,7 +406,7 @@ export class DailyReportForwarderService {
             breakdownHours: row.status === 'BROKEN' ? (Number(row.hoursWorked) || 0) : 0,
             stopReason: row.stopReason || null,
             notes: 'از گزارش ' + report.code,
-            status: 'DRAFT' as any,
+            status: EquipmentLogStatus.DRAFT,
           };
           let log;
           if (existingLog) {
@@ -359,7 +432,7 @@ export class DailyReportForwarderService {
           const receipt = await this.prisma.goodsReceipt.create({
             data: {
               code,
-              warehouseId: row.warehouseId,
+              warehouseId: row.warehouseId!,
               projectId: report.projectId,
               receiptDate: report.reportDate,
               notes: 'از گزارش روزانه ' + report.code + ' (ردیف ' + row.rowNumber + ')',
@@ -367,7 +440,7 @@ export class DailyReportForwarderService {
               createdById: report.createdById,
               items: {
                 create: [{
-                  itemId: row.itemId,
+                  itemId: row.itemId!,
                   rowNumber: 1,
                   quantity: Number(row.quantity) || 0,
                   unitCost: 0,
@@ -390,7 +463,7 @@ export class DailyReportForwarderService {
           const issue = await this.prisma.goodsIssue.create({
             data: {
               code,
-              warehouseId: row.warehouseId,
+              warehouseId: row.warehouseId!,
               projectId: report.projectId,
               wbsItemId: row.wbsItemId || null,
               issueDate: report.reportDate,
@@ -399,7 +472,7 @@ export class DailyReportForwarderService {
               createdById: report.createdById,
               items: {
                 create: [{
-                  itemId: row.itemId,
+                  itemId: row.itemId!,
                   rowNumber: 1,
                   quantity: Number(row.quantity) || 0,
                   unitCost: 0,
@@ -446,13 +519,13 @@ export class DailyReportForwarderService {
           reportId: report.id,
           sectionType: section.sectionType,
           rowNumber: row.rowNumber,
-          targetType: target.type as any,
+          targetType: target.type as ForwardingTarget,
           status: 'SUCCESS',
           targetId, targetCode, targetModel,
         },
       });
-    } catch (e: any) {
-      const errorMessage = String(e?.message || 'unknown').slice(0, 900);
+    } catch (e: unknown) {
+      const errorMessage = String(e instanceof Error ? e.message : String(e)).slice(0, 900);
       if (existing) {
         await this.prisma.dailyReportForwarding.update({
           where: { id: existing.id },
@@ -465,7 +538,7 @@ export class DailyReportForwarderService {
             reportId: report.id,
             sectionType: section.sectionType,
             rowNumber: row.rowNumber,
-            targetType: target.type as any,
+            targetType: target.type as ForwardingTarget,
             status: 'FAILED',
             errorMessage,
           },
@@ -476,7 +549,7 @@ export class DailyReportForwarderService {
   }
 
   // ═══ Notification ═══
-  private async createNotification(report: any, section: any, row: any) {
+  private async createNotification(report: DailyReportShape, section: DailyReportSectionShape, row: ForwardRow) {
     const severity = row.eventType === 'INCIDENT' ? 'CRITICAL' : 'WARNING';
     const title = row.eventType === 'INCIDENT' ? 'حادثه‌ی ایمنی در کارگاه' : 'توقف کار';
     const message = row.title + (row.description ? ' — ' + row.description : '');
@@ -504,6 +577,7 @@ export class DailyReportForwarderService {
   private async genCode(model: string, prefix: string, field: string): Promise<string> {
     const year = new Date().getFullYear();
     const fullPrefix = prefix + '-' + year + '-';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic model access
     const last = await (this.prisma as any)[model].findFirst({
       where: { [field]: { startsWith: fullPrefix } },
       orderBy: { [field]: 'desc' },
@@ -517,7 +591,7 @@ export class DailyReportForwarderService {
     return fullPrefix + String(lastNum + 1).padStart(4, '0');
   }
 
-  private mapUnit(u?: string | null): any {
+  private mapUnit(u?: string | null): string {
     const s = String(u || '').toUpperCase().replace(/\s+/g, '_');
     const map: Record<string, string> = {
       'عدد': 'NUMBER', 'NUMBER': 'NUMBER',
@@ -533,16 +607,16 @@ export class DailyReportForwarderService {
     return map[u || ''] || map[s] || 'LUMP_SUM';
   }
 
-  private mapPriority(p?: string | null): any {
+  private mapPriority(p?: string | null): PRPriority {
     const s = String(p || '').toUpperCase();
-    if (['LOW', 'NORMAL', 'HIGH', 'URGENT'].includes(s)) return s;
-    return 'NORMAL';
+    if (['LOW', 'NORMAL', 'HIGH', 'URGENT'].includes(s)) return s as PRPriority;
+    return PRPriority.NORMAL;
   }
 
-  private mapAttendanceStatus(s?: string | null): any {
+  private mapAttendanceStatus(s?: string | null): AttendanceStatus2 {
     const v = String(s || 'PRESENT').toUpperCase();
-    if (['PRESENT', 'ABSENT', 'LEAVE', 'SICK', 'HOLIDAY'].includes(v)) return v;
-    return 'PRESENT';
+    if (['PRESENT', 'ABSENT', 'LEAVE', 'SICK', 'MISSION', 'HOLIDAY'].includes(v)) return v as AttendanceStatus2;
+    return AttendanceStatus2.PRESENT;
   }
 
   // ============================================================
@@ -611,11 +685,11 @@ export class DailyReportForwarderService {
     if (!report) throw new NotFoundException('گزارش یافت نشد');
 
     const rows = this.rowsForSection(report, fwd.sectionType);
-    const row = rows.find((r: any) => r.rowNumber === fwd.rowNumber);
+    const row = rows.find((r: ForwardRow) => r.rowNumber === fwd.rowNumber);
     if (!row) throw new NotFoundException('ردیف مورد نظر در گزارش پیدا نشد');
 
     const targets = this.targetsFor(fwd.sectionType, row);
-    const target = targets.find((t: any) => t.type === fwd.targetType);
+    const target = targets.find((t: ForwardTarget) => t.type === (fwd.targetType as ForwardingTarget));
     if (!target) throw new NotFoundException('مقصد forwarding پیدا نشد');
 
     try {
@@ -626,8 +700,8 @@ export class DailyReportForwarderService {
         targetCode: r?.targetCode || null,
         targetModel: r?.targetModel || null,
       };
-    } catch (e: any) {
-      throw new BadRequestException(String(e?.message || 'retry failed').slice(0, 500));
+    } catch (e: unknown) {
+      throw new BadRequestException(String(e instanceof Error ? e.message : String(e)).slice(0, 500));
     }
   }
 }

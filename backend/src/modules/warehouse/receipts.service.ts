@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma, ReceiptStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from './stock.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -6,6 +7,21 @@ import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { CreateReceiptFromPoDto } from './dto/create-receipt-from-po.dto';
 import { generateCode } from '../../shared/utils/code-generator';
+
+interface ReceiptLineInput {
+  itemId?: string;
+  quantity?: number | string;
+  unitCost?: number | string;
+  discountPercent?: number | string;
+  discountAmount?: number | string;
+  additionAmount?: number | string;
+  deductionAmount?: number | string;
+  taxPercent?: number | string;
+  taxAmount?: number | string;
+  shippingCost?: number | string;
+  loadingCost?: number | string;
+  notes?: string;
+}
 
 @Injectable()
 export class ReceiptsService {
@@ -23,7 +39,7 @@ export class ReceiptsService {
   /**
    * محاسبه‌ی مقادیر مالی هر ردیف و جمع کل
    */
-  private computeLine(it: any) {
+  private computeLine(it: ReceiptLineInput) {
     const qty = Number(it.quantity) || 0;
     const unitCost = Number(it.unitCost) || 0;
     const base = qty * unitCost;
@@ -61,7 +77,7 @@ export class ReceiptsService {
   /**
    * تجمیع کل رسید از روی اقلام
    */
-  private computeTotals(items: any[]) {
+  private computeTotals(items: ReceiptLineInput[]) {
     let subtotal = 0, totalDiscount = 0, totalAddition = 0, totalDeduction = 0;
     let totalTax = 0, totalShipping = 0, totalLoading = 0, grandTotal = 0, totalValue = 0;
 
@@ -81,10 +97,10 @@ export class ReceiptsService {
   }
 
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.GoodsReceiptWhereInput = {};
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as ReceiptStatus;
     return this.prisma.goodsReceipt.findMany({
       where,
       include: {
@@ -231,7 +247,7 @@ export class ReceiptsService {
       vehiclePlate: dto.vehiclePlate,
       notes:       dto.notes,
       items:       receiptItems,
-    } as any, userId);
+    } as unknown as CreateReceiptDto, userId);
   }
 
 
@@ -240,7 +256,7 @@ export class ReceiptsService {
     const r = await this.findOne(id);
     if (r.status !== 'DRAFT') throw new BadRequestException('فقط رسید پیش‌نویس قابل ویرایش است');
 
-    const data: any = {};
+    const data: Prisma.GoodsReceiptUncheckedUpdateInput = {};
     if (dto.warehouseId !== undefined) data.warehouseId = dto.warehouseId;
     if (dto.projectId !== undefined) data.projectId = dto.projectId;
     if (dto.supplierId !== undefined) data.supplierId = dto.supplierId;

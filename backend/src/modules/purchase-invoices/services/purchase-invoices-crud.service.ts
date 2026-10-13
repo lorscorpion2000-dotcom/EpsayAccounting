@@ -1,7 +1,45 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { CreatePurchaseInvoiceDto } from '../dto/create-purchase-invoice.dto';
 import { UpdatePurchaseInvoiceDto } from '../dto/update-purchase-invoice.dto';
+
+interface InvoiceItemInput {
+  rowNumber?: number;
+  description?: string;
+  quantity?: unknown;
+  unit?: string;
+  unitPrice?: unknown;
+  totalPrice?: unknown;
+  accountId?: string | null;
+  wbsItemId?: string | null;
+  discountPercent?: unknown;
+  discountAmount?: unknown;
+  additionAmount?: unknown;
+  deductionAmount?: unknown;
+  taxPercent?: unknown;
+  taxAmount?: unknown;
+  shippingCost?: unknown;
+  loadingCost?: unknown;
+  lineTotal?: unknown;
+  isCapital?: boolean;
+  usefulLifeMonths?: number | null;
+  notes?: string | null;
+}
+
+interface RecomputeItem {
+  quantity?: unknown;
+  unitPrice?: unknown;
+  totalPrice?: unknown;
+  discountPercent?: unknown;
+  discountAmount?: unknown;
+  additionAmount?: unknown;
+  deductionAmount?: unknown;
+  taxPercent?: unknown;
+  taxAmount?: unknown;
+  shippingCost?: unknown;
+  loadingCost?: unknown;
+}
 
 @Injectable()
 export class PurchaseInvoicesCrudService {
@@ -11,6 +49,7 @@ export class PurchaseInvoicesCrudService {
     const year = new Date().getFullYear();
     const prefix = 'PI-' + year + '-';
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __withDeleted لازم است
     const last = await (this.prisma as any).purchaseInvoice.findFirst({
       __withDeleted: true,
       where: { code: { startsWith: prefix } },
@@ -27,6 +66,7 @@ export class PurchaseInvoicesCrudService {
     let candidate = prefix + String(lastNum + 1).padStart(5, '0');
     let tries = 0;
     while (tries < 100) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __withDeleted لازم است
       const exists = await (this.prisma as any).purchaseInvoice.findFirst({
         __withDeleted: true,
         where: { code: candidate },
@@ -40,7 +80,7 @@ export class PurchaseInvoicesCrudService {
     throw new Error('Cannot generate unique code for PI');
   }
 
-  private computeTotals(items: any[], _taxPercent: number, discountAmount: number) {
+  private computeTotals(items: InvoiceItemInput[], _taxPercent: number, discountAmount: number) {
     let subtotal = 0, totalDiscount = 0, totalAddition = 0, totalDeduction = 0;
     let totalTax = 0, totalShipping = 0, totalLoading = 0, grandTotal = 0;
 
@@ -90,10 +130,10 @@ export class PurchaseInvoicesCrudService {
   }
 
   async findAll(query?: { supplierId?: string; projectId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.PurchaseInvoiceWhereInput = {};
     if (query?.supplierId) where.supplierId = query.supplierId;
     if (query?.projectId)  where.projectId  = query.projectId;
-    if (query?.status)     where.status     = query.status;
+    if (query?.status)     where.status     = query.status as Prisma.PurchaseInvoiceWhereInput['status'];
     return this.prisma.purchaseInvoice.findMany({
       where,
       include: {
@@ -133,7 +173,7 @@ export class PurchaseInvoicesCrudService {
 
   async create(dto: CreatePurchaseInvoiceDto, userId?: string) {
     const code = await this.generateCode();
-    const items = (dto.items ?? []).map((it: any, i: number) => {
+    const items = (dto.items ?? []).map((it: InvoiceItemInput, i: number) => {
       const base = Number(it.totalPrice ?? (Number(it.quantity) * Number(it.unitPrice)));
       const discPercent = Number(it.discountPercent) || 0;
       const discAmount = Number(it.discountAmount) || (discPercent > 0 ? (base * discPercent) / 100 : 0);
@@ -148,10 +188,10 @@ export class PurchaseInvoicesCrudService {
 
       return {
         rowNumber: it.rowNumber ?? i + 1,
-        description: it.description,
-        quantity: it.quantity,
-        unit: (it.unit ?? 'NUMBER') as any,
-        unitPrice: it.unitPrice,
+        description: it.description ?? '',
+        quantity: Number(it.quantity ?? 0),
+        unit: String(it.unit ?? 'NUMBER'),
+        unitPrice: Number(it.unitPrice ?? 0),
         totalPrice: base,
         accountId: it.accountId ?? null,
         wbsItemId: it.wbsItemId ?? null,
@@ -224,9 +264,9 @@ export class PurchaseInvoicesCrudService {
     const code = await this.generateCode();
     const items = po.items.map((it) => ({
       rowNumber: it.rowNumber,
-      description: it.description,
+      description: it.description ?? '',
       quantity: Number(it.quantity),
-      unit: it.unit as any,
+      unit: String(it.unit ?? 'NUMBER'),
       unitPrice: Number(it.unitPrice),
       totalPrice: Number(it.totalPrice),
       accountId: null,
@@ -279,7 +319,7 @@ export class PurchaseInvoicesCrudService {
       rowNumber: it.rowNumber,
       description: it.item?.name ?? ('ردیف ' + it.rowNumber),
       quantity: Number(it.quantity),
-      unit: ((it.item?.unit as any) ?? 'NUMBER'),
+      unit: String(it.item?.unit ?? 'NUMBER'),
       unitPrice: Number(it.unitCost),
       totalPrice: Number(it.totalCost),
       accountId: null,
@@ -330,7 +370,7 @@ export class PurchaseInvoicesCrudService {
     const inv = await this.findOne(id);
     if (inv.status !== 'DRAFT') throw new BadRequestException('فقط فاکتورهای DRAFT قابل ویرایش‌اند');
 
-    const data: any = {};
+    const data: Prisma.PurchaseInvoiceUncheckedUpdateInput = {};
     if (dto.invoiceNumber !== undefined) data.invoiceNumber = dto.invoiceNumber;
     if (dto.invoiceDate !== undefined)   data.invoiceDate = new Date(dto.invoiceDate);
     if (dto.dueDate !== undefined)       data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
@@ -343,7 +383,7 @@ export class PurchaseInvoicesCrudService {
     if (dto.items !== undefined) {
       if (!dto.items.length) throw new BadRequestException('حداقل یک ردیف لازم است');
 
-      const items = dto.items.map((it: any, i: number) => {
+      const items = dto.items.map((it: InvoiceItemInput, i: number) => {
         const base = Number(it.totalPrice ?? (Number(it.quantity) * Number(it.unitPrice)));
         const discPercent = Number(it.discountPercent) || 0;
         const discAmount = Number(it.discountAmount) || (discPercent > 0 ? (base * discPercent) / 100 : 0);
@@ -358,10 +398,10 @@ export class PurchaseInvoicesCrudService {
 
         return {
           rowNumber: it.rowNumber ?? i + 1,
-          description: it.description,
-          quantity: it.quantity,
-          unit: (it.unit ?? 'NUMBER') as any,
-          unitPrice: it.unitPrice,
+          description: it.description ?? '',
+          quantity: Number(it.quantity ?? 0),
+          unit: String(it.unit ?? 'NUMBER'),
+          unitPrice: Number(it.unitPrice ?? 0),
           totalPrice: base,
           accountId: it.accountId ?? null,
           wbsItemId: it.wbsItemId ?? null,
@@ -414,7 +454,7 @@ export class PurchaseInvoicesCrudService {
 
     const needsRecompute = dto.taxPercent !== undefined || dto.discountAmount !== undefined;
     if (needsRecompute) {
-      const items = (inv.items as any[]).map((it) => ({
+      const items = (inv.items as unknown as RecomputeItem[]).map((it) => ({
         quantity: Number(it.quantity),
         unitPrice: Number(it.unitPrice),
         totalPrice: Number(it.totalPrice),

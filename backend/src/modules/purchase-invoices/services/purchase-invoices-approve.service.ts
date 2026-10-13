@@ -1,7 +1,42 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { AccountLevel, AccountNature, AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { FiscalYearsService } from '../../accounting/fiscal-years.service';
 import { PurchaseInvoicesCrudService } from './purchase-invoices-crud.service';
+
+interface JELine {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+}
+
+interface InvoiceItemShape {
+  id: string;
+  totalPrice?: unknown;
+  quantity?: unknown;
+  unitPrice?: unknown;
+  isCapital?: boolean;
+  accountId?: string | null;
+  description?: string | null;
+  usefulLifeMonths?: number | null;
+}
+
+interface InvoiceWithItems {
+  id: string;
+  code: string;
+  supplierId: string;
+  projectId?: string | null;
+  invoiceDate: Date;
+  grId?: string | null;
+  subtotal: unknown;
+  discountAmount: unknown;
+  taxAmount: unknown;
+  totalAmount: unknown;
+  journalEntryId?: string | null;
+  supplier: { name: string };
+  items: InvoiceItemShape[];
+}
 
 @Injectable()
 export class PurchaseInvoicesApproveService {
@@ -46,7 +81,7 @@ export class PurchaseInvoicesApproveService {
         throw new BadRequestException('Mapping GOODS_RECEIPT ناقص است');
       }
       const grniAmount = subtotalNum - discountNum;
-      const grniLines: any[] = [];
+      const grniLines: JELine[] = [];
       if (grniAmount > 0.01) {
         grniLines.push({
           accountId: grniMapping.creditAccountId,
@@ -85,14 +120,14 @@ export class PurchaseInvoicesApproveService {
 
     let capitalNet = 0;
     let normalNet = 0;
-    for (const it of ((inv as any).items || [])) {
+    for (const it of ((inv as unknown as InvoiceWithItems).items || [])) {
       const gross = Number(it.totalPrice);
       const share = subtotalNum > 0 ? (gross / subtotalNum) * discountNum : 0;
       const net = gross - share;
       if (it.isCapital && assetAccId) capitalNet += net;
       else normalNet += net;
     }
-    const jeLines: any[] = [];
+    const jeLines: JELine[] = [];
     if (normalNet > 0.01) {
       if (!expenseAcc) throw new BadRequestException('Expense account required');
       jeLines.push({ accountId: expenseAcc.id, debit: normalNet });
@@ -114,7 +149,7 @@ export class PurchaseInvoicesApproveService {
     });
 
     // C-4.b: create FixedAsset records for capital items
-    const capitalItems = ((inv as any).items || []).filter((it: any) => it.isCapital);
+    const capitalItems = ((inv as unknown as InvoiceWithItems).items || []).filter((it: InvoiceItemShape) => it.isCapital);
     if (capitalItems.length > 0 && assetAccId && deprecAccId && accumDeprecAccId) {
       for (const it of capitalItems) {
         const cost = Number(it.totalPrice) || (Number(it.quantity) * Number(it.unitPrice));
@@ -159,9 +194,9 @@ export class PurchaseInvoicesApproveService {
     });
   }
 
-  private async resolveExpenseAccount(inv: any) {
-    const itemWithAcc = inv.items.find((it: any) => it.accountId);
-    if (itemWithAcc) {
+  private async resolveExpenseAccount(inv: InvoiceWithItems) {
+    const itemWithAcc = inv.items.find((it: InvoiceItemShape) => it.accountId);
+    if (itemWithAcc?.accountId) {
       return this.prisma.account.findUnique({ where: { id: itemWithAcc.accountId } });
     }
     const mapping = await this.prisma.accountMapping.findUnique({ where: { code: 'PURCHASE_CREDIT' } });
@@ -209,12 +244,12 @@ export class PurchaseInvoicesApproveService {
       data: {
         code: nextCode,
         name: supplier.name,
-        level: 'DETAIL' as any,
-        nature: 'CREDIT' as any,
+        level: AccountLevel.DETAIL,
+        nature: AccountNature.CREDIT,
         parentId: parent.id,
         isPostable: true,
         isActive: true,
-        detailType: 'SUPPLIER' as any,
+        detailType: AccountDetailType.SUPPLIER,
         detailId: supplier.id,
       },
     });
@@ -231,7 +266,7 @@ export class PurchaseInvoicesApproveService {
     sourceId: string;
     userId?: string;
     projectId?: string | null;
-    lines: Array<{ accountId: string; debit?: number; credit?: number; description?: string }>;
+    lines: JELine[];
   }) {
     const fy = await this.prisma.fiscalYear.findFirst({
       where: {
