@@ -101,6 +101,7 @@ async function seedRoles() {
           if (p.module === 'projects' && p.action === 'read') return true;
           if (p.module === 'site-ops') return true;
           if (p.module === 'procurement' && ['create','read'].includes(p.action)) return true;
+          if (p.module === 'approvals' && p.action === 'read') return true;
           return false;
         })
         .map(p => p.id),
