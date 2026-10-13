@@ -14,6 +14,7 @@ let svToken: string;
 let svUserId: string;
 let otherUserId: string;
 let projectId: string;
+let createdProjectId: string | null = null;
 
 const createdReportIds: string[] = [];
 const SV_USERNAME = 'e2e_sv_' + Date.now();
@@ -49,8 +50,18 @@ before(async () => {
   if (!role) throw new Error('role site_supervisor یافت نشد — seed را اجرا کن');
 
   // project
-  const project = await prisma.project.findFirst({ where: { deletedAt: null } });
-  if (!project) throw new Error('هیچ پروژه‌ای موجود نیست');
+  // پروژه: از seed یا ساخت موقت
+  let project = await prisma.project.findFirst({ where: { deletedAt: null } });
+  if (!project) {
+    project = await prisma.project.create({
+      data: {
+        code: 'E2E-PRJ-' + Date.now(),
+        name: 'E2E Test Project',
+        status: 'ACTIVE',
+      },
+    });
+    createdProjectId = project.id;
+  }
   projectId = project.id;
 
   // admin user
@@ -118,6 +129,9 @@ after(async () => {
       if (svUserId) {
         await prisma.userRole.deleteMany({ where: { userId: svUserId } });
         await prisma.user.deleteMany({ where: { id: svUserId } });
+      }
+      if (createdProjectId) {
+        await prisma.project.deleteMany({ where: { id: createdProjectId } });
       }
     } catch (e) {
       // ignore
