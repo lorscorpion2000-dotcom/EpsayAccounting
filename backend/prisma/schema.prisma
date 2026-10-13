@@ -1559,8 +1559,7 @@ model DailyReport {
   equipments  DailyReportEquipment[]
   materials   DailyReportMaterial[]
   progresses  DailyReportProgress[]
-  entryExits  DailyReportEntryExit[]
-  requests    DailyReportRequest[]
+requests    DailyReportRequest[]
   events      DailyReportEvent[]
   sections    DailyReportSection[]
   attachments DailyReportAttachment[]
@@ -1584,7 +1583,6 @@ enum DailyReportSectionType {
   WORKERS
   EQUIPMENTS
   MATERIALS
-  ENTRY_EXIT
   REQUESTS
   EVENTS
   ATTACHMENTS
@@ -3756,32 +3754,6 @@ model ClientStatementItem {
 // SITE OPERATIONS v2 — sections و، ز، ح، ط
 // ============================================================
 
-model DailyReportEntryExit {
-  id       String      @id @default(uuid()) @db.Uuid
-  reportId String      @map("report_id") @db.Uuid
-  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  rowNumber    Int     @map("row_number")
-  kind         String  @db.VarChar(20) // PERSON | VEHICLE
-  // Person fields
-  personName   String? @map("person_name") @db.VarChar(200)
-  organization String? @db.VarChar(200)
-  purpose      String? @db.VarChar(300)
-  // Vehicle fields
-  vehicleType  String? @map("vehicle_type") @db.VarChar(100)
-  plateNumber  String? @map("plate_number") @db.VarChar(32)
-  driverName   String? @map("driver_name") @db.VarChar(200)
-  cargo        String? @db.VarChar(300)
-  // Time
-  entryTime    String? @map("entry_time") @db.VarChar(10)
-  exitTime     String? @map("exit_time") @db.VarChar(10)
-  notes        String? @db.VarChar(500)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([reportId])
-  @@map("daily_report_entry_exits")
-}
 
 model DailyReportRequest {
   id       String      @id @default(uuid()) @db.Uuid
