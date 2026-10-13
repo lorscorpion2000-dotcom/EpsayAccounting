@@ -149,6 +149,8 @@ export default function DashboardPage() {
               { key: 'dailyReports', label: 'گزارش روزانه', icon: ClipboardList },
               { key: 'goodsReceipts', label: 'رسید انبار', icon: Package },
               { key: 'subcontractorStatements', label: 'صورت‌وضعیت', icon: FileText },
+              { key: 'clientStatements', label: 'صورت‌وضعیت کارفرما', icon: FileText },
+              { key: 'workerStatements', label: 'صورت‌وضعیت پرسنل', icon: FileText },
               { key: 'leaveRequests', label: 'مرخصی', icon: CalendarOff },
               { key: 'advanceRequests', label: 'مساعده', icon: DollarSign },
             ].map((item) => {

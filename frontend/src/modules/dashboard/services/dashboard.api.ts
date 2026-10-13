@@ -47,6 +47,8 @@ export interface AlertsData {
     dailyReports: number;
     goodsReceipts: number;
     subcontractorStatements: number;
+    clientStatements: number;
+    workerStatements: number;
     leaveRequests: number;
     advanceRequests: number;
     total: number;

@@ -34,7 +34,7 @@ export class DashboardService {
     ]);
 
     // تعداد در انتظار تایید (به‌طور کامل)
-    const [pcTx, pcReq, pr, po, dr, gr, ss, lr, ar] = await Promise.all([
+    const [pcTx, pcReq, pr, po, dr, gr, ss, lr, ar, cs, ws] = await Promise.all([
       this.prisma.pettyCashTransaction.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.pettyCashRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.purchaseRequest.count({ where: { status: 'SUBMITTED' } }),
@@ -44,8 +44,10 @@ export class DashboardService {
       this.prisma.subcontractorStatement.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.advanceRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.workerStatement.count({ where: { status: 'SUBMITTED' } }),
     ]);
-    const totalPending = pcTx + pcReq + pr + po + dr + gr + ss + lr + ar;
+    const totalPending = pcTx + pcReq + pr + po + dr + gr + ss + lr + ar + cs + ws;
 
     return {
       activeProjects,
@@ -135,13 +137,28 @@ export class DashboardService {
           select: { weight: true, id: true },
         });
 
-        // پیشرفت فیزیکی بر اساس وزن‌های WBS (placeholder 0% تا زمان افزودن فیلد progressPct)
+        // آخرین snapshot به ازای هر WBS
+        const snapshots = await this.prisma.wbsProgressSnapshot.findMany({
+          where: { projectId: p.id },
+          orderBy: { snapshotDate: 'desc' },
+          select: { wbsItemId: true, progressPct: true },
+        });
+        const lastPct = new Map<string, number>();
+        for (const s of snapshots) {
+          if (!lastPct.has(s.wbsItemId)) lastPct.set(s.wbsItemId, Number(s.progressPct || 0));
+        }
+
+        // پیشرفت فیزیکی بر اساس وزن‌های WBS
         let totalWeight = 0;
+        let weightedProgress = 0;
         for (const w of wbsItems) {
           const weight = Number(w.weight || 0);
-          if (weight > 0) totalWeight += weight;
+          if (weight > 0) {
+            totalWeight += weight;
+            weightedProgress += (lastPct.get(w.id) || 0) * weight;
+          }
         }
-        const physicalProgress = 0; // در فاز بعدی با progressPct محاسبه می‌شود
+        const physicalProgress = totalWeight > 0 ? weightedProgress / totalWeight : 0;
 
         // پیشرفت مالی: مجموع هزینه‌های واقعی / بودجه مصوب
         const totalBudget = p.budgets.reduce((s, b) => s + Number(b.amount), 0);
@@ -289,7 +306,7 @@ export class DashboardService {
    * شمارش آیتم‌های در انتظار تایید به تفکیک نوع
    */
   private async countPendingApprovals() {
-    const [pcTx, pcReq, pr, po, dr, gr, ss, lr, ar] = await Promise.all([
+    const [pcTx, pcReq, pr, po, dr, gr, ss, lr, ar, cs, ws] = await Promise.all([
       this.prisma.pettyCashTransaction.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.pettyCashRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.purchaseRequest.count({ where: { status: 'SUBMITTED' } }),
@@ -299,6 +316,8 @@ export class DashboardService {
       this.prisma.subcontractorStatement.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.advanceRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.workerStatement.count({ where: { status: 'SUBMITTED' } }),
     ]);
 
     return {
@@ -311,7 +330,9 @@ export class DashboardService {
       subcontractorStatements: ss,
       leaveRequests: lr,
       advanceRequests: ar,
-      total: pcTx + pcReq + pr + po + dr + gr + ss + lr + ar,
+      clientStatements: cs,
+      workerStatements: ws,
+      total: pcTx + pcReq + pr + po + dr + gr + ss + lr + ar + cs + ws,
     };
   }
 

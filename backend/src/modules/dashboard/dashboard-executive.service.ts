@@ -78,9 +78,16 @@ export class DashboardExecutiveService {
     const payables = Number(apAgg._sum.credit || 0) - Number(apAgg._sum.debit || 0);
 
     // Pending approvals
-    const pendingDailyReports = await this.prisma.dailyReport.count({ where: { status: 'SUBMITTED' } });
-    const pendingPurchaseReqs  = await this.prisma.purchaseRequest.count({ where: { status: 'SUBMITTED' } });
-    const pendingStatements    = await this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } });
+    const [pendingDailyReports, pendingPurchaseReqs, pendingPurchaseOrders, pendingGoodsReceipts, pendingSubcontractorStatements, pendingClientStatements, pendingWorkerStatements, pendingPettyCash] = await Promise.all([
+      this.prisma.dailyReport.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.purchaseRequest.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.purchaseOrder.count({ where: { status: 'DRAFT' } }),
+      this.prisma.goodsReceipt.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.subcontractorStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.workerStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.pettyCashTransaction.count({ where: { status: 'SUBMITTED' } }),
+    ]);
 
     // ═══ Top 5 projects by contract ═══
     const projectsWithContracts = await this.prisma.project.findMany({
@@ -201,8 +208,15 @@ export class DashboardExecutiveService {
       pendingApprovals: {
         dailyReports: pendingDailyReports,
         purchaseRequests: pendingPurchaseReqs,
-        statements: pendingStatements,
-        total: pendingDailyReports + pendingPurchaseReqs + pendingStatements,
+        purchaseOrders: pendingPurchaseOrders,
+        goodsReceipts: pendingGoodsReceipts,
+        subcontractorStatements: pendingSubcontractorStatements,
+        clientStatements: pendingClientStatements,
+        workerStatements: pendingWorkerStatements,
+        pettyCashTransactions: pendingPettyCash,
+        total: pendingDailyReports + pendingPurchaseReqs + pendingPurchaseOrders +
+          pendingGoodsReceipts + pendingSubcontractorStatements +
+          pendingClientStatements + pendingWorkerStatements + pendingPettyCash,
       },
       projects: projectsRanked,
       monthlyTrend,
