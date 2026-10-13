@@ -6,7 +6,7 @@ import request from 'supertest';
 import * as bcrypt from 'bcrypt';
 
 let app: any, prisma: any;
-let adminToken: string, svToken: string, svUserId: string;
+let svToken: string, svUserId: string;
 let projectId: string, warehouseId: string, itemId: string, supplierId: string;
 let createdProjectId: string | null = null;
 let testAdminUserId: string | null = null;
@@ -80,9 +80,8 @@ before(async () => {
   approvalsSvc = app.get(ApprovalsService);
   receiptsSvc = app.get(ReceiptsService);
   piSvc = app.get(PurchaseInvoicesService);
-  const aL = await request(app.getHttpServer()).post('/api/auth/login').send({ username: TEST_ADMIN_USERNAME, password: TEST_ADMIN_PASSWORD });
-  adminToken = aL.body.accessToken;
-  let project = await prisma.project.findFirst({ where: { deletedAt: null } });
+
+    let project = await prisma.project.findFirst({ where: { deletedAt: null } });
   if (!project) { project = await prisma.project.create({ data: { code: 'E2E-FC-' + Date.now(), name: 'E2E FC', status: 'IN_PROGRESS' } }); createdProjectId = project.id; }
   projectId = project.id;
   let wh = await prisma.warehouse.findFirst({ where: { deletedAt: null } });
