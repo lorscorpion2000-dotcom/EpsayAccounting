@@ -57,7 +57,7 @@ before(async () => {
       data: {
         code: 'E2E-PRJ-' + Date.now(),
         name: 'E2E Test Project',
-        status: 'ACTIVE',
+        status: 'IN_PROGRESS',
       },
     });
     createdProjectId = project.id;
