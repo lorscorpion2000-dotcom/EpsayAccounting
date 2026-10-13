@@ -4,7 +4,6 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import * as bcrypt from 'bcrypt';
-import { loginAdmin } from './_helpers';
 
 let app: any;
 let prisma: any;
@@ -13,6 +12,9 @@ let svToken: string;
 let svUserId: string;
 let projectId: string;
 let createdProjectId: string | null = null;
+let testAdminUserId: string | null = null;
+const TEST_ADMIN_USERNAME = 'e2e_admin_' + Date.now();
+const TEST_ADMIN_PASSWORD = 'Admin@1234';
 
 const SV_USERNAME = 'e2e_pr_sv_' + Date.now();
 const SV_PASSWORD = 'Test@1234';
@@ -78,7 +80,30 @@ before(async () => {
 
   app = await createTestApp();
   prisma = app.get(PrismaService);
-  adminToken = await loginAdmin(app);
+
+  // به جای تکیه بر admin fixture، یک کاربر super_admin اختصاصی می‌سازیم
+  const superRole = await prisma.role.findUnique({ where: { code: 'super_admin' } });
+  if (!superRole) throw new Error('role super_admin یافت نشد — seed باید اجرا شده باشد');
+
+  const adminHash = await bcrypt.hash(TEST_ADMIN_PASSWORD, 10);
+  const testAdmin = await prisma.user.create({
+    data: {
+      username: TEST_ADMIN_USERNAME,
+      fullName: 'E2E Admin',
+      passwordHash: adminHash,
+      isActive: true,
+      roles: { create: [{ roleId: superRole.id }] },
+    },
+  });
+  testAdminUserId = testAdmin.id;
+
+  const adminLoginRes = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ username: TEST_ADMIN_USERNAME, password: TEST_ADMIN_PASSWORD });
+  if (adminLoginRes.status !== 201) {
+    throw new Error('test admin login failed: ' + JSON.stringify(adminLoginRes.body));
+  }
+  adminToken = adminLoginRes.body.accessToken;
 
   let project = await prisma.project.findFirst({ where: { deletedAt: null } });
   if (!project) {
@@ -139,6 +164,11 @@ after(async () => {
       if (svUserId) {
         await prisma.userRole.deleteMany({ where: { userId: svUserId } });
         await prisma.user.deleteMany({ where: { id: svUserId } });
+      }
+
+      if (testAdminUserId) {
+        await prisma.userRole.deleteMany({ where: { userId: testAdminUserId } });
+        await prisma.user.deleteMany({ where: { id: testAdminUserId } });
       }
 
       if (createdProjectId) {
