@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PayrollTaxService } from './payroll-tax.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { resolvePartnerDetailAccount, resolveDefaultDetailAccount } from '../../shared/utils/account-detail-resolver';
 import { generateCode } from '../../shared/utils/code-generator';
 import {
   CreateWorkerStatementDto,
@@ -387,12 +388,9 @@ export class WorkerStatementsService {
       },
       orderBy: { code: 'asc' },
     });
-    const payAcc = await this.prisma.account.findFirst({
-      where: { code: { startsWith: '2.1.2' }, isPostable: true, isActive: true },
-      orderBy: { code: 'asc' },
-    });
-    const insAcc = await this.prisma.account.findUnique({ where: { code: '2.1.4' } });
-    const taxAcc = await this.prisma.account.findUnique({ where: { code: '2.1.3' } });
+    const payAcc = await resolvePartnerDetailAccount(this.prisma, '2.1.2', s.partnerId, 'CREDIT', 'EMPLOYEE');
+    const insAcc = await resolveDefaultDetailAccount(this.prisma, '2.1.4');
+    const taxAcc = await resolveDefaultDetailAccount(this.prisma, '2.1.3');
 
     if (!salaryAcc || !payAcc || !insAcc || !taxAcc) {
       throw new Error('حساب‌های لازم برای JE صورت‌وضعیت پرسنل موجود نیستند');
@@ -459,6 +457,19 @@ export class WorkerStatementsService {
       sourceId: statementId,
       lines,
       userId,
+    });
+  }
+
+  async reject(id: string, reason: string) {
+    const s = await this.findOne(id);
+    if (s.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل رد است');
+    const existingDesc = (s as { description?: string | null }).description || '';
+    return this.prisma.workerStatement.update({
+      where: { id },
+      data: {
+        status: 'DRAFT',
+        description: existingDesc ? existingDesc + ' | رد: ' + reason : 'رد: ' + reason,
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { resolvePartnerDetailAccount, resolveDefaultDetailAccount } from '../../shared/utils/account-detail-resolver';
 import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
@@ -278,10 +279,10 @@ export class SubcontractorStatementsService {
     // ═══ حساب‌های لازم ═══
     const [expAcc, payAcc, insAcc, taxAcc, retAcc] = await Promise.all([
       this.prisma.account.findUnique({ where: { code: '5.1.3' } }), // پیمانکاران جزء (هزینه)
-      this.prisma.account.findUnique({ where: { code: '2.1.5' } }), // پیمانکاران و تأمین‌کنندگان (بدهی)
-      this.prisma.account.findUnique({ where: { code: '2.1.4' } }), // بیمه تأمین اجتماعی
-      this.prisma.account.findUnique({ where: { code: '2.1.3' } }), // مالیات و عوارض
-      this.prisma.account.findUnique({ where: { code: '2.1.7' } }), // حسن انجام کار پرداختنی
+      resolvePartnerDetailAccount(this.prisma, '2.1.5', s.contractorId, 'CREDIT', 'CONTRACTOR'),
+      resolveDefaultDetailAccount(this.prisma, '2.1.4'),
+      resolveDefaultDetailAccount(this.prisma, '2.1.3'),
+      resolveDefaultDetailAccount(this.prisma, '2.1.7'),
     ]);
 
     if (!expAcc || !payAcc || !insAcc || !taxAcc || !retAcc) {
@@ -380,6 +381,19 @@ export class SubcontractorStatementsService {
       sourceId: statementId,
       lines,
       userId,
+    });
+  }
+
+  async reject(id: string, reason: string) {
+    const s = await this.findOne(id);
+    if (s.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل رد است');
+    const existingDesc = (s as { description?: string | null }).description || '';
+    return this.prisma.subcontractorStatement.update({
+      where: { id },
+      data: {
+        status: 'DRAFT',
+        description: existingDesc ? existingDesc + ' | رد: ' + reason : 'رد: ' + reason,
+      },
     });
   }
 

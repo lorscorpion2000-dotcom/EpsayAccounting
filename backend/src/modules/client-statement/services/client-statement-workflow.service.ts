@@ -1,12 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { ClientStatementCrudService } from './client-statement-crud.service';
+import { ClientStatementPostService } from './client-statement-post.service';
 
 @Injectable()
 export class ClientStatementWorkflowService {
   constructor(
     private prisma: PrismaService,
     private crud: ClientStatementCrudService,
+    private postSvc: ClientStatementPostService,
   ) {}
 
   async submit(id: string) {
@@ -19,10 +21,18 @@ export class ClientStatementWorkflowService {
   async approve(id: string, userId: string) {
     const s = await this.crud.get(id);
     if (s.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
-    return this.prisma.clientStatement.update({
+    const updated = await this.prisma.clientStatement.update({
       where: { id },
       data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
     });
+    // F13: auto-post JE on approve (parity with subcontractor/worker)
+    try {
+      const posted = await this.postSvc.post(id, userId);
+      return posted;
+    } catch {
+      // status is APPROVED; JE failed. User can retry via /post endpoint.
+      return updated;
+    }
   }
 
   async reject(id: string, reason: string) {

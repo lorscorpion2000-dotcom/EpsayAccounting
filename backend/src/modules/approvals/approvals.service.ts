@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { SiteOpsService } from '../site-ops/site-ops.service';
+import { SubcontractorStatementsService } from '../payroll/subcontractor-statements.service';
+import { WorkerStatementsService } from '../payroll/worker-statements.service';
+import { ClientStatementService } from '../client-statement/client-statement.service';
 
 @Injectable()
 export class ApprovalsService {
   constructor(
     private prisma: PrismaService,
     private siteOps: SiteOpsService,
+    private subcontractorStatements: SubcontractorStatementsService,
+    private workerStatements: WorkerStatementsService,
+    private clientStatements: ClientStatementService,
   ) {}
 
   /**
@@ -55,6 +61,8 @@ export class ApprovalsService {
       subcontractorStatements,
       leaveRequests,
       advanceRequests,
+      clientStatementsPending,
+      workerStatementsPending,
     ] = await Promise.all([
       this.prisma.pettyCashTransaction.findMany({
         where: { status: 'SUBMITTED' },
@@ -159,6 +167,25 @@ export class ApprovalsService {
         where: { status: 'PENDING' },
         include: {
           employee: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.clientStatement.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          project: { select: { id: true, code: true, name: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+
+      this.prisma.workerStatement.findMany({
+        where: { status: 'SUBMITTED' },
+        include: {
+          partner: { select: { id: true, code: true, name: true } },
+          project: { select: { id: true, code: true, name: true } },
+          _count: { select: { items: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -336,6 +363,43 @@ export class ApprovalsService {
         createdAt: ar.createdAt,
         raw: ar,
       })),
+
+      clientStatements: clientStatementsPending.map((s) => ({
+        id: s.id,
+        module: 'client-statement',
+        type: 'STATEMENT',
+        code: s.code,
+        title: 'صورت‌وضعیت کارفرما ' + s.statementNumber,
+        description: 'پروژه: ' + (s.project?.name || '—') + ' - ' + (s._count?.items || 0) + ' ردیف',
+        amount: s.netPayable,
+        date: s.periodEnd,
+        status: s.status,
+        requester: 'کارفرما',
+        projectName: s.project?.name || null,
+        projectCode: s.project?.code,
+        itemCount: s._count?.items || 0,
+        createdAt: s.createdAt,
+        raw: s,
+      })),
+
+      workerStatements: workerStatementsPending.map((s) => ({
+        id: s.id,
+        module: 'worker-statement',
+        type: 'STATEMENT',
+        code: s.code,
+        title: 'صورت‌وضعیت پرسنل ' + s.statementNumber,
+        description: 'پرسنل: ' + (s.partner?.name || '—') + ' - ' + (s._count?.items || 0) + ' ردیف',
+        amount: s.netPayable,
+        date: s.periodEnd,
+        status: s.status,
+        requester: s.partner?.name || '—',
+        employeeName: s.partner?.name,
+        projectName: s.project?.name || null,
+        projectCode: s.project?.code,
+        itemCount: s._count?.items || 0,
+        createdAt: s.createdAt,
+        raw: s,
+      })),
     };
   }
 
@@ -350,6 +414,8 @@ export class ApprovalsService {
       subcontractorStatementCount,
       leaveRequestCount,
       advanceRequestCount,
+      clientStatementCount,
+      workerStatementCount,
       pettyCashTxAmount,
       pettyCashReqAmount,
       purchaseOrderAmount,
@@ -363,6 +429,8 @@ export class ApprovalsService {
       this.prisma.subcontractorStatement.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.advanceRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.clientStatement.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.workerStatement.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.pettyCashTransaction.aggregate({
         where: { status: 'SUBMITTED' },
         _sum: { amount: true },
@@ -425,6 +493,15 @@ export class ApprovalsService {
           count: advanceRequestCount,
           amount: 0,
         },
+
+        clientStatements: {
+          count: clientStatementCount,
+          amount: 0,
+        },
+        workerStatements: {
+          count: workerStatementCount,
+          amount: 0,
+        },
       },
     };
   }
@@ -460,10 +537,16 @@ export class ApprovalsService {
         });
 
       case 'subcontractor-statement':
-        return this.prisma.subcontractorStatement.update({
-          where: { id },
-          data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
-        });
+        // F13: delegate to service (builds JE)
+        return this.subcontractorStatements.approve(id, userId);
+
+      case 'client-statement':
+        // F13: delegate to service (approve + JE)
+        return this.clientStatements.approve(id, userId);
+
+      case 'worker-statement':
+        // F13: delegate to service (approve + JE)
+        return this.workerStatements.approve(id, userId);
 
       case 'leave-request':
         return this.prisma.leaveRequest.update({
@@ -529,10 +612,14 @@ export class ApprovalsService {
         });
 
       case 'subcontractor-statement':
-        return this.prisma.subcontractorStatement.update({
-          where: { id },
-          data: { status: 'DRAFT' },
-        });
+        // F13: delegate to service
+        return this.subcontractorStatements.reject(id, reason);
+
+      case 'client-statement':
+        return this.clientStatements.reject(id, reason);
+
+      case 'worker-statement':
+        return this.workerStatements.reject(id, reason);
 
       default:
         throw new Error('ماژول نامعتبر: ' + module);
