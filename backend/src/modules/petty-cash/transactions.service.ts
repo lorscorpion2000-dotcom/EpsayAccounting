@@ -59,6 +59,7 @@ export class PettyCashTransactionsService {
           },
         },
         project: { select: { id: true, code: true, name: true } },
+        journalEntry: { select: { id: true, code: true, status: true } },
       },
     });
     if (!tx) throw new NotFoundException('تراکنش یافت نشد');
@@ -281,6 +282,7 @@ export class PettyCashTransactionsService {
         sourceId: tx.id,
         userId: approverId,
         bankAccountId: sourceAccountId || undefined,
+        autoPost: true,
       });
 
       return this.prisma.pettyCashTransaction.update({

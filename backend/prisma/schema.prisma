@@ -669,6 +669,7 @@ model JournalEntry {
   adjustmentCalculation  AdjustmentCalculation? @relation("AdjustmentJE")
   materialPriceDiff      MaterialPriceDiff?     @relation("MPDJE")
   expenses               Expense[]              @relation("ExpenseJournal")
+  goodsIssues            GoodsIssue[]           @relation("GoodsIssueJournal")
 
   @@unique([fiscalYearId, entryNumber])
   @@index([entryDate])
@@ -1468,8 +1469,11 @@ model GoodsIssue {
   totalValue     Decimal     @default(0) @map("total_value") @db.Decimal(24, 2)
   createdById    String?     @map("created_by_id") @db.Uuid
   createdBy      User?       @relation(fields: [createdById], references: [id])
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid
+  journalEntry   JournalEntry? @relation("GoodsIssueJournal", fields: [journalEntryId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   items GoodsIssueItem[]
 

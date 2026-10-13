@@ -103,7 +103,8 @@ export class ChequesService {
         projectId: created.projectId ?? undefined,
         sourceId: created.id,
         userId,
-      });
+        autoPost: true,
+        });
       return this.prisma.cheque.update({
         where: { id: created.id },
         data: { issuedJournalEntryId: entry.id },
@@ -205,7 +206,8 @@ export class ChequesService {
       projectId: c.projectId ?? undefined,
       sourceId: c.id,
       userId,
-    });
+      autoPost: true,
+      });
     return this.prisma.cheque.update({
       where: { id },
       data: {

@@ -101,6 +101,7 @@ export class FixedAssetsService {
           creditAccountId: dto.counterAccountId,
           sourceId: created.id,
           userId,
+          autoPost: true,
           projectId: dto.projectId ?? undefined,
         }, tx);
 

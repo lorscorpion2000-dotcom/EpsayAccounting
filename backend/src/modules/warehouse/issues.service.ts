@@ -49,6 +49,7 @@ export class IssuesService {
           include: { item: { include: { category: true } } },
           orderBy: { rowNumber: 'asc' },
         },
+        journalEntry: { select: { id: true, code: true, status: true } },
       },
     });
     if (!r) throw new NotFoundException('حواله انبار یافت نشد');
@@ -279,6 +280,10 @@ export class IssuesService {
           lines: jeLines,
         }, tx);
         journalCode = je.code;
+        await tx.goodsIssue.update({
+          where: { id },
+          data: { journalEntryId: je.id },
+        });
       }
 
       await tx.goodsIssue.update({
