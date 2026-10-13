@@ -9,7 +9,7 @@ import { siteOpsApi } from '../services/site-ops.api';
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project } from '@/types/project';
-import { WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS, WeatherCondition } from '@/types/site-ops';
+import { WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS, WeatherCondition, SuggestedWorker } from '@/types/site-ops';
 import { toPersianDigits } from '@/utils/format';
 
 type Tab =
@@ -33,6 +33,21 @@ interface FormData {
   progresses: any[];
   requests: any[];
   events: any[];
+}
+
+/** تبدیل تاریخ ISO میلادی به سال/ماه شمسی — بدون وابستگی خارجی */
+function isoToJalali(iso: string): { year: number; month: number } {
+  const d = new Date(iso + "T00:00:00Z");
+  if (isNaN(d.getTime())) return { year: 0, month: 0 };
+  const fmt = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+    year: "numeric", month: "numeric", timeZone: "UTC",
+  });
+  const parts = fmt.formatToParts(d);
+  const yearStr = parts.find((p) => p.type === "year")?.value || "0";
+  const monthStr = parts.find((p) => p.type === "month")?.value || "0";
+  const year = Number(yearStr.replace(/[^0-9]/g, "")) || 0;
+  const month = Number(monthStr.replace(/[^0-9]/g, "")) || 0;
+  return { year, month };
 }
 
 function todayISO(): string {
@@ -79,6 +94,10 @@ export default function DailyReportFormPage() {
   const [pettyCashAccountList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [suggestedList, setSuggestedList] = useState<SuggestedWorker[]>([]);
+  const [selectedSuggested, setSelectedSuggested] = useState<Set<string>>(new Set());
+  const [loadingSuggested, setLoadingSuggested] = useState(false);
+  const [showSuggestedPanel, setShowSuggestedPanel] = useState(false);
 
   const { register, handleSubmit, control, reset, watch, setValue, formState: { errors: _errors } } = useForm<FormData>({
     defaultValues: {
@@ -217,6 +236,50 @@ export default function DailyReportFormPage() {
     </div>;
   }
 
+  const loadSuggested = async () => {
+    if (!projectId) { toast.error("ابتدا پروژه را انتخاب کنید"); return; }
+    const rd = watch("reportDate");
+    if (!rd) { toast.error("تاریخ گزارش را وارد کنید"); return; }
+    setLoadingSuggested(true);
+    try {
+      const j = isoToJalali(rd);
+      if (!j.year || !j.month) { toast.error("تاریخ گزارش نامعتبر است"); return; }
+      const data = await siteOpsApi.reports.suggestedWorkers(j.year, j.month, projectId);
+      setSuggestedList(data.employees || []);
+      setSelectedSuggested(new Set());
+      setShowSuggestedPanel(true);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "خطا در بارگذاری پیشنهادها");
+    } finally {
+      setLoadingSuggested(false);
+    }
+  };
+
+  const addSelectedToForm = () => {
+    if (selectedSuggested.size === 0) { toast.error("حداقل یک نفر را انتخاب کنید"); return; }
+    const existing = new Set(workersFA.fields.map((f: any) => f.employeeId).filter(Boolean));
+    let added = 0;
+    for (const sw of suggestedList) {
+      if (!selectedSuggested.has(sw.employeeId)) continue;
+      if (existing.has(sw.employeeId)) continue;
+      workersFA.append({
+        kind: "OWN",
+        employeeId: sw.employeeId,
+        teamName: sw.name,
+        foreman: "",
+        workerCount: 1,
+        workHours: 8,
+        overtime: 0,
+        status: "PRESENT",
+      });
+      added++;
+    }
+    setShowSuggestedPanel(false);
+    setSelectedSuggested(new Set());
+    if (added === 0) toast.info("هیچ ردیف جدیدی اضافه نشد (همه از قبل موجود بودند)");
+    else toast.success(added + " نفر به فرم اضافه شد");
+  };
+
   const TABS = [
     { key: 'general',   label: 'عمومی',         icon: Cloud,         count: undefined },
     { key: 'workers',   label: 'نیروی انسانی', icon: Users,         count: workersFA.fields.length },
@@ -329,6 +392,100 @@ export default function DailyReportFormPage() {
         {/* ═══ Workers ═══ */}
         {tab === 'workers' && (
           <div className="space-y-6">
+            {/* ═══ پیشنهادی از گرید ماهانه ═══ */}
+            <div className="card p-4 bg-emerald-50/40 border border-emerald-200">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-700" />
+                  <h3 className="font-bold text-emerald-900 text-sm">پرسنل پیشنهادی از گرید ماهانه</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadSuggested}
+                  disabled={loadingSuggested || !projectId}
+                  className="btn-secondary text-sm"
+                >
+                  {loadingSuggested ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardList className="w-4 h-4" />}
+                  بارگذاری از گرید ماهانه
+                </button>
+              </div>
+              {showSuggestedPanel && (
+                <div className="mt-4">
+                  {suggestedList.length === 0 ? (
+                    <div className="text-center py-4 text-slate-500 text-sm">در ماه انتخاب‌شده پرسنلی یافت نشد</div>
+                  ) : (
+                    <>
+                      <div className="text-xs text-slate-600 mb-2">پرسنلی که در این ماه حضور داشته‌اند:</div>
+                      <div className="overflow-x-auto bg-white rounded-lg border">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 border-b">
+                            <tr>
+                              <th className="px-2 py-1.5 w-12 text-center">انتخاب</th>
+                              <th className="px-2 py-1.5 text-right">نام</th>
+                              <th className="px-2 py-1.5 text-right w-24">کد</th>
+                              <th className="px-2 py-1.5 text-right w-24">سِمت</th>
+                              <th className="px-2 py-1.5 text-center w-16">روز</th>
+                              <th className="px-2 py-1.5 text-center w-20">ساعت</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {suggestedList.map((sw) => {
+                              const already = workersFA.fields.some((f: any) => f.employeeId === sw.employeeId);
+                              return (
+                                <tr key={sw.employeeId} className={already ? "opacity-50" : ""}>
+                                  <td className="px-2 py-1.5 text-center">
+                                    <input
+                                      type="checkbox"
+                                      disabled={already}
+                                      checked={selectedSuggested.has(sw.employeeId)}
+                                      onChange={(e) => {
+                                        const next = new Set(selectedSuggested);
+                                        if (e.target.checked) next.add(sw.employeeId);
+                                        else next.delete(sw.employeeId);
+                                        setSelectedSuggested(next);
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-1.5">{sw.name} {already && <span className="text-[10px] text-slate-400">(قبلاً افزوده)</span>}</td>
+                                  <td className="px-2 py-1.5 num text-slate-500">{sw.employeeCode}</td>
+                                  <td className="px-2 py-1.5 text-slate-600">{sw.position || "—"}</td>
+                                  <td className="px-2 py-1.5 text-center num">{sw.attendanceDays}</td>
+                                  <td className="px-2 py-1.5 text-center num">{sw.totalWorkHours}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="flex justify-between items-center mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = new Set<string>();
+                            for (const s of suggestedList) {
+                              if (!workersFA.fields.some((f: any) => f.employeeId === s.employeeId)) next.add(s.employeeId);
+                            }
+                            setSelectedSuggested(next);
+                          }}
+                          className="text-xs text-brand-600 hover:underline"
+                        >
+                          انتخاب همه
+                        </button>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => { setShowSuggestedPanel(false); setSelectedSuggested(new Set()); }} className="btn-secondary text-sm">
+                            بستن
+                          </button>
+                          <button type="button" onClick={addSelectedToForm} className="btn-primary text-sm">
+                            <Plus className="w-4 h-4" /> افزودن انتخاب‌شده‌ها ({selectedSuggested.size})
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* ═══ پرسنل خودمان ═══ */}
             <div className="card p-6">
               <div className="flex items-center justify-between mb-4">

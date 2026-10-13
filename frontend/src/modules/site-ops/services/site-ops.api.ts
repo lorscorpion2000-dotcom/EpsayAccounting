@@ -1,5 +1,5 @@
 import { api } from '@/services/api';
-import type { DailyReport, SiteOpsStats } from '@/types/site-ops';
+import type { DailyReport, SiteOpsStats, SuggestedWorkersResponse } from '@/types/site-ops';
 
 export const siteOpsApi = {
   reports: {
@@ -39,6 +39,13 @@ export const siteOpsApi = {
     },
     reject: async (id: string, reason: string) => {
       const { data } = await api.patch('/site-ops/daily-reports/' + id + '/reject', { reason });
+      return data;
+    },
+    suggestedWorkers: async (year: number, month: number, projectId?: string) => {
+      const { data } = await api.get<SuggestedWorkersResponse>(
+        '/site-ops/daily-reports/suggested-workers',
+        { params: { year, month, ...(projectId ? { projectId } : {}) } },
+      );
       return data;
     },
   },

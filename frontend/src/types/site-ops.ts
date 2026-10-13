@@ -219,3 +219,28 @@ export interface SiteOpsStats {
   submitted: number;
   approved: number;
 }
+
+// ─── پیشنهاد پرسنل از گرید ماهانه حضور و غیاب ───
+export interface SuggestedWorker {
+  employeeId: string;
+  partnerId: string;
+  employeeCode: string;
+  name: string;
+  position?: string | null;
+  employeeType?: string;
+  department?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  attendanceDays: number;
+  totalWorkHours: number;
+  totalOvertimeHours: number;
+  lastAttendanceDate: string;
+}
+
+export interface SuggestedWorkersResponse {
+  year: number;
+  month: number;
+  gregorianStart: string;
+  gregorianEnd: string;
+  employees: SuggestedWorker[];
+}
