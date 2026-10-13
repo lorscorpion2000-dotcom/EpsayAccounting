@@ -273,13 +273,20 @@ export default function MainLayout() {
   // F1.3 — فیلتر منو بر اساس permission کاربر
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const filteredMenu = useMemo(() => {
+    const canApproveAll = hasPermission('approvals.update');
     return MENU
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) => {
-          const code = getMenuPermission(item.to);
-          return !code || hasPermission(code);
-        }),
+        items: section.items
+          .filter((item) => {
+            const code = getMenuPermission(item.to);
+            return !code || hasPermission(code);
+          })
+          .map((item) =>
+            item.to === '/approvals' && !canApproveAll
+              ? { ...item, label: 'کارتابل من' }
+              : item,
+          ),
       }))
       .filter((section) => section.items.length > 0);
   }, [hasPermission]);
