@@ -9,7 +9,42 @@ export class ApprovalsService {
     private siteOps: SiteOpsService,
   ) {}
 
+  /**
+   * چک می‌کند که کاربر مجاز به تأیید گزارش‌های دیگران است یا نه
+   * (admin / super_admin / approver با permission approvals.update)
+   */
+  private async canUserApprove(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: { include: { permission: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!user) return false;
+    const roleCodes = new Set<string>();
+    const permCodes = new Set<string>();
+    for (const ur of (user as any).roles || []) {
+      if (ur.role?.code) roleCodes.add(ur.role.code);
+      for (const rp of ur.role?.permissions || []) {
+        if (rp.permission?.code) permCodes.add(rp.permission.code);
+      }
+    }
+    if (roleCodes.has('admin') || roleCodes.has('super_admin')) return true;
+    if (permCodes.has('approvals.update')) return true;
+    if (permCodes.has('approvals.approve')) return true;
+    return false;
+  }
+
   async getPending(userId?: string) {
+    const canApprove = userId ? await this.canUserApprove(userId) : true;
     const [
       pettyCashTxs,
       pettyCashRequests,
@@ -70,12 +105,17 @@ export class ApprovalsService {
 
       this.prisma.dailyReport.findMany({
         where: userId
-          ? {
-              OR: [
-                { status: 'SUBMITTED' },
-                { status: 'REJECTED', createdById: userId },
-              ],
-            }
+          ? canApprove
+            ? {
+                OR: [
+                  { status: 'SUBMITTED' },
+                  { status: 'REJECTED', createdById: userId },
+                ],
+              }
+            : {
+                createdById: userId,
+                status: { in: ['SUBMITTED', 'REJECTED'] },
+              }
           : { status: 'SUBMITTED' },
         include: {
           project: { select: { id: true, code: true, name: true } },
