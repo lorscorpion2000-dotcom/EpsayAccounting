@@ -2,19 +2,19 @@ import { useEffect, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Save, X, Loader2, Plus, Trash2, ClipboardList, Users, Truck, Package, TrendingUp, Cloud, UserCheck, ShoppingCart, Bell } from 'lucide-react';
+import { Save, X, Loader2, Plus, Trash2, ClipboardList, Users, Truck, Package, TrendingUp, Cloud, ShoppingCart, Bell } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 
 import { api } from '@/services/api';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import type { Project } from '@/types/project';
-import { WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS, ENTRY_EXIT_KIND_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS, WeatherCondition } from '@/types/site-ops';
+import { WEATHER_LABELS, ATTENDANCE_LABELS, EQUIPMENT_STATUS_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS, WeatherCondition } from '@/types/site-ops';
 import { toPersianDigits } from '@/utils/format';
 
 type Tab =
   | 'general' | 'workers' | 'equipment' | 'materials' | 'progress'
-  | 'entryExits' | 'requests' | 'events';
+  | 'requests' | 'events';
 
 interface FormData {
   projectId: string;
@@ -31,7 +31,6 @@ interface FormData {
   equipments: any[];
   materials: any[];
   progresses: any[];
-  entryExits: any[];
   requests: any[];
   events: any[];
 }
@@ -85,7 +84,7 @@ export default function DailyReportFormPage() {
     defaultValues: {
       reportDate: todayISO(),
       workers: [], equipments: [], materials: [], progresses: [],
-      entryExits: [], requests: [], events: [],
+      requests: [], events: [],
     },
   });
 
@@ -93,7 +92,6 @@ export default function DailyReportFormPage() {
   const equipmentsFA  = useFieldArray({ control, name: 'equipments' });
   const materialsFA   = useFieldArray({ control, name: 'materials' });
   const progressesFA  = useFieldArray({ control, name: 'progresses' });
-  const entryExitsFA  = useFieldArray({ control, name: 'entryExits' });
   const requestsFA    = useFieldArray({ control, name: 'requests' });
   const eventsFA      = useFieldArray({ control, name: 'events' });
 
@@ -157,12 +155,6 @@ export default function DailyReportFormPage() {
             progressPct: Number(p.progressPct),
             quantity: p.quantity ? Number(p.quantity) : undefined,
             location: p.location, notes: p.notes,
-          })),
-          entryExits: (r.entryExits || []).map((e: any) => ({
-            kind: e.kind, personName: e.personName, organization: e.organization,
-            purpose: e.purpose, vehicleType: e.vehicleType, plateNumber: e.plateNumber,
-            driverName: e.driverName, cargo: e.cargo, entryTime: e.entryTime,
-            exitTime: e.exitTime, notes: e.notes,
           })),
           requests: (r.requests || []).map((rq: any) => ({
             requestType: rq.requestType, title: rq.title, description: rq.description,
@@ -231,7 +223,6 @@ export default function DailyReportFormPage() {
     { key: 'equipment', label: 'ماشین‌آلات',   icon: Truck,         count: equipmentsFA.fields.length },
     { key: 'materials', label: 'مصالح',        icon: Package,       count: materialsFA.fields.length },
     { key: 'progress',  label: 'پیشرفت',       icon: TrendingUp,    count: progressesFA.fields.length },
-    { key: 'entryExits', label: 'ورود/خروج',   icon: UserCheck,     count: entryExitsFA.fields.length },
     { key: 'requests',  label: 'درخواست‌ها',    icon: ShoppingCart,  count: requestsFA.fields.length },
     { key: 'events',    label: 'تحولات',       icon: Bell,          count: eventsFA.fields.length },
   ];
@@ -733,62 +724,6 @@ export default function DailyReportFormPage() {
           </div>
         )}
 
-        {/* ═══ Entry/Exit ═══ */}
-        {tab === 'entryExits' && (
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-indigo-600" /> ورود و خروج کارگاه
-              </h2>
-              <button type="button" onClick={() => entryExitsFA.append({
-                kind: 'PERSON', personName: '', organization: '', purpose: '',
-                vehicleType: '', plateNumber: '', driverName: '', cargo: '',
-                entryTime: '', exitTime: '', notes: '',
-              })} className="btn-secondary text-sm">
-                <Plus className="w-4 h-4" /> افزودن
-              </button>
-            </div>
-            {entryExitsFA.fields.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-sm">هیچ ورود/خروجی ثبت نشده</div>
-            ) : (
-              <div className="space-y-3">
-                {entryExitsFA.fields.map((f, idx) => (
-                  <div key={f.id} className="p-4 rounded-lg border border-slate-200">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <div>
-                        <label className="label text-xs">نوع *</label>
-                        <select {...register(`entryExits.${idx}.kind`)} className="input text-xs py-1.5">
-                          {Object.entries(ENTRY_EXIT_KIND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="label text-xs">نام / سازمان</label>
-                        <input type="text" {...register(`entryExits.${idx}.personName`)} className="input text-xs py-1.5" placeholder="نام یا نوع خودرو" />
-                      </div>
-                      <div>
-                        <label className="label text-xs">ساعت ورود</label>
-                        <input type="time" {...register(`entryExits.${idx}.entryTime`)} className="input num text-xs py-1.5" dir="ltr" />
-                      </div>
-                      <div className="md:col-span-3">
-                        <label className="label text-xs">هدف / بار</label>
-                        <input type="text" {...register(`entryExits.${idx}.purpose`)} className="input text-xs py-1.5" />
-                      </div>
-                      <div>
-                        <label className="label text-xs">ساعت خروج</label>
-                        <input type="time" {...register(`entryExits.${idx}.exitTime`)} className="input num text-xs py-1.5" dir="ltr" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <button type="button" onClick={() => entryExitsFA.remove(idx)} className="p-1.5 rounded hover:bg-red-50 text-red-600">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ═══ Requests ═══ */}
         {tab === 'requests' && (

@@ -2,7 +2,6 @@ export type WeatherCondition = 'SUNNY' | 'CLOUDY' | 'RAINY' | 'SNOWY' | 'WINDY' 
 export type ReportStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LEAVE' | 'SICK' | 'HOLIDAY';
 export type EquipmentStatus = 'ACTIVE' | 'IDLE' | 'BROKEN' | 'MAINTENANCE';
-export type EntryExitKind = 'PERSON' | 'VEHICLE';
 export type RequestType = 'PURCHASE' | 'PETTY_CASH' | 'MANPOWER' | 'TECHNICAL' | 'REPAIR';
 export type EventType = 'STOP' | 'INCIDENT' | 'VISIT' | 'INSTRUCTION' | 'OTHER';
 
@@ -59,10 +58,6 @@ export const EQUIPMENT_STATUS_COLORS: Record<EquipmentStatus, string> = {
   MAINTENANCE: 'bg-amber-50 text-amber-700',
 };
 
-export const ENTRY_EXIT_KIND_LABELS: Record<EntryExitKind, string> = {
-  PERSON: 'شخص',
-  VEHICLE: 'خودرو',
-};
 
 export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {
   PURCHASE: 'خرید کالا',
@@ -158,21 +153,6 @@ export interface DailyReportProgress {
   notes?: string | null;
 }
 
-export interface DailyReportEntryExit {
-  id?: string;
-  rowNumber?: number;
-  kind: EntryExitKind;
-  personName?: string | null;
-  organization?: string | null;
-  purpose?: string | null;
-  vehicleType?: string | null;
-  plateNumber?: string | null;
-  driverName?: string | null;
-  cargo?: string | null;
-  entryTime?: string | null;
-  exitTime?: string | null;
-  notes?: string | null;
-}
 
 export interface DailyReportRequest {
   id?: string;
@@ -224,13 +204,12 @@ export interface DailyReport {
   equipments?: DailyReportEquipment[];
   materials?: DailyReportMaterial[];
   progresses?: DailyReportProgress[];
-  entryExits?: DailyReportEntryExit[];
   requests?: DailyReportRequest[];
   events?: DailyReportEvent[];
   createdAt: string;
   _count?: {
     workers: number; equipments: number; materials: number;
-    progresses: number; entryExits: number; requests: number; events: number;
+    progresses: number; requests: number; events: number;
   };
 }
 

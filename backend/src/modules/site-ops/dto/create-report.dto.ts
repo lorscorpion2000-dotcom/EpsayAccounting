@@ -16,9 +16,6 @@ export enum EquipmentStatusEnum {
   ACTIVE = 'ACTIVE', IDLE = 'IDLE', BROKEN = 'BROKEN', MAINTENANCE = 'MAINTENANCE',
 }
 
-export enum EntryExitKindEnum {
-  PERSON = 'PERSON', VEHICLE = 'VEHICLE',
-}
 
 export enum RequestTypeEnum {
   PURCHASE = 'PURCHASE', PETTY_CASH = 'PETTY_CASH', MANPOWER = 'MANPOWER',
@@ -172,42 +169,6 @@ export class ProgressDto {
   notes?: string;
 }
 
-// ─── Entry/Exit (new) ───
-export class EntryExitDto {
-  @ApiProperty({ enum: EntryExitKindEnum })
-  @IsEnum(EntryExitKindEnum)
-  kind: EntryExitKindEnum;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
-  personName?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
-  organization?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(300)
-  purpose?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100)
-  vehicleType?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(32)
-  plateNumber?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
-  driverName?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(300)
-  cargo?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(10)
-  entryTime?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(10)
-  exitTime?: string;
-
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500)
-  notes?: string;
-}
 
 // ─── Requests (new) ───
 export class RequestItemDto {
@@ -324,9 +285,6 @@ export class CreateDailyReportDto {
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProgressDto)
   progresses?: ProgressDto[];
 
-  @ApiPropertyOptional({ type: [EntryExitDto] })
-  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => EntryExitDto)
-  entryExits?: EntryExitDto[];
 
   @ApiPropertyOptional({ type: [RequestItemDto] })
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => RequestItemDto)

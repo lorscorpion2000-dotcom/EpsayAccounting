@@ -32,7 +32,7 @@ export class SiteOpsService {
       include: {
         project: { select: { id: true, code: true, name: true } },
         createdBy: { select: { id: true, fullName: true } },
-        _count: { select: { workers: true, equipments: true, materials: true, progresses: true, entryExits: true, requests: true, events: true } },
+        _count: { select: { workers: true, equipments: true, materials: true, progresses: true, requests: true, events: true } },
       },
       orderBy: [{ reportDate: 'desc' }, { createdAt: 'desc' }],
     });
@@ -48,7 +48,6 @@ export class SiteOpsService {
         equipments: { orderBy: { rowNumber: 'asc' } },
         materials: { orderBy: { rowNumber: 'asc' } },
         progresses: { orderBy: { rowNumber: 'asc' } },
-        entryExits: { orderBy: { rowNumber: 'asc' } },
         requests: { orderBy: { rowNumber: 'asc' } },
         events: { orderBy: { rowNumber: 'asc' } },
       },
@@ -122,14 +121,6 @@ export class SiteOpsService {
       location: p.location, notes: p.notes,
     }));
   }
-  private buildEntryExits(items: any[]) {
-    return items.map((e, i) => ({
-      rowNumber: i + 1, kind: e.kind,
-      personName: e.personName, organization: e.organization, purpose: e.purpose,
-      vehicleType: e.vehicleType, plateNumber: e.plateNumber, driverName: e.driverName, cargo: e.cargo,
-      entryTime: this.optTime(e.entryTime), exitTime: this.optTime(e.exitTime), notes: e.notes,
-    }));
-  }
   private buildRequests(items: any[]) {
     return items.map((r, i) => ({
       rowNumber: i + 1, requestType: r.requestType, title: r.title, description: r.description,
@@ -190,7 +181,6 @@ export class SiteOpsService {
     if (dto.equipments?.length) data.equipments = { create: this.buildEquipments(dto.equipments) };
     if (dto.materials?.length) data.materials = { create: this.buildMaterials(dto.materials) };
     if (dto.progresses?.length) data.progresses = { create: this.buildProgresses(dto.progresses) };
-    if (dto.entryExits?.length) data.entryExits = { create: this.buildEntryExits(dto.entryExits) };
     if (dto.requests?.length) data.requests = { create: this.buildRequests(dto.requests) };
     if (dto.events?.length) data.events = { create: this.buildEvents(dto.events) };
 
@@ -198,7 +188,7 @@ export class SiteOpsService {
       data,
       include: {
         workers: true, equipments: true, materials: true, progresses: true,
-        entryExits: true, requests: true, events: true,
+        requests: true, events: true,
       },
     });
 
@@ -241,10 +231,6 @@ export class SiteOpsService {
       if (dto.progresses) {
         await tx.dailyReportProgress.deleteMany({ where: { reportId: id } });
         data.progresses = { create: this.buildProgresses(dto.progresses) };
-      }
-      if (dto.entryExits) {
-        await tx.dailyReportEntryExit.deleteMany({ where: { reportId: id } });
-        data.entryExits = { create: this.buildEntryExits(dto.entryExits) };
       }
       if (dto.requests) {
         await tx.dailyReportRequest.deleteMany({ where: { reportId: id } });

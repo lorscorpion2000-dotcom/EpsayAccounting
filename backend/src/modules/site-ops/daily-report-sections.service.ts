@@ -11,7 +11,6 @@ export const SECTION_TYPES = [
   'WORKERS',
   'EQUIPMENTS',
   'MATERIALS',
-  'ENTRY_EXIT',
   'REQUESTS',
   'EVENTS',
   'ATTACHMENTS',

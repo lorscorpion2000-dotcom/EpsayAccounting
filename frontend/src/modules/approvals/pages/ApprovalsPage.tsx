@@ -16,7 +16,6 @@ const SECTION_LABELS: Record<string, string> = {
   WORKERS: 'پرسنل و نیروی انسانی',
   EQUIPMENTS: 'ماشین‌آلات',
   MATERIALS: 'مصالح',
-  ENTRY_EXIT: 'ورود و خروج',
   REQUESTS: 'درخواست‌ها',
   EVENTS: 'رویدادها',
   ATTACHMENTS: 'پیوست‌ها',
@@ -35,7 +34,7 @@ const SECTION_STATUS_COLORS: Record<string, string> = {
   FORWARDED: 'bg-blue-50 text-blue-700 border-blue-200',
   FAILED: 'bg-red-100 text-red-800 border-red-300',
 };
-const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','ENTRY_EXIT','REQUESTS','EVENTS','ATTACHMENTS'];
+const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','REQUESTS','EVENTS','ATTACHMENTS'];
 
 type Tab = 'all' | 'pettyCashTransactions' | 'pettyCashRequests' | 'purchaseRequests' | 'purchaseOrders' | 'dailyReports' | 'goodsReceipts' | 'subcontractorStatements' | 'leaveRequests' | 'advanceRequests';
 
@@ -419,38 +418,6 @@ export default function ApprovalsPage() {
       );
     }
 
-    if (type === 'ENTRY_EXIT') {
-      const items = rd.entryExits || [];
-      if (items.length === 0) return <div className="text-xs text-slate-400 p-2">موردی ثبت نشده</div>;
-      return (
-        <div className="overflow-x-auto bg-slate-50 rounded-lg">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="p-1.5 text-right">#</th>
-                <th className="p-1.5 text-center">نوع</th>
-                <th className="p-1.5 text-right">نام</th>
-                <th className="p-1.5 text-right">هدف</th>
-                <th className="p-1.5 text-center">ورود</th>
-                <th className="p-1.5 text-center">خروج</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e: any, i: number) => (
-                <tr key={e.id || i} className="border-t">
-                  <td className="p-1.5 text-right num">{i + 1}</td>
-                  <td className="p-1.5 text-center text-[10px]">{e.kind || '—'}</td>
-                  <td className="p-1.5 text-right">{e.personName || e.driverName || '—'}</td>
-                  <td className="p-1.5 text-right">{e.purpose || e.cargo || '—'}</td>
-                  <td className="p-1.5 text-center num" dir="ltr">{e.entryTime || '—'}</td>
-                  <td className="p-1.5 text-center num" dir="ltr">{e.exitTime || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
 
     if (type === 'REQUESTS') {
       const items = rd.requests || [];

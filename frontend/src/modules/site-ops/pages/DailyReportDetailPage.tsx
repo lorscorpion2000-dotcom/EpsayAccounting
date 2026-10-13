@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, ClipboardList, Printer, Send, Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp, AlertCircle, UserCheck, ShoppingCart, Bell, Edit } from 'lucide-react';
+import { ArrowRight, Loader2, ClipboardList, Printer, Send, Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp, AlertCircle, ShoppingCart, Bell, Edit } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 import type { DailyReport, WeatherCondition, RequestType, EventType } from '@/types/site-ops';
@@ -10,7 +10,7 @@ import {
   REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, WEATHER_LABELS,
   ATTENDANCE_LABELS, ATTENDANCE_COLORS,
   EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS,
-  ENTRY_EXIT_KIND_LABELS, REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS,
+  REQUEST_TYPE_LABELS, REQUEST_PRIORITY_LABELS,
   REQUEST_STATUS_LABELS, EVENT_TYPE_LABELS, EVENT_SEVERITY_LABELS,
 } from '@/types/site-ops';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
@@ -36,7 +36,6 @@ const SECTION_LABELS: Record<string, string> = {
   WORKERS: 'ج) نیروی انسانی و اکیپ‌ها',
   EQUIPMENTS: 'د) ماشین‌آلات',
   MATERIALS: 'ه) مصالح',
-  ENTRY_EXIT: 'و) ورود و خروج',
   REQUESTS: 'ز) درخواست‌ها',
   EVENTS: 'ح) تحولات و رویدادها',
   ATTACHMENTS: 'ط) پیوست‌ها',
@@ -58,7 +57,7 @@ const SECTION_STATUS_COLORS: Record<string, string> = {
   FAILED: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
-const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','ENTRY_EXIT','REQUESTS','EVENTS','ATTACHMENTS'];
+const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','REQUESTS','EVENTS','ATTACHMENTS'];
 
 function DailyReportSectionsPanel({
   sections, onApprove, onReject, busy, canApprove,
@@ -568,49 +567,6 @@ export default function DailyReportDetailPage() {
         </div>
       )}
 
-      {/* Entry/Exit */}
-      {report.entryExits && report.entryExits.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-6 py-4 border-b bg-slate-50 flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-indigo-600" />
-            <h2 className="font-bold text-slate-800">ورود و خروج کارگاه</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="text-center px-3 py-2 w-10">#</th>
-                  <th className="text-center px-3 py-2 w-20">نوع</th>
-                  <th className="text-right px-3 py-2">نام / سازمان</th>
-                  <th className="text-right px-3 py-2">هدف / بار</th>
-                  <th className="text-center px-3 py-2 w-24">ورود</th>
-                  <th className="text-center px-3 py-2 w-24">خروج</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {report.entryExits.map((e, i) => (
-                  <tr key={e.id || i}>
-                    <td className="px-3 py-2 text-center text-slate-500 num text-xs">{toPersianDigits(i + 1)}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={clsx('text-xs px-2 py-0.5 rounded-md',
-                        e.kind === 'PERSON' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700')}>
-                        {ENTRY_EXIT_KIND_LABELS[e.kind]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-slate-800">
-                      {e.personName || '—'}
-                      {e.organization && <span className="text-xs text-slate-500"> ({e.organization})</span>}
-                    </td>
-                    <td className="px-3 py-2 text-xs">{e.purpose || e.cargo || '—'}</td>
-                    <td className="px-3 py-2 text-center num text-xs" dir="ltr">{e.entryTime || '—'}</td>
-                    <td className="px-3 py-2 text-center num text-xs" dir="ltr">{e.exitTime || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Requests */}
       {report.requests && report.requests.length > 0 && (
