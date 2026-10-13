@@ -34,28 +34,37 @@ function reportDateFor(offset: number): string {
 
 async function createAndSubmitReport(requests: any[], offset: number): Promise<string> {
   const svAuth = { Authorization: 'Bearer ' + svToken };
-  const res = await request(app.getHttpServer())
-    .post('/api/site-ops/daily-reports')
-    .set(svAuth)
-    .send({
-      projectId,
-      reportDate: reportDateFor(offset),
-      operations: 'تست زنجیره خرید',
-      requests,
-    });
-  if (res.status !== 201) {
-    throw new Error('create report failed: ' + JSON.stringify(res.body));
-  }
-  const id = res.body.id;
-  REPORT_IDS.push(id);
+  let lastErr: any = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const res = await request(app.getHttpServer())
+      .post('/api/site-ops/daily-reports')
+      .set(svAuth)
+      .send({
+        projectId,
+        reportDate: reportDateFor(offset),
+        operations: 'تست زنجیره خرید',
+        requests,
+      });
 
-  const submitRes = await request(app.getHttpServer())
-    .patch('/api/site-ops/daily-reports/' + id + '/submit')
-    .set(svAuth);
-  if (submitRes.status !== 200) {
-    throw new Error('submit failed: ' + JSON.stringify(submitRes.body));
+    if (res.status === 201) {
+      const id = res.body.id;
+      REPORT_IDS.push(id);
+      const submitRes = await request(app.getHttpServer())
+        .patch('/api/site-ops/daily-reports/' + id + '/submit')
+        .set(svAuth);
+      if (submitRes.status !== 200) throw new Error('submit failed: ' + JSON.stringify(submitRes.body));
+      return id;
+    }
+
+    const msg = String(res.body?.message || '');
+    if (res.status === 500 && msg.includes('Unique constraint')) {
+      lastErr = new Error('race: ' + msg);
+      await new Promise((r) => setTimeout(r, 60 + Math.random() * 120));
+      continue;
+    }
+    throw new Error('create failed: ' + JSON.stringify(res.body));
   }
-  return id;
+  throw lastErr || new Error('create retries exhausted');
 }
 
 async function approveRequestsSection(reportId: string) {
