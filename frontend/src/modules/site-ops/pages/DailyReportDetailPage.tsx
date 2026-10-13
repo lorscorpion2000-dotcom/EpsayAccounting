@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState , useRef } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, ClipboardList, Printer, Send, Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp, AlertCircle, ShoppingCart, Bell, Edit } from 'lucide-react';
+import { ArrowRight, Loader2, ClipboardList, Send, Sun, Cloud, CloudRain, Snowflake, Wind, Users, Truck, Package, TrendingUp, AlertCircle, ShoppingCart, Bell, Edit } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 import type { DailyReport, WeatherCondition, RequestType, EventType } from '@/types/site-ops';
@@ -16,6 +16,7 @@ import {
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintHeader from '@/components/PrintHeader';
+import PrintButton from '@/components/PrintButton';
 import { api } from '@/services/api';
 
 const WEATHER_ICONS: Record<WeatherCondition, any> = {
@@ -147,6 +148,7 @@ export default function DailyReportDetailPage() {
 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<DailyReport | null>(null);
 
   // F2 — تفکیک تأییدکننده از ثبت‌کننده
@@ -263,7 +265,7 @@ export default function DailyReportDetailPage() {
   const WeatherIcon = report.weather ? WEATHER_ICONS[report.weather] : null;
 
   return (<>
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" ref={contentRef}>
       <div className="flex items-center gap-2 text-sm text-slate-500 no-print">
         <button onClick={() => navigate('/site-ops/daily-reports')} className="hover:text-brand-600 flex items-center gap-1">
           <ArrowRight className="w-4 h-4" /> گزارش‌های روزانه
@@ -309,9 +311,11 @@ export default function DailyReportDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 no-print">
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> چاپ
-            </button>
+            <PrintButton
+              contentRef={contentRef}
+              documentTitle={'گزارش روزانه ' + report.code}
+              label="چاپ"
+            />
             {(report.status === 'DRAFT' || report.status === 'REJECTED') && (
               <>
                 <button className="btn-secondary" onClick={() => navigate('/site-ops/daily-reports/' + report.id + '/edit')}>
