@@ -137,19 +137,9 @@ export class CostCentersService {
     });
   }
 
-  async remove(id: string) {
-    const existing = await this.prisma.costCenter.findUnique({
-      where: { id },
-      include: { _count: { select: { children: true, journalLines: true } } },
-    });
-    if (!existing) throw new NotFoundException('مرکز هزینه یافت نشد');
-    if (existing._count.children > 0) {
-      throw new BadRequestException('این مرکز هزینه دارای زیرمجموعه است و قابل حذف نیست');
-    }
-    if (existing._count.journalLines > 0) {
-      throw new BadRequestException('این مرکز هزینه در اسناد حسابداری استفاده شده و قابل حذف نیست');
-    }
-    await this.prisma.costCenter.delete({ where: { id } });
-    return { success: true };
+  async remove(_id: string): Promise<never> {
+    throw new BadRequestException(
+      'حذف مرکز هزینه مجاز نیست. لطفاً از «آرشیو» (غیرفعال‌سازی) استفاده کنید تا اسناد، دارایی‌ها و هزینه‌های مرتبط دست‌نخورده بمانند.',
+    );
   }
 }

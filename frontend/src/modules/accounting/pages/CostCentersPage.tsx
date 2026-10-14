@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Plus, Pencil, Trash2, RefreshCw, Target, ChevronDown, ChevronLeft, Building2 } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Plus, Pencil, RefreshCw, Target, ChevronDown, ChevronLeft, Building2, Archive, ArchiveRestore } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   costCentersApi,
@@ -15,11 +15,11 @@ export default function CostCentersPage() {
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CostCenter | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CostCenter | null>(null);
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [archiveBusy, setArchiveBusy] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -30,8 +30,11 @@ export default function CostCentersPage() {
       ]);
       setItems(list);
       setProjects(prjs);
-      const roots = list.filter((x) => !x.parentId).map((x) => x.id);
-      setExpanded(new Set(roots));
+      setExpanded((prev) => {
+        if (prev.size > 0) return prev;
+        const roots = list.filter((x) => !x.parentId).map((x) => x.id);
+        return new Set(roots);
+      });
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? 'خطا در بارگذاری');
     } finally {
@@ -103,18 +106,16 @@ export default function CostCentersPage() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
+  const toggleArchive = async (cc: CostCenter) => {
+    setArchiveBusy(cc.id);
     try {
-      await costCentersApi.remove(deleteTarget.id);
-      toast.success('حذف شد');
-      setDeleteTarget(null);
+      await costCentersApi.update(cc.id, { isActive: !cc.isActive });
+      toast.success(cc.isActive ? 'آرشیو شد' : 'بازگردانی شد');
       await load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? 'خطا در حذف');
+      toast.error(e?.response?.data?.message ?? 'خطا در تغییر وضعیت');
     } finally {
-      setBusy(false);
+      setArchiveBusy(null);
     }
   };
 
@@ -126,8 +127,8 @@ export default function CostCentersPage() {
     const hasKids = kids.length > 0;
     const isOpen = expanded.has(cc.id);
     return (
-      <>
-        <tr key={cc.id} className="border-t border-slate-100 hover:bg-slate-50/60">
+      <Fragment key={cc.id}>
+        <tr className="border-t border-slate-100 hover:bg-slate-50/60">
           <td className="px-4 py-2">
             <div className="flex items-center" style={{ paddingRight: depth * 20 }}>
               {hasKids ? (
@@ -165,14 +166,23 @@ export default function CostCentersPage() {
               <button onClick={() => openEdit(cc)} className="p-1.5 rounded hover:bg-slate-100 text-slate-600" title="ویرایش">
                 <Pencil size={14} />
               </button>
-              <button onClick={() => setDeleteTarget(cc)} className="p-1.5 rounded hover:bg-rose-50 text-rose-600" title="حذف">
-                <Trash2 size={14} />
+              <button
+                onClick={() => toggleArchive(cc)}
+                disabled={archiveBusy === cc.id}
+                className={
+                  cc.isActive
+                    ? 'p-1.5 rounded hover:bg-amber-50 text-amber-600 disabled:opacity-50'
+                    : 'p-1.5 rounded hover:bg-emerald-50 text-emerald-600 disabled:opacity-50'
+                }
+                title={cc.isActive ? 'آرشیو' : 'بازگردانی'}
+              >
+                {cc.isActive ? <Archive size={14} /> : <ArchiveRestore size={14} />}
               </button>
             </div>
           </td>
         </tr>
         {hasKids && isOpen && kids.map((k) => renderRow(k, depth + 1))}
-      </>
+      </Fragment>
     );
   };
 
@@ -229,7 +239,7 @@ export default function CostCentersPage() {
         </select>
         <select
           value={filterActive}
-          onChange={(e) => setFilterActive(e.target.value as any)}
+          onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')}
           className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           <option value="all">همه</option>
@@ -271,25 +281,6 @@ export default function CostCentersPage() {
           onCancel={() => { setShowForm(false); setEditing(null); }}
           onSubmit={handleSubmit}
         />
-      )}
-
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-slate-800 mb-2">حذف مرکز هزینه</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              آیا از حذف <span className="font-mono">{deleteTarget.code}</span> «{deleteTarget.name}» مطمئن هستید؟
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">انصراف</button>
-              <button
-                onClick={confirmDelete}
-                disabled={busy}
-                className="px-4 py-2 text-sm rounded-lg bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50"
-              >{busy ? '...' : 'حذف'}</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
