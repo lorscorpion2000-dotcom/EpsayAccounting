@@ -3,6 +3,7 @@ import {
   MENU,
   findActiveSection,
   buildFilteredMenu,
+  type MenuItem,
 } from '@/layouts/menu-config';
 import { getMenuPermission } from '@/config/route-permissions';
 
@@ -15,14 +16,27 @@ function permOnly(...codes: string[]) {
 const allowAll = () => true;
 const denyAll = () => false;
 
+/** helper: استخراج همه آیتم‌های یک section (items + subsections.items) */
+function allItemsOf(section: any): MenuItem[] {
+  const direct = section.items ?? [];
+  const sub = (section.subsections ?? []).flatMap((s: any) => s.items ?? []);
+  return [...direct, ...sub];
+}
+
 describe('menu-config / findActiveSection', () => {
   it('returns "dashboard" for /dashboard', () => {
     expect(findActiveSection('/dashboard')).toBe('dashboard');
   });
 
-  it('returns the parent section for nested paths', () => {
-    expect(findActiveSection('/payroll/periods')).toBe('payroll');
-    expect(findActiveSection('/accounting/journals')).toBe('accounting');
+  it('returns the parent section for nested paths (3-level)', () => {
+    // /payroll/* الان زیر financial.subsections.payroll است
+    expect(findActiveSection('/payroll/periods')).toBe('financial');
+    // /accounting/* الان زیر financial.subsections.accounting است
+    expect(findActiveSection('/accounting/journals')).toBe('financial');
+    // /reports/project زیر dashboard.subsections.reports-hub است
+    expect(findActiveSection('/reports/project')).toBe('dashboard');
+    // مسیر مستقل: /contracts
+    expect(findActiveSection('/contracts')).toBe('contracts');
   });
 
   it('returns empty string for unknown path', () => {
@@ -33,23 +47,22 @@ describe('menu-config / findActiveSection', () => {
 describe('menu-config / buildFilteredMenu', () => {
   it('MENU has at least one section with /approvals item', () => {
     const hasApprovals = MENU.some((s) =>
-      s.items.some((it) => it.to === '/approvals'),
+      allItemsOf(s).some((it) => it.to === '/approvals'),
     );
     expect(hasApprovals).toBe(true);
   });
 
   it('denyAll: only items without permission code survive', () => {
     const filtered = buildFilteredMenu(denyAll);
-    // بعضی مسیرها در route-permissions آزادند (code = '')
-    // پس همه sectionها نباید حذف شوند
     for (const s of filtered) {
-      expect(s.items.length).toBeGreaterThan(0);
-      for (const it of s.items) {
+      const items = allItemsOf(s);
+      expect(items.length).toBeGreaterThan(0);
+      for (const it of items) {
         expect(getMenuPermission(it.to)).toBeNull();
       }
     }
-    // و همه آیتم‌های مجاز حذف شده‌اند
-    const allItems = filtered.flatMap((s) => s.items);
+    // همه آیتم‌های حذف‌شده باید permission داشته باشند
+    const allItems = filtered.flatMap(allItemsOf);
     const forbidden = allItems.filter((it) => getMenuPermission(it.to) !== null);
     expect(forbidden.length).toBe(0);
   });
@@ -60,22 +73,20 @@ describe('menu-config / buildFilteredMenu', () => {
   });
 
   it('label "/approvals" -> "کارتابل تأییدها" when has approvals.update', () => {
-    // کاربر باید approvals.read برای دیدن + approvals.update برای label تغییر نکند
     const filtered = buildFilteredMenu(
       permOnly('approvals.read', 'approvals.update'),
     );
     const approvalsItem = filtered
-      .flatMap((s) => s.items)
+      .flatMap(allItemsOf)
       .find((it) => it.to === '/approvals');
     expect(approvalsItem).toBeDefined();
     expect(approvalsItem!.label).toBe('کارتابل تأییدها');
   });
 
   it('label "/approvals" -> "کارتابل من" when missing approvals.update', () => {
-    // کاربر با approvals.read ولی بدون approvals.update
     const filtered = buildFilteredMenu(permOnly('approvals.read'));
     const approvalsItem = filtered
-      .flatMap((s) => s.items)
+      .flatMap(allItemsOf)
       .find((it) => it.to === '/approvals');
     expect(approvalsItem).toBeDefined();
     expect(approvalsItem!.label).toBe('کارتابل من');
@@ -84,7 +95,8 @@ describe('menu-config / buildFilteredMenu', () => {
   it('sections with zero items are removed', () => {
     const filtered = buildFilteredMenu(permOnly('accounting.read'));
     for (const s of filtered) {
-      expect(s.items.length).toBeGreaterThan(0);
+      const items = allItemsOf(s);
+      expect(items.length).toBeGreaterThan(0);
     }
   });
 });

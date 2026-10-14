@@ -38,7 +38,7 @@ const MENU: MenuSection[] = [
     items: [
       { to: '/dashboard', label: 'داشبورد مدیریتی', icon: LayoutDashboard },
       { to: '/notifications', label: 'اعلان‌ها', icon: Bell },
-      { to: '/approvals', label: 'کارتابل تاییدها', icon: Inbox },
+      { to: '/approvals', label: 'کارتابل تأییدها', icon: Inbox },
     ],
     subsections: [
       {
