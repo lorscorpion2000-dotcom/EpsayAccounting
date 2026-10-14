@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Loader2, TrendingUp, Edit, RefreshCw, Search, Power } from 'lucide-react';
+import { Plus, Loader2, TrendingUp, Edit, RefreshCw, Search, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import type { AdjustmentIndex } from '@/types/adjustment';
 import { PERSIAN_MONTHS_ADJ } from '@/types/adjustment';
 import { toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 export default function AdjustmentIndicesListPage() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function AdjustmentIndicesListPage() {
     setActionLoading(true);
     try {
       await adjustmentApi.indices.remove(actionItem.id);
-      toast.success('غیرفعال شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setActionItem(null);
       load();
     } catch (e: any) {
@@ -139,16 +140,15 @@ export default function AdjustmentIndicesListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <AdminDeleteButton endpoint="/adjustment-indices" id={it.id} itemLabel={(it as any).code || (it as any).category} onSuccess={load} />
                         <button onClick={() => navigate('/adjustment-indices/' + it.id + '/edit')}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title="ویرایش">
                           <Edit className="w-4 h-4" />
                         </button>
-                        {it.isActive && (
-                          <button onClick={() => setActionItem(it)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="غیرفعال‌سازی">
-                            <Power className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button onClick={() => setActionItem(it)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف (به سطل زباله)">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -161,9 +161,9 @@ export default function AdjustmentIndicesListPage() {
 
       <ConfirmDialog
         isOpen={!!actionItem}
-        title="غیرفعال‌سازی شاخص"
-        message={actionItem ? `شاخص «${actionItem.code}» غیرفعال شود؟` : ''}
-        confirmLabel="بله"
+        title="انتقال به سطل زباله"
+        message={actionItem ? `شاخص «${actionItem.code}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.` : ''}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={actionLoading}
         onConfirm={handleDelete}

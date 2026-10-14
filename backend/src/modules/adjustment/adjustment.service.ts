@@ -118,11 +118,14 @@ export class AdjustmentService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const a = await this.get(id);
     if (a.status === 'POSTED') throw new BadRequestException('ثبت‌شده قابل حذف نیست');
-    await this.prisma.adjustmentCalculation.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.adjustmentCalculation.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   // ═══ Post to Journal ═══
@@ -229,7 +232,10 @@ export class AdjustmentService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.adjustmentCalculation.findUnique({ where: { id } });
+    const existing: any = await this.prisma.adjustmentCalculation.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
     if (!existing) throw new Error('رکورد یافت نشد');
     if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
 
@@ -241,10 +247,31 @@ export class AdjustmentService {
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    // For hard delete by admin — soft delete first then optionally purge
-    // For safety we only do soft delete by default; uncomment hard delete below if needed
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.adjustmentCalculation.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.adjustmentCalculation.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.adjustmentCalculation.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    await this.prisma.adjustmentCalculation.delete({ where: { id } });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
   }
 
 }

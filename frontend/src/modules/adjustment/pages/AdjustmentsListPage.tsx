@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Loader2, Calculator, Eye, RefreshCw, CheckCircle2, Send, XCircle, FileSpreadsheet, Archive } from 'lucide-react';
+import { Plus, Loader2, Calculator, Eye, RefreshCw, CheckCircle2, Send, XCircle, FileSpreadsheet, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import { api } from '@/services/api';
@@ -44,7 +44,7 @@ export default function AdjustmentsListPage() {
     setActionLoading(true);
     try {
       await adjustmentApi.calculations.remove(actionItem.id);
-      toast.success('حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setActionItem(null);
       load();
     } catch (e: any) {
@@ -173,8 +173,8 @@ export default function AdjustmentsListPage() {
                               <CheckCircle2 className="w-4 h-4" />
                             </button>
                             <button onClick={() => setActionItem(it)}
-                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                              <Archive className="w-4 h-4" />
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف (به سطل زباله)">
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </>
                         )}
@@ -205,9 +205,9 @@ export default function AdjustmentsListPage() {
 
       <ConfirmDialog
         isOpen={!!actionItem}
-        title="حذف تعدیل"
-        message={actionItem ? `«${actionItem.code}» حذف شود؟` : ''}
-        confirmLabel="بله"
+        title="انتقال به سطل زباله"
+        message={actionItem ? `تعدیل «${actionItem.code}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.` : ''}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={actionLoading}
         onConfirm={handleDelete}

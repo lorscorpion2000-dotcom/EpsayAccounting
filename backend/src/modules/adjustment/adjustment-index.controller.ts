@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdjustmentIndexService } from './adjustment-index.service';
 import { CreateIndexDto, UpdateIndexDto } from './dto/adjustment.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Adjustment Index - شاخص‌های تعدیل')
 @ApiBearerAuth()
@@ -44,5 +46,36 @@ export class AdjustmentIndexController {
 
   @Delete(':id')
   @RequirePermissions('adjustment.manage')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.service.remove(id, req.user?.id);
+  }
+
+  // ═══ Admin Delete / Restore / List ═══
+  @Get('deleted/list')
+  @RequirePermissions('adjustment.manage')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.service.listDeleted(take ?? 100, skip ?? 0);
+  }
+
+  @Delete(':id/admin')
+  @RequirePermissions('adjustment.manage')
+  adminDelete(
+    @Param('id') id: string,
+    @Body() body: ReasonDto,
+    @Req() req: any,
+  ) {
+    return this.service.adminDelete(id, req.user?.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('adjustment.manage')
+  restore(@Param('id') id: string, @Req() req: any) {
+    return this.service.restore(id, req.user?.id);
+  }
 }

@@ -5,6 +5,7 @@ import { CalculateAdjDto } from './dto/adjustment.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { AdjustmentStatus } from '@prisma/client';
 
 @ApiTags('Adjustment - تعدیل صورت‌وضعیت')
@@ -45,7 +46,18 @@ export class AdjustmentController {
 
   @Delete(':id')
   @RequirePermissions('adjustment.manage')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.service.remove(id, req.user?.id);
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('adjustment.manage')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.service.listDeleted(take ?? 100, skip ?? 0);
+  }
 
 
   @Delete(':id/admin')
