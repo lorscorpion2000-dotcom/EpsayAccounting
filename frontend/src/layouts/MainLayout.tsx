@@ -117,7 +117,10 @@ export default function MainLayout() {
                     title={section.title}
                     onClick={() => {
                       // در حالت بسته، اولین آیتم بخش را باز کن
-                      navigate(section.items[0].to);
+                      const firstTo = section.items?.[0]?.to
+                        ?? section.subsections?.[0]?.items?.[0]?.to
+                        ?? '/dashboard';
+                      navigate(firstTo);
                     }}
                   >
                     <SectionIcon className="w-5 h-5 shrink-0" />
@@ -155,7 +158,7 @@ export default function MainLayout() {
                 {/* Section Items */}
                 {isExpanded && (
                   <div className="mt-1 me-2 ms-3 ps-3 border-s-2 border-brand-500/40 bg-slate-900/30 rounded-s-lg animate-fade-in">
-                    {section.items.map((m) => {
+                    {(section.items || []).map((m) => {
                       const Icon = m.icon;
                       return (
                         <NavLink
@@ -176,6 +179,35 @@ export default function MainLayout() {
                         </NavLink>
                       );
                     })}
+                    {section.subsections?.map((sub) => (
+                      <div key={sub.key} className="mt-3 mb-1">
+                        <div className="text-[10px] uppercase tracking-wider text-brand-300/80 font-semibold px-3 py-1.5 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-400/60" />
+                          {sub.title}
+                        </div>
+                        {sub.items.map((m) => {
+                          const Icon = m.icon;
+                          return (
+                            <NavLink
+                              key={m.to}
+                              to={m.to}
+                              end={m.to === '/accounting'}
+                              className={({ isActive }) =>
+                                clsx(
+                                  'flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 transition-all text-sm',
+                                  isActive
+                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-900/40 ring-1 ring-brand-400/50 font-semibold'
+                                    : 'text-slate-300 hover:bg-sidebar-light/70 hover:text-white',
+                                )
+                              }
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <span className="text-xs font-medium">{m.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
