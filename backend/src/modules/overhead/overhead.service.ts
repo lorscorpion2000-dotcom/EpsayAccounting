@@ -28,6 +28,7 @@ export class OverheadService {
     const where: any = {};
     if (query?.fiscalYearId) where.fiscalYearId = query.fiscalYearId;
     if (query?.status) where.status = query.status;
+    where.deletedAt = null;
     return this.prisma.overheadAllocation.findMany({
       where,
       include: {
@@ -53,13 +54,16 @@ export class OverheadService {
     return a;
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const a = await this.get(id);
     if (a.status === 'POSTED') {
       throw new BadRequestException('تسهیم ثبت‌شده قابل حذف نیست');
     }
-    await this.prisma.overheadAllocation.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.overheadAllocation.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async preview(dto: PreviewDto) {

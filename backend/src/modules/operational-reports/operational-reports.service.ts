@@ -15,6 +15,7 @@ export class OperationalReportsService {
     equipmentId?: string;
   }) {
     const where: any = {
+      deletedAt: null,
       logDate: {
         gte: new Date(params.fromDate),
         lte: new Date(params.toDate),

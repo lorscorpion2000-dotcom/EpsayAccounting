@@ -76,6 +76,7 @@ export class VatService {
 
       const where: any = {
         deletedAt: null,
+        status: { in: ['POSTED', 'REVERSED'] },
         entryDate: { gte: from, lte: to },
         lines: { some: { accountId: { in: vatIds } } },
       };

@@ -51,7 +51,9 @@ export class OverheadController {
 
   @Delete(':id')
   @RequirePermissions('overhead.manage')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.service.remove(id, req.user?.id);
+  }
 
   @Post(':id/post')
   @RequirePermissions('overhead.manage')

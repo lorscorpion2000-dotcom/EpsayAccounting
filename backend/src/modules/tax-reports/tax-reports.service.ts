@@ -22,6 +22,7 @@ export class TaxReportsService {
       ...whereBase,
       invoiceDate: dateFilter,
       status: { in: ['APPROVED', 'PARTIALLY_PAID', 'PAID'] },
+      deletedAt: null,
     };
     if (params.partnerId) purchaseWhere.supplierId = params.partnerId;
 
@@ -39,6 +40,7 @@ export class TaxReportsService {
       ...whereBase,
       invoiceDate: dateFilter,
       status: { in: ['APPROVED', 'PARTIALLY_RECEIVED', 'PAID'] },
+      deletedAt: null,
     };
     if (params.partnerId) salesWhere.partnerId = params.partnerId;
 
