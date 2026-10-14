@@ -4,6 +4,7 @@ import { Loader2, TrendingUp, TrendingDown, FileSpreadsheet, RefreshCw, Search }
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
 import { formatNumber } from '@/utils/format';
+import { PersianDatePicker } from '@/components/PersianDatePicker';
 import PrintButton from '@/components/PrintButton';
 import PrintHeader from '@/components/PrintHeader';
 
@@ -14,6 +15,8 @@ export default function ProfitLossPage() {
   const [loading, setLoading] = useState(false);
   const [fiscalYears, setFiscalYears] = useState<any[]>([]);
   const [fiscalYearId, setFiscalYearId] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   useEffect(() => {
     accountingApi.fiscalYears.list().then((list) => {
@@ -30,7 +33,13 @@ export default function ProfitLossPage() {
     const id = fyId || fiscalYearId;
     if (!id) { toast.error('ابتدا سال مالی را انتخاب کنید'); return; }
     setLoading(true);
-    try { setData(await accountingApi.reports.profitLoss({ fiscalYearId: id })); }
+    try {
+      setData(await accountingApi.reports.profitLoss({
+        fiscalYearId: id,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      }));
+    }
     catch { toast.error('خطا در بارگذاری'); }
     finally { setLoading(false); }
   };
@@ -75,18 +84,39 @@ export default function ProfitLossPage() {
         </div>
       </div>
 
-      <div className="card p-4 grid grid-cols-1 md:grid-cols-3 gap-3 no-print">
-        <div className="md:col-span-2">
-          <label className="block text-xs text-slate-500 mb-1">سال مالی</label>
-          <select value={fiscalYearId} onChange={(e) => { setFiscalYearId(e.target.value); load(e.target.value); }} className="input w-full">
-            <option value="">— انتخاب کنید —</option>
-            {fiscalYears.map((f: any) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
+      <div className="card p-4 space-y-3 no-print">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="md:col-span-2">
+            <label className="block text-xs text-slate-500 mb-1">سال مالی</label>
+            <select value={fiscalYearId} onChange={(e) => { setFiscalYearId(e.target.value); load(e.target.value); }} className="input w-full">
+              <option value="">— انتخاب کنید —</option>
+              {fiscalYears.map((f: any) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">از تاریخ (اختیاری)</label>
+            <PersianDatePicker value={fromDate} onChange={(v: string | null) => setFromDate(v || '')} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">تا تاریخ (اختیاری)</label>
+            <PersianDatePicker value={toDate} onChange={(v: string | null) => setToDate(v || '')} />
+          </div>
         </div>
-        <div className="flex items-end">
-          <button className="btn-primary w-full" onClick={() => load()} disabled={loading}>
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+          {(fromDate || toDate) ? (
+            <button
+              type="button"
+              onClick={() => { setFromDate(''); setToDate(''); }}
+              className="text-xs text-slate-500 hover:text-red-600"
+            >
+              ✕ پاک کردن فیلتر تاریخ
+            </button>
+          ) : (
+            <span className="text-xs text-slate-400">بدون فیلتر تاریخ — کل سال مالی</span>
+          )}
+          <button className="btn-primary" onClick={() => load()} disabled={loading}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} نمایش
           </button>
         </div>

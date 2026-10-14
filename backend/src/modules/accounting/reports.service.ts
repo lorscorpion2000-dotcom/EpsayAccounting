@@ -13,6 +13,7 @@ export class ReportsService {
       journalEntry: {
         fiscalYearId: query.fiscalYearId,
         status: { in: ['POSTED', 'REVERSED'] },
+        deletedAt: null,
       },
     };
 
@@ -405,6 +406,7 @@ export class ReportsService {
       journalEntry: {
         fiscalYearId: query.fiscalYearId,
         status: { in: ['POSTED', 'REVERSED'] },
+        deletedAt: null,
       },
     };
     if (query.fromDate || query.toDate) {
@@ -487,6 +489,7 @@ export class ReportsService {
       journalEntry: {
         fiscalYearId: query.fiscalYearId,
         status: { in: ['POSTED', 'REVERSED'] },
+        deletedAt: null,
       },
     };
     if (query.asOfDate) {
@@ -605,6 +608,7 @@ export class ReportsService {
           journalEntry: {
             fiscalYearId: query.fiscalYearId,
             status: { in: ['POSTED', 'REVERSED'] },
+            deletedAt: null,
             entryDate: { lt: new Date(query.fromDate) },
           },
         },
@@ -621,6 +625,7 @@ export class ReportsService {
       journalEntry: {
         fiscalYearId: query.fiscalYearId,
         status: { in: ['POSTED', 'REVERSED'] },
+        deletedAt: null,
       },
     };
     if (query.fromDate || query.toDate) {
