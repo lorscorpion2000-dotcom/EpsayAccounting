@@ -163,7 +163,7 @@ export default function PartnersListPage() {
             <tbody className="divide-y divide-slate-100">
               {partners.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-3 num text-xs text-slate-500" dir="ltr">{p.code}</td>
+                  <td className="px-4 py-3 num text-xs text-slate-500" style={{ textAlign: 'right' }} dir="ltr">{p.code}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-xs">
@@ -182,8 +182,8 @@ export default function PartnersListPage() {
                       {TYPE_LABELS[p.type] || p.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 num text-slate-600" dir="ltr">{(p as any).phone || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600" dir="ltr">{(p as any).email || '—'}</td>
+                  <td className="px-4 py-3 num text-slate-600" style={{ textAlign: 'center' }} dir="ltr">{(p as any).phone || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600" style={{ textAlign: 'center' }} dir="ltr">{(p as any).email || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                         <AdminDeleteButton

@@ -199,9 +199,10 @@ export class PartnersService {
 
   private async softDeactivate(id: string) {
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // soft-delete: هم isActive false و هم deletedAt set
       await tx.partner.update({
         where: { id },
-        data: { isActive: false },
+        data: { isActive: false, deletedAt: new Date() },
       });
       const detailAccount = await tx.account.findFirst({
         where: { detailId: id } as any,

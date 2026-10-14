@@ -180,9 +180,20 @@ export class RecycleBinService {
     const client: any = (this.prisma as any)[def.model];
     if (!client) throw new NotFoundException('مدل پیدا نشد: ' + def.model);
 
+    // F24: بازگردانی با تنظیم فیلدهای پرچمی — مدل‌هایی که هنگام soft-delete
+    // isActive را false می‌کنند باید بازگردانی هم true شوند.
+    const updateData: any = { deletedAt: null, deletedBy: null };
+    if (['partner', 'user', 'role', 'unit', 'warehouse', 'itemCategory', 'item', 'priceList', 'project', 'contract', 'fiscalYear', 'equipment', 'permit', 'insurance', 'guarantee', 'technicalDocument', 'phaseChecklist'].includes(def.model)) {
+      updateData.isActive = true;
+    }
+    // Model-specific fielde‌های status که هنگام حذف تغییر می‌کنند
+    if (def.model === 'cheque') {
+      // چک معمولاً status ندارد، skip
+    }
+
     await client.update({
       where: { id },
-      data: { deletedAt: null, deletedBy: null },
+      data: updateData,
     });
 
     return { ok: true, entity, id, label: def.label };
