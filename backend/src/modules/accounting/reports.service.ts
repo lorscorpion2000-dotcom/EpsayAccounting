@@ -251,7 +251,7 @@ export class ReportsService {
 
     const where: any = {
       projectId: query.projectId,
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] } },
+      journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
     };
     if (query.fiscalYearId) where.journalEntry.fiscalYearId = query.fiscalYearId;
     if (query.fromDate || query.toDate) {

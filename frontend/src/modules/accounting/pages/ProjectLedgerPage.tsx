@@ -1,35 +1,58 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Building2, Search, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Building2, Search, FileSpreadsheet, X } from 'lucide-react';
 
 import { projectsApi } from '@/modules/projects/services/projects.api';
 import { accountingApi } from '../services/accounting.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
+import { PersianDatePicker } from '@/components/PersianDatePicker';
 import PrintButton from '@/components/PrintButton';
 import PrintHeader from '@/components/PrintHeader';
 
 import { exportToExcel } from '@/utils/export-excel';
+
 export default function ProjectLedgerPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [projects, setProjects] = useState<any[]>([]);
+  const [fiscalYears, setFiscalYears] = useState<any[]>([]);
   const [projectId, setProjectId] = useState('');
+  const [fiscalYearId, setFiscalYearId] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     projectsApi.list().then(setProjects as any).catch(() => []);
+    accountingApi.fiscalYears.list().then((list) => {
+      setFiscalYears(list);
+      const cur = list.find((f: any) => f.isCurrent);
+      if (cur) setFiscalYearId(cur.id);
+    }).catch(() => []);
   }, []);
 
   const load = async () => {
     if (!projectId) { toast.error('ابتدا پروژه را انتخاب کنید'); return; }
     setLoading(true);
-    try { setData(await accountingApi.reports.projectLedger({ projectId })); }
-    catch { toast.error('خطا در بارگذاری'); }
+    try {
+      setData(await accountingApi.reports.projectLedger({
+        projectId,
+        fiscalYearId: fiscalYearId || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      }));
+    } catch { toast.error('خطا در بارگذاری'); }
     finally { setLoading(false); }
   };
 
+  const clearFilters = () => {
+    setFiscalYearId('');
+    setFromDate('');
+    setToDate('');
+  };
+
   const exportExcel = () => {
-    if (!data?.rows?.length) { toast.info('دادهای نیست'); return; }
+    if (!data?.rows?.length) { toast.info('داده‌ای نیست'); return; }
     const rows = data.rows.map((r: any, i: number) => ({
       'ردیف': i + 1,
       'تاریخ': new Date(r.entryDate).toLocaleDateString('fa-IR'),
@@ -50,6 +73,12 @@ export default function ProjectLedgerPage() {
     toast.success('Excel دانلود شد');
   };
 
+  const projectLabel = data?.project
+    ? data.project.name + (data.project.code ? ' (' + data.project.code + ')' : '')
+    : '';
+
+  const hasSecondaryFilter = !!(fiscalYearId || fromDate || toDate);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -57,34 +86,84 @@ export default function ProjectLedgerPage() {
           <Building2 className="w-6 h-6 text-brand-600" />
           ریز حساب پروژه
         </h1>
-        <p className="text-sm text-slate-500 mt-1">تمام مالی پروژه در یک نگاه</p>
+        <p className="text-sm text-slate-500 mt-1">تمام گردش مالی پروژه در یک نگاه</p>
       </div>
 
-      <div className="card p-4 no-print grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-2">
-          <label className="block text-xs text-slate-500 mb-1">پروژه</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="input w-full">
-            <option value="">— انتخاب کنید —</option>
-            {projects.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.name} {p.code ? '(' + p.code + ')' : ''}</option>
-            ))}
-          </select>
+      <div className="card p-4 space-y-3 no-print">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="md:col-span-2">
+            <label className="block text-xs text-slate-500 mb-1">پروژه *</label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">— انتخاب کنید —</option>
+              {projects.map((p: any) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.code ? '(' + p.code + ')' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">سال مالی</label>
+            <select
+              value={fiscalYearId}
+              onChange={(e) => setFiscalYearId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">— همه —</option>
+              {fiscalYears.map((f: any) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} {f.isCurrent ? '(جاری)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">از تاریخ (اختیاری)</label>
+            <PersianDatePicker
+              value={fromDate}
+              onChange={(v: string | null) => setFromDate(v || '')}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">تا تاریخ (اختیاری)</label>
+            <PersianDatePicker
+              value={toDate}
+              onChange={(v: string | null) => setToDate(v || '')}
+            />
+          </div>
         </div>
-        <div className="flex items-end gap-2">
-          <button className="btn-primary flex-1" onClick={load} disabled={!projectId || loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            نمایش
-          </button>
-          <PrintButton contentRef={printRef} documentTitle="گزارش" />
-          <button className="btn-secondary" onClick={exportExcel} disabled={!data}>
-            <FileSpreadsheet className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+          {hasSecondaryFilter ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs text-slate-500 hover:text-red-600 flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> پاک کردن فیلترهای سال/تاریخ
+            </button>
+          ) : (
+            <span className="text-xs text-slate-400">بدون فیلتر سال/تاریخ</span>
+          )}
+          <div className="flex items-center gap-2">
+            <PrintButton contentRef={printRef} documentTitle="ریز حساب پروژه" />
+            <button className="btn-secondary" onClick={exportExcel} disabled={!data}>
+              <FileSpreadsheet className="w-4 h-4" /> Excel
+            </button>
+            <button className="btn-primary" onClick={load} disabled={!projectId || loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              نمایش
+            </button>
+          </div>
         </div>
       </div>
 
       {data && (
         <div ref={printRef} className="space-y-6">
-          <PrintHeader title="گزارش" />
+          <PrintHeader title="ریز حساب پروژه" subtitle={projectLabel} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="card p-4">
               <div className="text-xs text-slate-500 mb-1">مجموع بدهکار</div>
