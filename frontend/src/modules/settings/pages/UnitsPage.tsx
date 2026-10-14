@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Edit, RefreshCw, Ruler, Info, Archive } from 'lucide-react';
+import { Plus, Loader2, Edit, RefreshCw, Ruler, Info, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { unitsApi, Unit } from '../services/units.api';
 import { invalidateUnitsCache } from '@/hooks/useUnits';
@@ -38,7 +38,7 @@ export default function UnitsPage() {
     setActionLoading(true);
     try {
       await unitsApi.remove(deleting.id);
-      toast.success('واحد حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setDeleting(null);
       invalidateUnitsCache();
       load();
@@ -56,10 +56,10 @@ export default function UnitsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Ruler className="w-6 h-6 text-brand-600" />
-            واحدهای اندازهگیری
+            واحدهای اندازه‌گیری
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            واحدهای سراسری برنامه — قابل استفاده در کالاها خرید WBS و قیمتها
+            واحدهای سراسری برنامه — قابل استفاده در کالاها خرید WBS و قیمت‌ها
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function UnitsPage() {
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="text-xs text-blue-900">
-            واحدهای سیستمی قابل حذف نیستند (فقط غیرفعال). واحدهایی که در اسناد استفاده شدهاند هم قابل حذف نیستند.
+            واحدهای سیستمی قابل حذف نیستند (فقط غیرفعال). حذف یک واحد آن را به سطل زباله می‌برد و توسط مدیر قابل بازیابی است.
           </div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function UnitsPage() {
                         <AdminDeleteButton
                           endpoint="/units"
                           id={u.id}
-                          itemLabel={(u as any).code || (u as any).name || (u as any).title || (u as any).fullName || (u as any).username || ''}
+                          itemLabel={(u as any).code || (u as any).name || ''}
                           onSuccess={load}
                         />
                         <button
@@ -161,9 +161,9 @@ export default function UnitsPage() {
                           <button
                             onClick={() => setDeleting(u)}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
-                            title="حذف"
+                            title="حذف (به سطل زباله)"
                           >
-                            <Archive className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -185,9 +185,9 @@ export default function UnitsPage() {
 
       <ConfirmDialog
         isOpen={!!deleting}
-        title="حذف واحد"
-        message={deleting ? 'آیا از حذف «' + deleting.name + '» اطمینان دارید' : ''}
-        confirmLabel="بله حذف شود"
+        title="انتقال به سطل زباله"
+        message={deleting ? `«${deleting.name}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.` : ''}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={actionLoading}
         onConfirm={handleDelete}

@@ -57,13 +57,16 @@ export class UnitsService {
     return this.prisma.unit.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const unit = await this.findOne(id);
     if (unit.isSystem) {
       throw new BadRequestException('واحدهای سیستمی قابل حذف نیستند — فقط می‌توانید غیرفعال کنید');
     }
-    await this.prisma.unit.delete({ where: { id } });
-    return { ok: true };
+    await this.prisma.unit.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null, isActive: false },
+    });
+    return { ok: true, softDeleted: true };
   }
 
   async usageCount(id: string) {
