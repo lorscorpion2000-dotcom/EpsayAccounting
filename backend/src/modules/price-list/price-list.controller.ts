@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PriceListService } from './price-list.service';
 import {
@@ -12,14 +12,14 @@ import { ReasonDto } from '../../common/dto';
 import { PriceListStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
-@ApiTags('Price List - ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ (BOQ)')
+@ApiTags('Price List - فهرست بها (BOQ)')
 @ApiBearerAuth()
 @Controller('price-lists')
 export class PriceListController {
   constructor(private svc: PriceListService,
     private softDelete: SoftDeleteService,) {}
 
-  // â•â•â• Price Lists â•â•â•
+  // ═══ Price Lists ═══
   @Get()
   @RequirePermissions('price-list.read')
   list(
@@ -53,13 +53,15 @@ export class PriceListController {
 
   @Delete(':id')
   @RequirePermissions('price-list.manage')
-  remove(@Param('id') id: string) { return this.svc.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.svc.remove(id, req.user?.id);
+  }
 
   @Post(':id/publish')
   @RequirePermissions('price-list.manage')
   publish(@Param('id') id: string) { return this.svc.publish(id); }
 
-  // â•â•â• Items â•â•â•
+  // ═══ Items ═══
   @Get(':id/items')
   @RequirePermissions('price-list.read')
   listItems(
@@ -98,13 +100,13 @@ export class PriceListController {
   @RequirePermissions('price-list.manage')
   removeItem(@Param('itemId') itemId: string) { return this.svc.removeItem(itemId); }
 
-  // â•â•â• WBS Linking â•â•â•
+  // ═══ WBS Linking ═══
   @Get('wbs/:wbsItemId')
   @RequirePermissions('price-list.read')
   itemsForWbs(@Param('wbsItemId') wbsItemId: string) {
     return this.svc.itemsForWbs(wbsItemId);
   }
-  
+
   @Get('project/:projectId/wbs-mapping')
   @RequirePermissions('price-list.read')
   projectWbsMapping(@Param('projectId') projectId: string) {
@@ -117,10 +119,7 @@ export class PriceListController {
     return this.svc.linkWbs(wbsItemId, dto.priceListItemId);
   }
 
-  // ═══════════════════════════════════════════════════════
-  // Admin Delete / Restore
-  // ═══════════════════════════════════════════════════════
-
+  // ═══ Admin Delete / Restore ═══
   @Delete(':id/admin')
   @RequirePermissions('price-lists.update')
   async adminDelete(
@@ -168,5 +167,4 @@ export class PriceListController {
       skip: skip ?? 0,
     });
   }
-
 }

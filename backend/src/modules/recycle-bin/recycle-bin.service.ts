@@ -3,10 +3,6 @@ export type RecycleEntity = string;
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
-/**
- * تعریف entity ها برای سطل بازیافت
- * شامل: کلید یکتا، نام Prisma model، فیلدها، برچسب فارسی، تابع link
- */
 interface EntityDef {
   key: string;
   model: string;
@@ -18,14 +14,11 @@ interface EntityDef {
 }
 
 const ENTITIES: EntityDef[] = [
-  // ═══ خرید و انبار ═══
   { key: 'purchase-invoice', model: 'purchaseInvoice', label: 'فاکتور خرید', codeField: 'code', titleField: 'invoiceNumber', amountField: 'totalAmount', linkFn: (r) => '/procurement/invoices/' + r.id },
   { key: 'purchase-order',   model: 'purchaseOrder',   label: 'دستور خرید', codeField: 'code', titleField: 'code', amountField: 'totalAmount', linkFn: (r) => '/procurement/orders/' + r.id },
   { key: 'purchase-request', model: 'purchaseRequest', label: 'درخواست خرید', codeField: 'code', titleField: 'reason', linkFn: (r) => '/procurement/requests/' + r.id },
   { key: 'goods-receipt',    model: 'goodsReceipt',    label: 'رسید انبار', codeField: 'code', titleField: 'reference', amountField: 'totalValue', linkFn: (r) => '/warehouse/receipts/' + r.id },
   { key: 'goods-issue',      model: 'goodsIssue',      label: 'حواله انبار', codeField: 'code', titleField: 'usageLocation', amountField: 'totalValue', linkFn: () => '/warehouse/issues' },
-
-  // ═══ حسابداری ═══
   { key: 'journal-entry',      model: 'journalEntry',       label: 'سند حسابداری', codeField: 'code', titleField: 'description', amountField: 'totalDebit', linkFn: (r) => '/accounting/journals/' + r.id },
   { key: 'fiscal-year',        model: 'fiscalYear',         label: 'سال مالی', codeField: 'code', titleField: 'name', linkFn: () => '/settings/fiscal-years' },
   { key: 'cheque',             model: 'cheque',             label: 'چک', codeField: 'code', amountField: 'amount', linkFn: () => '/accounting/cheques' },
@@ -39,8 +32,6 @@ const ENTITIES: EntityDef[] = [
   { key: 'adjustment-index',   model: 'adjustmentIndex',    label: 'شاخص تعدیل', linkFn: () => '/adjustment-indices' },
   { key: 'adjustment',         model: 'adjustmentCalculation', label: 'محاسبه تعدیل', linkFn: () => '/adjustments' },
   { key: 'material-price-diff',model: 'materialPriceDiff',  label: 'مابه‌التفاوت مصالح', amountField: 'diffAmount', linkFn: () => '/material-price-diffs' },
-
-  // ═══ اطلاعات پایه ═══
   { key: 'user',      model: 'user',      label: 'کاربر', codeField: 'username', titleField: 'fullName', linkFn: () => '/settings/users' },
   { key: 'role',      model: 'role',      label: 'نقش', codeField: 'code', titleField: 'name', linkFn: () => '/settings/roles' },
   { key: 'partner',   model: 'partner',   label: 'شخص / طرف حساب', codeField: 'code', titleField: 'name', linkFn: () => '/directory' },
@@ -50,30 +41,20 @@ const ENTITIES: EntityDef[] = [
   { key: 'warehouse', model: 'warehouse', label: 'انبار', codeField: 'code', titleField: 'name', linkFn: () => '/warehouse/warehouses' },
   { key: 'item-category', model: 'itemCategory', label: 'دسته کالا', codeField: 'code', titleField: 'name', linkFn: () => '/warehouse/categories' },
   { key: 'item',      model: 'item',      label: 'کالا / مصالح', codeField: 'code', titleField: 'name', linkFn: () => '/warehouse/items' },
-  { key: 'price-list',model: 'priceList', label: 'فهرست بها', codeField: 'code', titleField: 'name', linkFn: () => '/price-lists' },
-
-  // ═══ اسناد عملیاتی ═══
+  { key: 'price-list',model: 'priceList', label: 'فهرست بها', codeField: 'code', titleField: 'title', linkFn: () => '/price-lists' },
   { key: 'daily-report',            model: 'dailyReport',           label: 'گزارش روزانه', codeField: 'code', titleField: 'operations', linkFn: (r) => '/site-ops/daily-reports/' + r.id },
   { key: 'subcontractor-statement', model: 'subcontractorStatement', label: 'صورت‌وضعیت پیمانکار', codeField: 'code', amountField: 'netPayable', linkFn: (r) => '/payroll/subcontractor-statements/' + r.id },
   { key: 'worker-statement',        model: 'workerStatement',        label: 'صورت‌وضعیت پرسنل', codeField: 'code', amountField: 'netPayable', linkFn: (r) => '/payroll/worker-statements/' + r.id },
   { key: 'client-statement',        model: 'clientStatement',        label: 'صورت‌وضعیت کارفرما', codeField: 'code', amountField: 'netPayable', linkFn: (r) => '/client-statements/' + r.id },
-
-  // ═══ فروش ═══
   { key: 'sales-invoice',   model: 'salesInvoice',   label: 'فاکتور فروش', codeField: 'code', titleField: 'invoiceNumber', amountField: 'totalAmount', linkFn: (r) => '/sales/invoices/' + r.id },
   { key: 'sales-receipt',   model: 'salesReceipt',   label: 'دریافت از مشتری', codeField: 'code', amountField: 'amount', linkFn: () => '/sales/receipts' },
   { key: 'sales-contract',  model: 'salesContract',  label: 'قرارداد فروش', codeField: 'code', titleField: 'title', linkFn: () => '/sales/contracts' },
   { key: 'sales-customer',  model: 'salesCustomer',  label: 'مشتری', titleField: 'fullName', linkFn: () => '/sales/customers' },
   { key: 'sales-unit',      model: 'salesUnit',      label: 'واحد قابل فروش', codeField: 'code', titleField: 'title', linkFn: () => '/sales/units' },
-
-  // ═══ پیمانکاران خارجی / پرداخت ═══
   { key: 'supplier-payment', model: 'supplierPayment', label: 'پرداخت تأمین‌کننده', codeField: 'code', amountField: 'amount', linkFn: () => '/procurement/supplier-payments' },
-
-  // ═══ ماشین‌آلات ═══
   { key: 'equipment',           model: 'equipment',              label: 'ماشین‌آلات', codeField: 'code', titleField: 'name', linkFn: () => '/equipment' },
   { key: 'equipment-daily-log', model: 'equipmentDailyLog',      label: 'کارکرد ماشین', codeField: 'code', linkFn: () => '/equipment/logs' },
   { key: 'equipment-maintenance', model: 'equipmentMaintenance', label: 'تعمیر ماشین', linkFn: () => '/equipment/maintenances' },
-
-  // ═══ منابع انسانی ═══
   { key: 'employee-profile', model: 'employeeProfile', label: 'پرسنل', linkFn: () => '/payroll/employees' },
   { key: 'payroll-period',   model: 'payrollPeriod',   label: 'دوره حقوق', linkFn: () => '/payroll/periods' },
   { key: 'payroll-record',   model: 'payrollRecord',   label: 'فیش حقوقی', amountField: 'netPay', linkFn: () => '/payroll/periods' },
@@ -82,8 +63,6 @@ const ENTITIES: EntityDef[] = [
   { key: 'leave-request',    model: 'leaveRequest',    label: 'مرخصی', codeField: 'code', linkFn: () => '/payroll/leave-requests' },
   { key: 'advance-request',  model: 'advanceRequest',  label: 'مساعده', codeField: 'code', amountField: 'amount', linkFn: () => '/payroll/advance-requests' },
   { key: 'partner-capital',  model: 'partnerCapitalAccount', label: 'حساب سرمایه شریک', linkFn: () => '/partner-capital/accounts' },
-
-  // ═══ timeline ═══
   { key: 'permit',      model: 'permit',      label: 'مجوز / پروانه', codeField: 'code', titleField: 'title', linkFn: () => '/timeline/permits' },
   { key: 'insurance',   model: 'insurance',   label: 'بیمه‌نامه', codeField: 'code', titleField: 'title', linkFn: () => '/timeline/insurances' },
   { key: 'guarantee',   model: 'guarantee',   label: 'ضمانت‌نامه', codeField: 'code', titleField: 'title', amountField: 'amount', linkFn: () => '/timeline/guarantees' },
@@ -145,7 +124,6 @@ export class RecycleBinService {
           });
         }
       } catch (e) {
-        // model در Prisma نیست یا relation ندارد — skip
         continue;
       }
     }
@@ -180,15 +158,10 @@ export class RecycleBinService {
     const client: any = (this.prisma as any)[def.model];
     if (!client) throw new NotFoundException('مدل پیدا نشد: ' + def.model);
 
-    // F24: بازگردانی با تنظیم فیلدهای پرچمی — مدل‌هایی که هنگام soft-delete
-    // isActive را false می‌کنند باید بازگردانی هم true شوند.
     const updateData: any = { deletedAt: null, deletedBy: null };
-    if (['partner', 'user', 'role', 'unit', 'warehouse', 'itemCategory', 'item', 'priceList', 'project', 'contract', 'fiscalYear', 'equipment', 'permit', 'insurance', 'guarantee', 'technicalDocument', 'phaseChecklist'].includes(def.model)) {
+    const HAS_ISACTIVE = ['partner', 'user', 'role', 'unit', 'warehouse', 'itemCategory', 'item', 'project', 'contract', 'fiscalYear', 'equipment', 'permit', 'insurance', 'guarantee', 'technicalDocument', 'phaseChecklist'];
+    if (HAS_ISACTIVE.includes(def.model)) {
       updateData.isActive = true;
-    }
-    // Model-specific fielde‌های status که هنگام حذف تغییر می‌کنند
-    if (def.model === 'cheque') {
-      // چک معمولاً status ندارد، skip
     }
 
     await client.update({
@@ -199,7 +172,6 @@ export class RecycleBinService {
     return { ok: true, entity, id, label: def.label };
   }
 
-  /** لیست entity های پشتیبانی‌شده برای فرانت */
   entities() {
     return ENTITIES.map(e => ({ key: e.key, label: e.label }));
   }

@@ -23,7 +23,7 @@ export class PriceListService {
     return prefix + String(n).padStart(3, '0');
   }
 
-  // â”€â”€â”€ Price Lists â”€â”€â”€
+  // ─── Price Lists ───
   async list(query?: { year?: number; status?: string; search?: string }) {
     const where: any = {};
     if (query?.year) where.year = query.year;
@@ -48,7 +48,7 @@ export class PriceListService {
         _count: { select: { items: true } },
       },
     });
-    if (!pl) throw new NotFoundException('ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!pl) throw new NotFoundException('فهرست بها یافت نشد');
     return pl;
   }
 
@@ -75,13 +75,16 @@ export class PriceListService {
     return this.prisma.priceList.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const pl = await this.get(id);
     if (pl._count.items > 0) {
-      throw new BadRequestException('Ø§Ø¨ØªØ¯Ø§ Ø±Ø¯ÛŒÙâ€ŒÙ‡Ø§ÛŒ ÙÙ‡Ø±Ø³Øª Ø±Ø§ Ø­Ø°Ù Ú©Ù†ÛŒØ¯');
+      throw new BadRequestException('ابتدا ردیف‌های فهرست را حذف کنید یا از «حذف توسط مدیر» استفاده کنید');
     }
-    await this.prisma.priceList.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.priceList.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async publish(id: string) {
@@ -91,7 +94,7 @@ export class PriceListService {
     });
   }
 
-  // â”€â”€â”€ Items â”€â”€â”€
+  // ─── Items ───
   async listItems(priceListId: string, query?: { search?: string; chapter?: string }) {
     const where: any = { priceListId };
     if (query?.search) {
@@ -113,7 +116,7 @@ export class PriceListService {
       where: { id },
       include: { priceList: true },
     });
-    if (!item) throw new NotFoundException('Ø±Ø¯ÛŒÙ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
     return item;
   }
 
@@ -146,17 +149,17 @@ export class PriceListService {
       where: { priceListItemId: id },
     });
     if (wbsCount > 0) {
-      throw new BadRequestException('Ø§ÛŒÙ† Ø±Ø¯ÛŒÙ Ø¨Ù‡ WBS Ù…ØªØµÙ„ Ø§Ø³Øª â€” Ø§Ø¨ØªØ¯Ø§ Ù„ÛŒÙ†Ú© Ø±Ø§ Ù‚Ø·Ø¹ Ú©Ù†ÛŒØ¯');
+      throw new BadRequestException('این ردیف به WBS متصل است — ابتدا لینک را قطع کنید');
     }
     await this.prisma.priceListItem.delete({ where: { id } });
     return { success: true };
   }
 
-  // â”€â”€â”€ Bulk Import â”€â”€â”€
+  // ─── Bulk Import ───
   async importItems(priceListId: string, dto: ImportItemsDto) {
     const pl = await this.get(priceListId);
     if (!dto.items || dto.items.length === 0) {
-      throw new BadRequestException('Ù‡ÛŒÚ† Ø±Ø¯ÛŒÙÛŒ Ø¨Ø±Ø§ÛŒ ÙˆØ±ÙˆØ¯ ÙˆØ¬ÙˆØ¯ Ù†Ø¯Ø§Ø±Ø¯');
+      throw new BadRequestException('هیچ ردیفی برای ورود وجود ندارد');
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -172,7 +175,7 @@ export class PriceListService {
           });
           if (existing) {
             skipped++;
-            errors.push({ row: i + 1, code: row.code, reason: 'Ú©Ø¯ ØªÚ©Ø±Ø§Ø±ÛŒ' });
+            errors.push({ row: i + 1, code: row.code, reason: 'کد تکراری' });
             continue;
           }
 
@@ -203,28 +206,28 @@ export class PriceListService {
   async clearItems(priceListId: string) {
     const pl = await this.get(priceListId);
     if (pl.status === 'PUBLISHED') {
-      throw new BadRequestException('ÙÙ‡Ø±Ø³Øª Ù…Ù†ØªØ´Ø±Ø´Ø¯Ù‡ Ù‚Ø§Ø¨Ù„ Ù¾Ø§Ú©â€ŒØ³Ø§Ø²ÛŒ Ù†ÛŒØ³Øª');
+      throw new BadRequestException('فهرست منتشرشده قابل پاک‌سازی نیست');
     }
     const inUse = await this.prisma.wbsItem.count({
       where: { priceListItem: { priceListId } },
     });
     if (inUse > 0) {
-      throw new BadRequestException('Ø¨Ø±Ø®ÛŒ Ø±Ø¯ÛŒÙâ€ŒÙ‡Ø§ Ø¨Ù‡ WBS Ù…ØªØµÙ„ Ù‡Ø³ØªÙ†Ø¯');
+      throw new BadRequestException('برخی ردیف‌ها به WBS متصل هستند');
     }
     const result = await this.prisma.priceListItem.deleteMany({ where: { priceListId } });
     return { deleted: result.count };
   }
 
-  // â”€â”€â”€ WBS Linking â”€â”€â”€
+  // ─── WBS Linking ───
   async linkWbs(wbsItemId: string, priceListItemId: string | null) {
     const wbs = await this.prisma.wbsItem.findUnique({ where: { id: wbsItemId } });
-    if (!wbs) throw new NotFoundException('Ø±Ø¯ÛŒÙ WBS ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!wbs) throw new NotFoundException('ردیف WBS یافت نشد');
 
     if (priceListItemId) {
       const item = await this.prisma.priceListItem.findUnique({
         where: { id: priceListItemId },
       });
-      if (!item) throw new NotFoundException('Ø±Ø¯ÛŒÙ ÙÙ‡Ø±Ø³Øª Ø¨Ù‡Ø§ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+      if (!item) throw new NotFoundException('ردیف فهرست بها یافت نشد');
     }
 
     return this.prisma.wbsItem.update({
@@ -239,11 +242,11 @@ export class PriceListService {
       where: { id: wbsItemId },
       include: { priceListItem: true, project: { select: { id: true, code: true, name: true } } },
     });
-    if (!wbs) throw new NotFoundException('Ø±Ø¯ÛŒÙ WBS ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!wbs) throw new NotFoundException('ردیف WBS یافت نشد');
     return wbs;
   }
 
-  // â”€â”€â”€ Stats â”€â”€â”€
+  // ─── Stats ───
   async stats() {
     const [lists, published, items, linked] = await Promise.all([
       this.prisma.priceList.count(),
@@ -253,7 +256,8 @@ export class PriceListService {
     ]);
     return { lists, published, items, linked };
   }
-    // ─── Project WBS Mapping ───
+
+  // ─── Project WBS Mapping ───
   async projectWbsMapping(projectId: string) {
     const wbs = await this.prisma.wbsItem.findMany({
       where: { projectId },

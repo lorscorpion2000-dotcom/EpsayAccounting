@@ -1,7 +1,7 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, BookOpen, Eye, Edit, RefreshCw, CheckCircle2, BarChart3, Archive } from 'lucide-react';
+import { Plus, Search, Loader2, BookOpen, Eye, Edit, RefreshCw, CheckCircle2, BarChart3, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { priceListApi } from '../services/price-list.api';
 import type { PriceList, BoqStats } from '@/types/price-list';
@@ -44,11 +44,11 @@ export default function PriceListsPage() {
     setActionLoading(true);
     try {
       await priceListApi.lists.remove(actionItem.id);
-      toast.success('حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setActionItem(null);
       load();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'خطا');
+      toast.error(e?.response?.data?.message || 'خطا در حذف');
     } finally { setActionLoading(false); }
   };
 
@@ -172,9 +172,9 @@ export default function PriceListsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
                         <AdminDeleteButton
-                          endpoint="/price-list"
+                          endpoint="/price-lists"
                           id={pl.id}
-                          itemLabel={(pl as any).code || (pl as any).name || (pl as any).title || (pl as any).fullName || (pl as any).serialNumber || ''}
+                          itemLabel={pl.code || pl.title || ''}
                           onSuccess={load}
                         />
                         <button onClick={() => navigate(`/price-lists/${pl.id}`)}
@@ -192,8 +192,9 @@ export default function PriceListsPage() {
                           </button>
                         )}
                         <button onClick={() => setActionItem(pl)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                          <Archive className="w-4 h-4" />
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
+                          title="حذف (به سطل زباله)">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -207,9 +208,9 @@ export default function PriceListsPage() {
 
       <ConfirmDialog
         isOpen={!!actionItem}
-        title="حذف فهرست بها"
-        message={actionItem ? `آیا از حذف «${actionItem.title}» اطمینان دارید؟` : ''}
-        confirmLabel="بله، حذف کن"
+        title="انتقال به سطل زباله"
+        message={actionItem ? `«${actionItem.title}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.` : ''}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={actionLoading}
         onConfirm={handleDelete}
