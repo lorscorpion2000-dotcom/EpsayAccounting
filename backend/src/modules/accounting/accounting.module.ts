@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { AuditModule } from '../audit/audit.module';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
 import { FiscalYearsController } from './fiscal-years.controller';
@@ -28,7 +30,7 @@ import { ARAgingDetailService } from './reports/ar-aging-detail.service';
 import { ARAgingDetailController } from './reports/ar-aging-detail.controller';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuditModule],
   controllers: [
     ARAgingDetailController,
     AdvancedLedgerController,
@@ -57,6 +59,7 @@ import { ARAgingDetailController } from './reports/ar-aging-detail.controller';
     ReportsService,
     DetailAccountsService,
     AccountingEngineService,
+    SoftDeleteService,
   ],
   exports: [
     AccountsService,

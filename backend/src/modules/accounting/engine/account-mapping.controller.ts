@@ -1,14 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { CreateAccountMappingDto, UpdateAccountMappingDto } from './dto/account-mapping.dto';
+import { SoftDeleteService } from '../../../common/services/soft-delete.service';
+import { ReasonDto } from '../../../common/dto';
+import { OptionalIntPipe } from '../../../common/pipes/optional-int.pipe';
 
 @ApiTags('Account Mappings - نگاشت حساب‌ها')
 @ApiBearerAuth()
 @Controller('accounting/mappings')
 export class AccountMappingController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private softDelete: SoftDeleteService,
+  ) {}
 
   @Get()
   @RequirePermissions('accounting.read')
@@ -19,6 +25,19 @@ export class AccountMappingController {
         creditAccount: { select: { id: true, code: true, name: true } },
       },
       orderBy: { code: 'asc' },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('accounting.update')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'accountMapping',
+      take: take ?? 100,
+      skip: skip ?? 0,
     });
   }
 
@@ -45,8 +64,41 @@ export class AccountMappingController {
 
   @Delete(':id')
   @RequirePermissions('accounting.delete')
-  async remove(@Param('id') id: string) {
-    await this.prisma.accountMapping.delete({ where: { id } });
-    return { success: true };
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.id;
+    await this.prisma.accountMapping.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
+
+  @Delete(':id/admin')
+  @RequirePermissions('accounting.delete')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: ReasonDto,
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'accountMapping',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('accounting.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'accountMapping',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
   }
 }

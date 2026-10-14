@@ -22,6 +22,7 @@ const SOFT_DELETE_MODELS = new Set([
   'PriceList', 'OverheadAllocation',
   'AdjustmentIndex', 'AdjustmentCalculation', 'MaterialPriceDiff',
   'WorkerStatement', 'WorkerStatementItem',
+  'Account', 'AccountMapping',
 ]);
 
 const READ_ACTIONS = new Set([

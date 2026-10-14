@@ -34,57 +34,42 @@ export class AccountsService {
     });
   }
 
-  /**
-   * حساب‌های قابل استفاده در سند:
-   * - تمام تفضیل‌های فعال و postable
-   * - معین‌هایی که postable هستن ولی فرزند postable ندارن
-   * - معین‌هایی که فرزند postable دارن → حذف می‌شن (کاربر باید از تفضیل استفاده کنه)
-   * - گروه و کل هرگز نمایش داده نمی‌شن
-   */
   async findPostable() {
     const accounts = await this.prisma.account.findMany({
       where: { isActive: true, isPostable: true },
       include: {
         children: {
-          where: { isActive: true, isPostable: true },
+          where: { isActive: true, isPostable: true, deletedAt: null },
           select: { id: true, level: true, code: true, name: true, nature: true, parentId: true, isActive: true, isPostable: true, description: true, detailType: true, detailId: true },
         },
       },
       orderBy: { code: 'asc' },
     });
 
-    // ─── فیلتر ───
     const result = accounts.filter((a) => {
-      // تفضیل‌ها: همیشه نشون بده
       if (a.level === 'DETAIL' || (a.level as any) === 'TAFZIL') return true;
-
-      // معین‌ها: اگه فرزند postable داره، حذف کن
       if (a.level === 'SUBSIDIARY') {
         const hasPostableChildren = a.children.length > 0;
         return !hasPostableChildren;
       }
-
-      // گروه و کل هرگز (حتی اگه isPostable=true باشه، اشتباه تنظیمه)
       return false;
     });
 
-    // ─── مرتب‌سازی نهایی: تفضیل‌ها زیر معین والد ───
-    // (چون در DB ترتیب کد رعایت شده، همین کافیه)
     return result;
   }
 
   async findOne(id: string) {
     const account = await this.prisma.account.findUnique({
       where: { id },
-      include: { parent: true, children: true },
+      include: {
+        parent: true,
+        children: { where: { deletedAt: null } },
+      },
     });
     if (!account) throw new NotFoundException('حساب یافت نشد');
     return account;
   }
 
-  /**
-   * تولید کد خودکار بر اساس سطح والد
-   */
   async generateCode(parentId?: string): Promise<string> {
     if (!parentId) {
       const count = await this.prisma.account.count({ where: { parentId: null } });
@@ -100,7 +85,6 @@ export class AccountsService {
     const exists = await this.prisma.account.findUnique({ where: { code: dto.code } });
     if (exists) throw new ConflictException('کد حساب تکراری است');
 
-    // اگر والد دارد، سطح باید یک سطح پایین‌تر باشد
     if (dto.parentId) {
       const parent = await this.prisma.account.findUnique({ where: { id: dto.parentId } });
       if (!parent) throw new NotFoundException('والد یافت نشد');
@@ -133,10 +117,6 @@ export class AccountsService {
     const data: any = {};
     if ((dto as any).detailType !== undefined) data.detailType = (dto as any).detailType || null;
     if ((dto as any).detailId !== undefined) data.detailId = (dto as any).detailId || null;
-    if ((dto as any).detailType !== undefined) data.detailType = (dto as any).detailType;
-    if ((dto as any).detailId !== undefined) data.detailId = (dto as any).detailId;
-    if ((dto as any).detailType !== undefined) data.detailType = (dto as any).detailType;
-    if ((dto as any).detailId !== undefined) data.detailId = (dto as any).detailId;
     if (dto.code !== undefined) data.code = dto.code;
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.level !== undefined) data.level = dto.level;
@@ -147,17 +127,22 @@ export class AccountsService {
     return this.prisma.account.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const account = await this.findOne(id);
-    if (account.children.length > 0) {
+    if (account.children && account.children.length > 0) {
       throw new BadRequestException('ابتدا زیرمجموعه‌ها را حذف کنید');
     }
     const linesCount = await this.prisma.journalLine.count({ where: { accountId: id } });
     if (linesCount > 0) {
-      throw new BadRequestException('این حساب در اسناد استفاده شده است');
+      throw new BadRequestException(
+        'این حساب در اسناد استفاده شده است — ابتدا سند مربوطه را ابطال کنید یا از «حذف توسط مدیر» استفاده کنید',
+      );
     }
-    await this.prisma.account.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.account.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   private nextLevel(current: string): AccountLevelDto {
@@ -167,9 +152,7 @@ export class AccountsService {
     const idx = order.indexOf(current as any);
     return order[Math.min(idx + 1, order.length - 1)];
   }
-  /**
-   * همه حساب‌های فعال (گروه، کل، معین، تفصیلی) برای فیلترها
-   */
+
   async findAllForFilter() {
     const accounts = await this.prisma.account.findMany({
       where: { isActive: true },
@@ -181,5 +164,4 @@ export class AccountsService {
     });
     return accounts;
   }
-
 }

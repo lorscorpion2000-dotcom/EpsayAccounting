@@ -582,8 +582,12 @@ model Account {
   expensesAsPayFrom              Expense[]             @relation("ExpensePayFrom")
   expensesAsDr                   Expense[]             @relation("ExpenseAccountDr")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([parentId])
   @@index([level])
+  @@index([deletedAt])
   @@map("accounts")
 }
 
@@ -838,6 +842,10 @@ model AccountMapping {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([deletedAt])
   @@map("account_mappings")
 }
 

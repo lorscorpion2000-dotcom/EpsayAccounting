@@ -12,9 +12,11 @@ import {
 } from '@/types/accounting';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AccountFormModal from '../components/AccountFormModal';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
+
 export default function ChartOfAccountsPage() {
   const [tree, setTree] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function ChartOfAccountsPage() {
     setDeleting(true);
     try {
       await accountingApi.accounts.remove(deletingAccount.id);
-      toast.success('حساب حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setDeletingAccount(null);
       loadData();
     } catch (e: any) {
@@ -88,8 +90,8 @@ export default function ChartOfAccountsPage() {
         name: 'ChartOfAccounts',
         rows,
         cols: [
-      { wch: 15 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 8 },
-    ],
+          { wch: 15 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 8 },
+        ],
       }],
     });
     toast.success('خروجی Excel دانلود شد');
@@ -158,8 +160,8 @@ export default function ChartOfAccountsPage() {
                 depth={0}
                 search={search}
                 onDelete={setDeletingAccount}
-              onEdit={(a) => { setEditingAccount(a); setShowModal(true); }}
-              onAddChild={(a) => { setEditingAccount(null); setDefaultParentForNew(a.id); setShowModal(true); }}
+                onEdit={(a) => { setEditingAccount(a); setShowModal(true); }}
+                onAddChild={(a) => { setEditingAccount(null); setDefaultParentForNew(a.id); setShowModal(true); }}
               />
             ))}
           </div>
@@ -177,9 +179,9 @@ export default function ChartOfAccountsPage() {
 
       <ConfirmDialog
         isOpen={!!deletingAccount}
-        title="حذف حساب"
-        message={`آیا از حذف حساب «${deletingAccount?.code} - ${deletingAccount?.name}» اطمینان دارید؟`}
-        confirmLabel="بله، حذف شود"
+        title="انتقال به سطل زباله"
+        message={`«${deletingAccount?.code} - ${deletingAccount?.name}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در درخت نمایش داده نمی‌شود.`}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={deleting}
         onConfirm={handleDelete}
@@ -203,7 +205,6 @@ function AccountNode({
   const [expanded, setExpanded] = useState(depth < 2);
   const hasChildren = (node.children?.length ?? 0) > 0;
 
-  // فیلتر بر اساس جستجو
   const matchesSearch = !search ||
     node.name.toLowerCase().includes(search.toLowerCase()) ||
     node.code.includes(search);
@@ -259,6 +260,13 @@ function AccountNode({
         )}
 
         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+          <AdminDeleteButton
+            endpoint="/accounts"
+            id={node.id}
+            itemLabel={node.code + ' - ' + node.name}
+            onSuccess={() => { /* parent should reload */ window.location.reload(); }}
+            size="sm"
+          />
           <button onClick={() => onAddChild(node)} className="p-1.5 rounded hover:bg-brand-100 text-brand-600 transition-colors" title="افزودن زیرحساب">
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -268,7 +276,7 @@ function AccountNode({
           <button
             onClick={() => onDelete(node)}
             className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-            title="حذف"
+            title="حذف (به سطل زباله)"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>

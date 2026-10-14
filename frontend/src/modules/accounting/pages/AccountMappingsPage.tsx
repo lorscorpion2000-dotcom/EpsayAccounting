@@ -7,8 +7,9 @@ import {
   type AccountMappingInput,
   type PostableAccount,
 } from '../services/mappings.api';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
-// ────────────────────────────────────────────────────────────
 export default function AccountMappingsPage() {
   const [items, setItems] = useState<AccountMapping[]>([]);
   const [accounts, setAccounts] = useState<PostableAccount[]>([]);
@@ -77,7 +78,7 @@ export default function AccountMappingsPage() {
     setBusy(true);
     try {
       await mappingsApi.remove(deleteTarget.id);
-      toast.success('حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setDeleteTarget(null);
       await load();
     } catch (e: any) {
@@ -139,7 +140,7 @@ export default function AccountMappingsPage() {
               <th className="text-right px-4 py-3 font-medium">حساب بدهکار</th>
               <th className="text-right px-4 py-3 font-medium">حساب بستانکار</th>
               <th className="text-center px-4 py-3 font-medium">وضعیت</th>
-              <th className="text-center px-4 py-3 font-medium w-24">عملیات</th>
+              <th className="text-center px-4 py-3 font-medium w-32">عملیات</th>
             </tr>
           </thead>
           <tbody>
@@ -172,6 +173,13 @@ export default function AccountMappingsPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1">
+                    <AdminDeleteButton
+                      endpoint="/accounting/mappings"
+                      id={m.id}
+                      itemLabel={m.code + ' - ' + m.title}
+                      onSuccess={load}
+                      size="sm"
+                    />
                     <button
                       onClick={() => openEdit(m)}
                       className="p-1.5 rounded hover:bg-slate-100 text-slate-600"
@@ -180,7 +188,7 @@ export default function AccountMappingsPage() {
                     <button
                       onClick={() => setDeleteTarget(m)}
                       className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
-                      title="حذف"
+                      title="حذف (به سطل زباله)"
                     ><Trash2 size={14} /></button>
                   </div>
                 </td>
@@ -200,29 +208,20 @@ export default function AccountMappingsPage() {
         />
       )}
 
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-slate-800 mb-2">حذف نگاشت</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              آیا از حذف <span className="font-mono">{deleteTarget.code}</span> مطمئن هستید؟
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">انصراف</button>
-              <button
-                onClick={confirmDelete}
-                disabled={busy}
-                className="px-4 py-2 text-sm rounded-lg bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50"
-              >{busy ? '...' : 'حذف'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="انتقال به سطل زباله"
+        message={deleteTarget ? `نگاشت «${deleteTarget.title}» (${deleteTarget.code}) به سطل زباله منتقل می‌شود.` : ''}
+        confirmLabel="بله، منتقل کن"
+        variant="danger"
+        loading={busy}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
 
-// ────────────────────────────────────────────────────────────
 function MappingFormModal({
   editing, accounts, busy, onCancel, onSubmit,
 }: {

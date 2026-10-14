@@ -1,17 +1,23 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query,
+  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Accounts - کدینگ حساب‌ها')
 @ApiBearerAuth()
 @Controller('accounts')
 export class AccountsController {
-  constructor(private service: AccountsService) {}
+  constructor(
+    private service: AccountsService,
+    private softDelete: SoftDeleteService,
+  ) {}
 
   @Get('tree')
   @RequirePermissions('accounting.read')
@@ -32,18 +38,32 @@ export class AccountsController {
     return this.service.generateCode(parentId).then((code) => ({ code }));
   }
 
-  
   @Get('for-filter')
   @RequirePermissions('accounting.accounts.read')
   findAllForFilter() {
     return this.service.findAllForFilter();
   }
 
+  // ═══ Admin Delete / Restore ═══
+  @Get('deleted/list')
+  @RequirePermissions('accounting.update')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'account',
+      take: take ?? 100,
+      skip: skip ?? 0,
+    });
+  }
+
   @Get(':id')
+  @RequirePermissions('accounting.read')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
-  
+
   @Post()
   @RequirePermissions('accounting.create')
   create(@Body() dto: CreateAccountDto) { return this.service.create(dto); }
@@ -56,7 +76,36 @@ export class AccountsController {
 
   @Delete(':id')
   @RequirePermissions('accounting.delete')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.service.remove(id, req.user?.id);
+  }
 
-  
+  @Delete(':id/admin')
+  @RequirePermissions('accounting.delete')
+  async adminDelete(
+    @Param('id') id: string,
+    @Body() body: ReasonDto,
+    @Req() req: any,
+  ) {
+    const user = req.user || {};
+    return this.softDelete.adminDelete({
+      model: 'account',
+      id,
+      user,
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('accounting.update')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    const user = req.user || {};
+    return this.softDelete.restore({
+      model: 'account',
+      id,
+      user,
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
 }
