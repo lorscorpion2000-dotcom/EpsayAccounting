@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, ClipboardList, Eye, Edit, Trash2, Send,
-  CheckCircle2, XCircle, RefreshCw, Sun, Cloud, CloudRain, Snowflake, Wind,
-} from 'lucide-react';
+import { Plus, Search, Loader2, ClipboardList, Eye, Edit, Send, CheckCircle2, XCircle, RefreshCw, Sun, Cloud, CloudRain, Snowflake, Wind, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { siteOpsApi } from '../services/site-ops.api';
 import { api } from '@/services/api';
@@ -205,7 +202,7 @@ export default function DailyReportsListPage() {
                                 <Send className="w-4 h-4" />
                               </button>
                               <button onClick={() => setActionItem({ item: r, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                                <Trash2 className="w-4 h-4" />
+                                <Archive className="w-4 h-4" />
                               </button>
                             </>
                           )}

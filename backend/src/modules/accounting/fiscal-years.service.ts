@@ -26,6 +26,25 @@ export class FiscalYearsService {
   }
 
   async create(dto: CreateFiscalYearDto) {
+    // چک وجود soft-deleted با همان code
+    const softDeleted = await (this.prisma.fiscalYear as any).findFirst({
+      __withDeleted: true,
+      where: { code: dto.code, deletedAt: { not: null } },
+    });
+    if (softDeleted) {
+      throw new BadRequestException(
+        'کد «' + dto.code + '» قبلاً استفاده شده و در سطل بازیافت است. ابتدا از «سوابق حذف» آن را بازیابی یا حذف دائمی کنید.',
+      );
+    }
+
+    // چک وجود active با همان code
+    const existing = await this.prisma.fiscalYear.findFirst({
+      where: { code: dto.code },
+    });
+    if (existing) {
+      throw new BadRequestException('کد «' + dto.code + '» قبلاً استفاده شده است.');
+    }
+
     if (dto.isCurrent) {
       await this.prisma.fiscalYear.updateMany({
         where: { isCurrent: true },
@@ -70,11 +89,11 @@ export class FiscalYearsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    const count = await this.prisma.journalEntry.count({ where: { fiscalYearId: id } });
-    if (count > 0) {
-      throw new BadRequestException('این سال مالی اسناد دارد و قابل حذف نیست — می‌توانید ببندید');
-    }
-    return this.prisma.fiscalYear.delete({ where: { id } });
+    // Soft delete — به سوابق حذف می‌رود و قابل بازیابی است
+    return this.prisma.fiscalYear.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   async close(id: string) {

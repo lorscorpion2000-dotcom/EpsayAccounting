@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, CheckSquare, Edit, Trash2, RefreshCw, FileSpreadsheet, Send, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Search, Loader2, CheckSquare, Edit, RefreshCw, FileSpreadsheet, Send, CheckCircle2, XCircle, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { timelineApi, PhaseChecklist, ChecklistType, ChecklistStatus } from '../services/timeline.api';
 import { formatJalaliDate } from '@/utils/format';
@@ -203,7 +203,7 @@ export default function ChecklistsPage() {
                               </button>
                               <button onClick={() => setActionItem({ item: c, action: 'delete' })}
                                 className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                                <Trash2 className="w-4 h-4" />
+                                <Archive className="w-4 h-4" />
                               </button>
                             </>
                           )}

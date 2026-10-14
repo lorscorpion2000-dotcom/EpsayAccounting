@@ -1,10 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, BookOpen, Eye, Edit, Trash2, RefreshCw,
-  CheckCircle2, BarChart3,
-} from 'lucide-react';
+import { Plus, Search, Loader2, BookOpen, Eye, Edit, RefreshCw, CheckCircle2, BarChart3, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { priceListApi } from '../services/price-list.api';
 import type { PriceList, BoqStats } from '@/types/price-list';
@@ -196,7 +193,7 @@ export default function PriceListsPage() {
                         )}
                         <button onClick={() => setActionItem(pl)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

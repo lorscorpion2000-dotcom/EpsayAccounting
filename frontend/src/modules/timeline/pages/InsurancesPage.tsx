@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, ShieldCheck, Edit, Trash2, RefreshCw,
-  FileSpreadsheet, AlertTriangle,
-} from 'lucide-react';
+import { Plus, Search, Loader2, ShieldCheck, Edit, RefreshCw, FileSpreadsheet, AlertTriangle, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { timelineApi, Insurance, InsuranceType } from '../services/timeline.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
@@ -177,7 +174,7 @@ export default function InsurancesPage() {
                           </button>
                           <button onClick={() => setDeleting(i)}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                            <Trash2 className="w-4 h-4" />
+                            <Archive className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

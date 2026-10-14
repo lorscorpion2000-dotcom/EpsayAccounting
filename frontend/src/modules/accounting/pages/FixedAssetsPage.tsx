@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, RefreshCw, Building2, XCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Pencil, RefreshCw, Building2, XCircle, CheckCircle2, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import {
@@ -287,7 +287,7 @@ export default function FixedAssetsPage() {
                           className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
                           title="حذف"
                         >
-                          <Trash2 size={14} />
+                          <Archive size={14} />
                         </button>
                       </>
                     )}

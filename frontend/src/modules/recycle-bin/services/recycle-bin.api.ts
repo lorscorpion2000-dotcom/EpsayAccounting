@@ -1,15 +1,12 @@
 import { api } from '@/services/api';
 
-export type RecycleEntity =
-  | 'purchase-invoice'
-  | 'purchase-order'
-  | 'purchase-request'
-  | 'journal-entry'
-;
+/** entity از بک‌اند می‌آید — رشته آزاد است */
+export type RecycleEntity = string;
 
 export interface RecycleItem {
   id: string;
-  entity: RecycleEntity;
+  entity: string;
+  entityLabel: string;
   code: string | null;
   title: string | null;
   amount: number | null;
@@ -20,11 +17,13 @@ export interface RecycleItem {
 }
 
 export interface RecycleCounts {
-  'purchase-invoice': number;
-  'purchase-order': number;
-  'purchase-request': number;
-  'journal-entry': number;
+  [key: string]: number;
   total: number;
+}
+
+export interface RecycleEntityDef {
+  key: string;
+  label: string;
 }
 
 export const recycleBinApi = {
@@ -36,7 +35,11 @@ export const recycleBinApi = {
     const { data } = await api.get<RecycleCounts>('/recycle-bin/counts');
     return data;
   },
-  restore: async (entity: RecycleEntity, id: string) => {
+  entities: async (): Promise<RecycleEntityDef[]> => {
+    const { data } = await api.get<RecycleEntityDef[]>('/recycle-bin/entities');
+    return data;
+  },
+  restore: async (entity: string, id: string) => {
     const { data } = await api.post('/recycle-bin/' + entity + '/' + id + '/restore');
     return data;
   },

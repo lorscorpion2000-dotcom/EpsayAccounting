@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Briefcase, RefreshCw, Edit, Trash2, FileSpreadsheet, Search } from 'lucide-react';
+import { Plus, Loader2, Briefcase, RefreshCw, Edit, FileSpreadsheet, Search, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { WorkLog, Employee } from '@/types/payroll';
@@ -176,7 +176,7 @@ export default function WorkLogsPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => setDeleting(w)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

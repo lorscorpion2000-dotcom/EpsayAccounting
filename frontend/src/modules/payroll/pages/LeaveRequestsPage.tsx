@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, CalendarOff, RefreshCw, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Loader2, CalendarOff, RefreshCw, CheckCircle2, XCircle, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { LeaveRequest, Employee } from '@/types/payroll';
@@ -127,7 +127,7 @@ export default function LeaveRequestsPage() {
                               <XCircle className="w-4 h-4" />
                             </button>
                             <button onClick={() => setActionItem({ item: l, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                              <Trash2 className="w-4 h-4" />
+                              <Archive className="w-4 h-4" />
                             </button>
                           </>
                         )}

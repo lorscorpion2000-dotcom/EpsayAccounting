@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, ShoppingCart, RefreshCw, FileSpreadsheet,
-  Eye, Edit, Trash2, Send, CheckCircle2, XCircle, FileText,
-} from 'lucide-react';
+import { Plus, Search, Loader2, ShoppingCart, RefreshCw, FileSpreadsheet, Eye, Edit, Send, CheckCircle2, XCircle, FileText, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
 import type { PurchaseRequest, PRStatus } from '@/types/procurement';
@@ -230,7 +227,7 @@ export default function PRListPage() {
                               className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
                               title="حذف"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Archive className="w-4 h-4" />
                             </button>
                           </>
                         )}

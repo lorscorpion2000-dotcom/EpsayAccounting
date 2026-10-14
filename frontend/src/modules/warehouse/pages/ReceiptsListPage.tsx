@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, PackagePlus, Eye, Edit, Trash2,
-  CheckCircle2, RefreshCw, Printer, Send, XCircle,
-} from 'lucide-react';
+import { Plus, Search, Loader2, PackagePlus, Eye, Edit, CheckCircle2, RefreshCw, Printer, Send, XCircle, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
 import type { GoodsReceipt } from '@/types/warehouse';
@@ -180,7 +177,7 @@ export default function ReceiptsListPage() {
                               <Send className="w-4 h-4" />
                             </button>
                             <button onClick={() => setActionItem({ item: r, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                              <Trash2 className="w-4 h-4" />
+                              <Archive className="w-4 h-4" />
                             </button>
                           </>
                         )}

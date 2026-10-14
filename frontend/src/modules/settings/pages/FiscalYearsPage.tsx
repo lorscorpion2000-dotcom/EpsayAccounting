@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 import { toast } from 'sonner';
-import { Lock as LockIcon, Unlock as UnlockIcon, FileMinus, FilePlus } from 'lucide-react';
 import {
-  Plus, Loader2, Edit, Trash2, Calendar, RefreshCw, CheckCircle2,
+  Lock as LockIcon, Unlock as UnlockIcon, FileMinus, FilePlus,
+  Plus, Loader2, Edit, Archive, Calendar, RefreshCw, CheckCircle2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '@/modules/accounting/services/accounting.api';
@@ -20,17 +20,16 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function FiscalYearsPage() {
-
   const [items, setItems] = useState<FiscalYear[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<FiscalYear | null>(null);
   const [deleting, setDeleting] = useState<FiscalYear | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
   const [closing, setClosing] = useState<FiscalYear | null>(null);
   const [reopening, setReopening] = useState<FiscalYear | null>(null);
-  const [, setGeneratingClosing] = useState<FiscalYear | null>(null);
-  const [, setGeneratingOpening] = useState<FiscalYear | null>(null);
+  const [generatingClosing, setGeneratingClosing] = useState<FiscalYear | null>(null);
+  const [generatingOpening, setGeneratingOpening] = useState<FiscalYear | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -45,7 +44,7 @@ export default function FiscalYearsPage() {
   const handleSetCurrent = async (fy: FiscalYear) => {
     try {
       await accountingApi.fiscalYears.setCurrent(fy.id);
-      toast.success('سال مالی جاری تغییر کرد');
+      toast.success('سال مالی جاری تغییر یافت');
       load();
     } catch (e: any) {
       const m = e?.response?.data?.message;
@@ -58,7 +57,7 @@ export default function FiscalYearsPage() {
     setActionLoading(true);
     try {
       await accountingApi.fiscalYears.remove(deleting.id);
-      toast.success('حذف شد');
+      toast.success('به سطل بازیافت منتقل شد');
       setDeleting(null);
       load();
     } catch (e: any) {
@@ -86,12 +85,40 @@ export default function FiscalYearsPage() {
     setActionLoading(true);
     try {
       await accountingApi.fiscalYears.reopen(reopening.id);
-      toast.success('سال مالی بازگشایی شد');
+      toast.success('سال مالی دوباره باز شد');
       setReopening(null);
       load();
     } catch (e: any) {
       const m = e?.response?.data?.message;
       toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
+    } finally { setActionLoading(false); }
+  };
+
+  const handleGenerateClosing = async () => {
+    if (!generatingClosing) return;
+    setActionLoading(true);
+    try {
+      await accountingApi.fiscalYears.generateClosing(generatingClosing.id);
+      toast.success('سند اختتامیه ساخته شد');
+      setGeneratingClosing(null);
+      load();
+    } catch (e: any) {
+      const m = e?.response?.data?.message;
+      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در تولید سند اختتامیه');
+    } finally { setActionLoading(false); }
+  };
+
+  const handleGenerateOpening = async () => {
+    if (!generatingOpening) return;
+    setActionLoading(true);
+    try {
+      await accountingApi.fiscalYears.generateOpening(generatingOpening.id);
+      toast.success('سند افتتاحیه ساخته شد');
+      setGeneratingOpening(null);
+      load();
+    } catch (e: any) {
+      const m = e?.response?.data?.message;
+      toast.error(Array.isArray(m) ? m[0] : m || 'خطا در تولید سند افتتاحیه');
     } finally { setActionLoading(false); }
   };
 
@@ -104,7 +131,7 @@ export default function FiscalYearsPage() {
             سال‌های مالی
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            مدیریت سال‌های مالی و تعیین سال جاری برای ثبت اسناد
+            مدیریت سال‌های مالی — سال جاری مبنای ثبت اسناد است
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -141,7 +168,7 @@ export default function FiscalYearsPage() {
                   <th className="text-right px-4 py-3 font-medium text-slate-600 w-32">پایان</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600 w-24">وضعیت</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-600 w-28">جاری</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-600 w-32">عملیات</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-600 w-40">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -169,7 +196,7 @@ export default function FiscalYearsPage() {
                           onClick={() => handleSetCurrent(fy)}
                           className="text-xs text-brand-600 hover:text-brand-700 font-medium"
                         >
-                          تعیین جاری
+                          تغییر جاری
                         </button>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
@@ -177,12 +204,25 @@ export default function FiscalYearsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <AdminDeleteButton
-                          endpoint="/fiscal-years"
-                          id={fy.id}
-                          itemLabel={(fy as any).code || (fy as any).name || (fy as any).title || (fy as any).fullName || (fy as any).username || ''}
-                          onSuccess={load}
-                        />
+                        {/* تولید سند اختتامیه */}
+                        <button
+                          onClick={() => setGeneratingClosing(fy)}
+                          className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600"
+                          title="تولید سند اختتامیه"
+                        >
+                          <FileMinus className="w-4 h-4" />
+                        </button>
+
+                        {/* تولید سند افتتاحیه */}
+                        <button
+                          onClick={() => setGeneratingOpening(fy)}
+                          className="p-1.5 rounded-lg hover:bg-cyan-50 text-cyan-600"
+                          title="تولید سند افتتاحیه"
+                        >
+                          <FilePlus className="w-4 h-4" />
+                        </button>
+
+                        {/* ویرایش */}
                         <button
                           onClick={() => { setEditing(fy); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
@@ -190,6 +230,8 @@ export default function FiscalYearsPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+
+                        {/* بستن سال مالی */}
                         {fy.status === 'OPEN' && !fy.isCurrent && (
                           <button
                             onClick={() => setClosing(fy)}
@@ -199,36 +241,34 @@ export default function FiscalYearsPage() {
                             <LockIcon className="w-4 h-4" />
                           </button>
                         )}
+
+                        {/* بازگشایی سال مالی */}
                         {fy.status === 'CLOSED' && (
                           <button
                             onClick={() => setReopening(fy)}
                             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
-                            title="بازگشایی"
+                            title="بازگشایی سال مالی"
                           >
                             <UnlockIcon className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => setGeneratingClosing(fy)}
-                          className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600"
-                          title="سند اختتامیه"
-                        >
-                          <FileMinus className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setGeneratingOpening(fy)}
-                          className="p-1.5 rounded-lg hover:bg-cyan-50 text-cyan-600"
-                          title="سند افتتاحیه"
-                        >
-                          <FilePlus className="w-4 h-4" />
-                        </button>
+
+                        {/* حذف (soft) */}
                         <button
                           onClick={() => setDeleting(fy)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
-                          title="حذف"
+                          className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
+                          title="انتقال به سطل بازیافت"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
+
+                        {/* حذف دائمی (admin) */}
+                        <AdminDeleteButton
+                          endpoint="/fiscal-years"
+                          id={fy.id}
+                          itemLabel={(fy as any).code || (fy as any).name || ''}
+                          onSuccess={load}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -249,8 +289,8 @@ export default function FiscalYearsPage() {
       <ConfirmDialog
         isOpen={!!closing}
         title="بستن سال مالی"
-        message={'آیا از بستن «' + (closing?.name || '') + '» اطمینان دارید؟ پس از بستن، امکان ثبت سند جدید در این سال وجود ندارد.'}
-        confirmLabel="بله، بسته شود"
+        message={'آیا از بستن سال مالی «' + (closing?.name || '') + '» مطمئن هستید؟ پس از بستن، اسناد جدید در این سال ثبت نمی‌شوند.'}
+        confirmLabel="بله، بستن"
         variant="warning"
         loading={actionLoading}
         onConfirm={handleClose}
@@ -260,8 +300,8 @@ export default function FiscalYearsPage() {
       <ConfirmDialog
         isOpen={!!reopening}
         title="بازگشایی سال مالی"
-        message={'آیا از بازگشایی «' + (reopening?.name || '') + '» اطمینان دارید؟'}
-        confirmLabel="بله، باز شود"
+        message={'آیا از بازگشایی سال مالی «' + (reopening?.name || '') + '» مطمئن هستید؟'}
+        confirmLabel="بله، باز کن"
         variant="info"
         loading={actionLoading}
         onConfirm={handleReopen}
@@ -270,13 +310,35 @@ export default function FiscalYearsPage() {
 
       <ConfirmDialog
         isOpen={!!deleting}
-        title="حذف سال مالی"
-        message={'آیا از حذف «' + (deleting?.name || '') + '» اطمینان دارید؟'}
-        confirmLabel="بله، حذف شود"
-        variant="danger"
+        title="انتقال به سطل بازیافت"
+        message={'آیا از انتقال سال مالی «' + (deleting?.name || '') + '» به سطل بازیافت مطمئن هستید؟ (قابل بازیابی)'}
+        confirmLabel="بله، انتقال بده"
+        variant="warning"
         loading={actionLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleting(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!generatingClosing}
+        title="تولید سند اختتامیه"
+        message={'آیا از تولید سند اختتامیه برای سال مالی «' + (generatingClosing?.name || '') + '» مطمئن هستید؟ این عمل حساب‌های موقت (درآمد و هزینه) را می‌بندد.'}
+        confirmLabel="بله، تولید کن"
+        variant="warning"
+        loading={actionLoading}
+        onConfirm={handleGenerateClosing}
+        onCancel={() => setGeneratingClosing(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!generatingOpening}
+        title="تولید سند افتتاحیه"
+        message={'آیا از تولید سند افتتاحیه برای سال مالی «' + (generatingOpening?.name || '') + '» مطمئن هستید؟ ماندهای دائمی از سال قبل منتقل می‌شود.'}
+        confirmLabel="بله، تولید کن"
+        variant="info"
+        loading={actionLoading}
+        onConfirm={handleGenerateOpening}
+        onCancel={() => setGeneratingOpening(null)}
       />
     </div>
   );

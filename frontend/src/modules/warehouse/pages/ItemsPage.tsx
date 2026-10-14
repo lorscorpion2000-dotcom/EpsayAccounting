@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, Package, Edit, Trash2, RefreshCw, FileSpreadsheet,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Package, Edit, RefreshCw, FileSpreadsheet, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
 import type { Item } from '@/types/warehouse';
@@ -188,7 +186,7 @@ export default function ItemsPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => setDeleting(it)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

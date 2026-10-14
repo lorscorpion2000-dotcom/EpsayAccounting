@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Edit, Trash2, RefreshCw, Ruler, Info } from 'lucide-react';
+import { Plus, Loader2, Edit, RefreshCw, Ruler, Info, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { unitsApi, Unit } from '../services/units.api';
 import { invalidateUnitsCache } from '@/hooks/useUnits';
@@ -163,7 +163,7 @@ export default function UnitsPage() {
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
                             title="حذف"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Archive className="w-4 h-4" />
                           </button>
                         )}
                       </div>

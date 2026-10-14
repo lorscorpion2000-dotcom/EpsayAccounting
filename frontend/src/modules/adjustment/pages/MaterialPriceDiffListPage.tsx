@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Loader2, Package, Eye, Trash2, RefreshCw, CheckCircle2, Send, XCircle } from 'lucide-react';
+import { Plus, Loader2, Package, Eye, RefreshCw, CheckCircle2, Send, XCircle, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import { api } from '@/services/api';
@@ -174,7 +174,7 @@ export default function MaterialPriceDiffListPage() {
                               </button>
                               <button onClick={() => setActionItem(it)}
                                 className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                                <Trash2 className="w-4 h-4" />
+                                <Archive className="w-4 h-4" />
                               </button>
                             </>
                           )}

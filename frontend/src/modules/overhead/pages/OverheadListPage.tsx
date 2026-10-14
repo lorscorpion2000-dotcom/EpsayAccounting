@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Loader2, Calculator, Eye, Trash2, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Plus, Loader2, Calculator, Eye, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { overheadApi } from '../services/overhead.api';
 import { api } from '@/services/api';
@@ -188,7 +188,7 @@ export default function OverheadListPage() {
                             </button>
                             <button onClick={() => setActionItem(a)}
                               className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                              <Trash2 className="w-4 h-4" />
+                              <Archive className="w-4 h-4" />
                             </button>
                           </>
                         )}

@@ -47,7 +47,10 @@ export class SoftDeleteService {
     return r;
   }
 
-  /** حذف نرم توسط مدیر (idempotent) */
+  /**
+   * حذف دائمی (hard delete) توسط مدیر — کاملاً از دیتابیس حذف می‌شود.
+   * اگر رکورد در جای دیگری ارجاع داشته باشد، خطای فارسی می‌دهد.
+   */
   async adminDelete(params: {
     model: string;
     id: string;
@@ -61,20 +64,25 @@ export class SoftDeleteService {
     const existing = await client.findUnique({ where: { id: params.id } });
     if (!existing) throw new NotFoundException('رکورد یافت نشد');
 
-    if (existing.deletedAt) {
-      return { ok: true, id: params.id, alreadyDeleted: true };
+    // تلاش برای حذف دائمی
+    try {
+      await client.delete({ where: { id: params.id } });
+    } catch (e: any) {
+      const code = e?.code;
+      const msg = String(e?.message || '');
+      if (code === 'P2003' || msg.includes('Foreign key constraint') || code === 'P2014') {
+        throw new BadRequestException(
+          'این رکورد به رکوردهای دیگر وابسته است و حذف دائمی ممکن نیست. ابتدا وابستگی‌ها را حذف کنید یا از «آرشیو» استفاده کنید.',
+        );
+      }
+      throw e;
     }
-
-    await client.update({
-      where: { id: params.id },
-      data: { deletedAt: new Date(), deletedBy: params.user.id },
-    });
 
     // لاگ
     try {
       await this.audit.log({
         userId: params.user.id,
-        action: 'ADMIN_SOFT_DELETE',
+        action: 'ADMIN_HARD_DELETE',
         entity: params.model,
         entityId: params.id,
         payload: { reason, username: params.user.username, fullName: params.user.fullName },
@@ -83,7 +91,7 @@ export class SoftDeleteService {
       });
     } catch { /* silent */ }
 
-    return { ok: true, id: params.id, deleted: true, reason };
+    return { ok: true, id: params.id, hardDeleted: true, reason };
   }
 
   /** بازیابی رکورد حذف‌شده */

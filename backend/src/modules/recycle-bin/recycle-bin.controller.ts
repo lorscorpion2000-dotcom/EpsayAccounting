@@ -17,6 +17,13 @@ export class RecycleBinController {
     return this.svc.list(entity || 'all', limit ? parseInt(limit, 10) : 200);
   }
 
+  @Get('entities')
+  @RequirePermissions('accounting.manage')
+  entities() {
+    return this.svc.entities();
+  }
+
+
   @Get('counts')
   @RequirePermissions('accounting.manage')
   counts() {

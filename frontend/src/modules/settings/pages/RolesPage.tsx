@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Shield, Plus, Edit, Trash2, RefreshCw, Lock } from 'lucide-react';
+import { Loader2, Shield, Plus, Edit, RefreshCw, Lock, Archive } from 'lucide-react';
 import { rolesApi, SystemRole } from '../services/roles.api';
 import RoleFormModal from '../components/RoleFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -127,7 +127,7 @@ export default function RolesPage() {
                     }
                     title={r.isSystem ? 'نقش سیستمی قابل حذف نیست' : 'حذف'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Archive className="w-4 h-4" />
                   </button>
                 </div>
               </div>

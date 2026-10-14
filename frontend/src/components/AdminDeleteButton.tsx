@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { useAdminDelete } from '@/hooks/useAdminDelete';
 import DeleteWithReasonDialog from './DeleteWithReasonDialog';
@@ -21,7 +21,7 @@ export default function AdminDeleteButton({
   onSuccess,
   size = 'md',
   variant = 'icon',
-  label = 'حذف',
+  label = 'حذف دائمی (مدیر)',
   title,
 }: AdminDeleteButtonProps) {
   const {
@@ -49,9 +49,9 @@ export default function AdminDeleteButton({
           type="button"
           onClick={handleClick}
           className={clsx(sizeClass, 'rounded-lg hover:bg-red-50 text-red-600 transition-colors')}
-          title={title || label}
+          title={title || 'حذف دائمی (فقط مدیر ارشد)'}
         >
-          <Trash2 className={iconClass} />
+          <AlertTriangle className={iconClass} />
         </button>
       ) : (
         <button
@@ -60,7 +60,7 @@ export default function AdminDeleteButton({
           className="btn-secondary text-red-600 hover:bg-red-50 flex items-center gap-1.5"
           title={title}
         >
-          <Trash2 className={iconClass} />
+          <AlertTriangle className={iconClass} />
           {variant === 'button' && label}
         </button>
       )}

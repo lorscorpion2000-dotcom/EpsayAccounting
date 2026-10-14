@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Loader2, Calendar, RefreshCw, Eye, Calculator, Trash2, Users } from 'lucide-react';
+import { Plus, Loader2, Calendar, RefreshCw, Eye, Calculator, Users, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { PayrollPeriod } from '@/types/payroll';
@@ -153,7 +153,7 @@ export default function PayrollPeriodsPage() {
                       <Calculator className="w-3.5 h-3.5" /> محاسبه
                     </button>
                     <button onClick={() => setDeleting(p)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Archive className="w-3.5 h-3.5" />
                     </button>
                   </>
                 )}

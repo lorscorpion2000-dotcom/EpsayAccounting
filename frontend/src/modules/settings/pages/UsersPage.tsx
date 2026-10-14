@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Shield, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Loader2, Shield, Edit, RefreshCw, Archive } from 'lucide-react';
 import { usersApi, SystemUser } from '../services/users.api';
 import UserFormModal from '../components/UserFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -144,7 +144,7 @@ export default function UsersPage() {
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
                           title="حذف"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, User, Users, Edit, Trash2, RefreshCw, FileSpreadsheet, Briefcase, Award, Eye } from 'lucide-react';
+import { Plus, Search, Loader2, User, Users, Edit, RefreshCw, FileSpreadsheet, Briefcase, Award, Eye, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { Employee } from '@/types/payroll';
@@ -282,7 +282,7 @@ export default function EmployeesListPage() {
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
                             title="حذف"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Archive className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

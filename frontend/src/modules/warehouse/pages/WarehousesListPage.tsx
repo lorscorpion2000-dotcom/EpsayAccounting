@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, Warehouse as WarehouseIcon, Edit, Trash2, FolderOpen, MapPin, RefreshCw,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Warehouse as WarehouseIcon, Edit, FolderOpen, MapPin, RefreshCw, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
 import type { Warehouse } from '@/types/warehouse';
@@ -124,7 +122,7 @@ export default function WarehousesListPage() {
                   className="p-1.5 rounded-lg bg-white shadow-sm border hover:bg-red-50 text-slate-600"
                   title="حذف"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Archive className="w-3.5 h-3.5" />
                 </button>
                         <AdminDeleteButton
                           endpoint="/warehouse/warehouses"

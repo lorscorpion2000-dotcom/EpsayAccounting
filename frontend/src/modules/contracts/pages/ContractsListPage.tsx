@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, FileText, Edit, Ban, RefreshCw, Printer, FileSpreadsheet, CheckCircle2, Play, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, FileText, Edit, Ban, RefreshCw, Printer, FileSpreadsheet, CheckCircle2, Play, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { contractsApi, LegalContract, LegalContractKind, LegalContractStatus } from '../services/contracts.api';
 
@@ -277,7 +277,7 @@ export default function ContractsListPage() {
                         )}
                         {(c.status === 'DRAFT' || c.status === 'CANCELLED') && (
                           <button onClick={() => setDeleting(c)} className="p-1.5 rounded-lg hover:bg-red-100 text-red-700" title="حذف کامل">
-                            <Trash2 className="w-4 h-4" />
+                            <Archive className="w-4 h-4" />
                           </button>
                         )}
                       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Users, Edit, Trash2, Printer } from 'lucide-react';
+import { Plus, Search, Loader2, Users, Edit, Printer, Archive } from 'lucide-react';
 import { partnersApi } from '../services/partners.api';
 import type { Partner } from '@/types/project';
 import QuickPartnerModal from '../components/QuickPartnerModal';
@@ -204,7 +204,7 @@ export default function PartnersListPage() {
                         className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                         title="حذف"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Archive className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

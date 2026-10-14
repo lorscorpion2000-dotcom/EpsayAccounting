@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, FileImage, Edit, Trash2, RefreshCw,
-  FileSpreadsheet, CheckCircle2, Clock,
-} from 'lucide-react';
+import { Plus, Search, Loader2, FileImage, Edit, RefreshCw, FileSpreadsheet, CheckCircle2, Clock, Archive } from 'lucide-react';
 
 import { timelineApi, TechnicalDocument, DocumentType, DocumentPhase } from '../services/timeline.api';
 
@@ -177,7 +174,7 @@ export default function DocumentsPage() {
                         </button>
                         <button onClick={() => setDeleting(d)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

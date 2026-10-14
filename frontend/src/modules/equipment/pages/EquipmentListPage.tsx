@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Search, Loader2, Truck, Eye, Edit, Trash2, RefreshCw,
-} from 'lucide-react';
+import { Plus, Search, Loader2, Truck, Eye, Edit, RefreshCw, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { equipmentApi } from '../services/equipment.api';
 import type { Equipment } from '@/types/equipment';
@@ -222,7 +220,7 @@ export default function EquipmentListPage() {
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
                           title="حذف"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

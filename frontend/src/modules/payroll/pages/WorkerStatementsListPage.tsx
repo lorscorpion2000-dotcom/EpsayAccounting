@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus, Loader2, Users, RefreshCw, Eye, Edit, Trash2, Send, CheckCircle2, DollarSign, Search,
-} from 'lucide-react';
+import { Plus, Loader2, Users, RefreshCw, Eye, Edit, Send, CheckCircle2, DollarSign, Search, Archive } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import { api } from '@/services/api';
@@ -179,7 +177,7 @@ export default function WorkerStatementsListPage() {
                               <Send className="w-4 h-4" />
                             </button>
                             <button onClick={() => setActionItem({ item: s, action: 'delete' })} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
-                              <Trash2 className="w-4 h-4" />
+                              <Archive className="w-4 h-4" />
                             </button>
                           </>
                         )}

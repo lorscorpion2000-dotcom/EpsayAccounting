@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Users, Edit, Trash2, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Loader2, Users, Edit, RefreshCw, FileSpreadsheet, Archive } from 'lucide-react';
 import { salesApi, SalesCustomer } from '../services/sales.api';
 import CustomerFormModal from '../components/CustomerFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -151,7 +151,7 @@ export default function SalesCustomersPage() {
                           className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"
                           title="حذف"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
