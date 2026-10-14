@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PurchaseRequestsService } from '../procurement/pr.service';
+import { generateCode } from '../../shared/utils/code-generator';
 
 interface ForwardRow {
   rowNumber: number;
@@ -577,18 +578,7 @@ export class DailyReportForwarderService {
   private async genCode(model: string, prefix: string, field: string): Promise<string> {
     const year = new Date().getFullYear();
     const fullPrefix = prefix + '-' + year + '-';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic model access
-    const last = await (this.prisma as any)[model].findFirst({
-      where: { [field]: { startsWith: fullPrefix } },
-      orderBy: { [field]: 'desc' },
-      select: { [field]: true },
-    });
-    let lastNum = 0;
-    if (last && last[field]) {
-      const m = String(last[field]).match(new RegExp('^' + fullPrefix + '(\\d+)$'));
-      if (m) lastNum = parseInt(m[1], 10) || 0;
-    }
-    return fullPrefix + String(lastNum + 1).padStart(4, '0');
+    return generateCode(this.prisma, model, field, fullPrefix, { pad: 4, withDeleted: true });
   }
 
   private mapUnit(u?: string | null): string {
