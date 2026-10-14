@@ -146,6 +146,7 @@ export class ReportsService {
     const where: any = {
       fiscalYearId: query.fiscalYearId,
       status: { in: ['POSTED', 'REVERSED'] },
+      deletedAt: null,
     };
 
     if (query.fromDate || query.toDate) {
@@ -181,7 +182,7 @@ export class ReportsService {
 
     const where: any = {
       partnerId: query.partnerId,
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] } },
+      journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
     };
     if (query.fiscalYearId) where.journalEntry.fiscalYearId = query.fiscalYearId;
     if (query.fromDate || query.toDate) {
