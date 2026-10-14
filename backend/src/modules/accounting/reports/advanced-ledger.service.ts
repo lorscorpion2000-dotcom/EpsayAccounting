@@ -56,7 +56,7 @@ export class AdvancedLedgerService {
     // ═══ فیلتر مشترک ═══
     const commonWhere: any = {
       accountId: { in: accountIds },
-      journalEntry: { status: 'POSTED' },
+      journalEntry: { status: 'POSTED', deletedAt: null },
     };
     if (params.projectId) commonWhere.projectId = params.projectId;
     if (params.partnerId) commonWhere.partnerId = params.partnerId;
@@ -100,7 +100,7 @@ export class AdvancedLedgerService {
         account: { select: { id: true, code: true, name: true, nature: true } },
         journalEntry: {
           select: {
-            id: true, code: true, entryDate: true, description: true, reference: true,
+            id: true, code: true, entryNumber: true, entryDate: true, description: true, reference: true,
             sourceType: true, sourceId: true,
           },
         },

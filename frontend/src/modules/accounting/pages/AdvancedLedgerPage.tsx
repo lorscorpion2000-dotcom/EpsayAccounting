@@ -145,7 +145,7 @@ export default function AdvancedLedgerPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <BookMarked className="w-6 h-6 text-brand-600" />
-            دفتر معین پیشرفته
+            دفتر معین
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             گردش تفصیلی حساب‌ها با فیلتر پروژه، طرف حساب و مرکز هزینه
@@ -305,7 +305,7 @@ export default function AdvancedLedgerPage() {
 
             <div ref={printRef}>
               <div className="hidden print:block p-4">
-                <PrintHeader title="دفتر معین پیشرفته" subtitle={
+                <PrintHeader title="دفتر معین" subtitle={
                   data.period ? formatJalaliDate(data.period.from) + ' تا ' + formatJalaliDate(data.period.to) : ''
                 } />
               </div>
