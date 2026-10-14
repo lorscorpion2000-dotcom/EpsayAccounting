@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Save, ArrowRight, ReceiptText } from 'lucide-react';
+import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { expensesApi, expenseCategoriesApi } from '../services/expenses.api';
 import type { ExpenseCategory, ExpensePayFromType } from '@/types/expense';
 import { api } from '@/services/api';
@@ -115,7 +116,7 @@ export default function ExpenseFormPage() {
       <div className="card p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="تاریخ *">
-            <input type="date" className="input" value={form.expenseDate} onChange={(e) => setForm({ ...form, expenseDate: e.target.value })} />
+            <PersianDatePicker value={form.expenseDate} onChange={(v) => setForm({ ...form, expenseDate: v || '' })} />
           </Field>
           <Field label="دسته‌بندی *">
             <select className="input" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>

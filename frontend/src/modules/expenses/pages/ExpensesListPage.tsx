@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Filter, RefreshCw, ReceiptText, Settings } from 'lucide-react';
+import { PersianDatePicker } from '@/components/PersianDatePicker';
 import clsx from 'clsx';
 import { expensesApi, expenseCategoriesApi } from '../services/expenses.api';
 import type { Expense, ExpenseCategory } from '@/types/expense';
@@ -88,8 +89,8 @@ export default function ExpensesListPage() {
             <option value="">همه وضعیت‌ها</option>
             {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
-          <input type="date" className="input" value={filters.fromDate} onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })} placeholder="از تاریخ" />
-          <input type="date" className="input" value={filters.toDate} onChange={(e) => setFilters({ ...filters, toDate: e.target.value })} placeholder="تا تاریخ" />
+          <PersianDatePicker value={filters.fromDate} onChange={(v) => setFilters({ ...filters, fromDate: v || '' })} placeholder="از تاریخ" />
+          <PersianDatePicker value={filters.toDate} onChange={(v) => setFilters({ ...filters, toDate: v || '' })} placeholder="تا تاریخ" />
           <input className="input" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="جستجو..." />
         </div>
       </div>
