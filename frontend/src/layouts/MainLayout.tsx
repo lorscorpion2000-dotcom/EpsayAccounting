@@ -3,7 +3,7 @@ import {
   NavLink,
   useNavigate,
   useLocation } from 'react-router-dom';
-import { LogOut, Search, Menu, ChevronDown, ChevronLeft } from 'lucide-react';
+import { LogOut, Search, Menu, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/auth.store';
@@ -12,7 +12,7 @@ import DateDisplay from '@/components/DateDisplay';
 import HelpButton from '@/modules/help/components/HelpButton';
 import ThemeSelector from '@/components/ThemeSelector';
 import NotificationBell from '@/modules/notifications/components/NotificationBell';
-import { findActiveSection, buildFilteredMenu } from './menu-config';
+import { findActiveSection, buildFilteredMenu, MENU } from './menu-config';
 
 
 
@@ -25,6 +25,8 @@ export default function MainLayout() {
     const activeKey = findActiveSection(window.location.pathname);
     return activeKey ? { [activeKey]: true } : {};
   });
+
+  const [expandedSubs, setExpandedSubs] = useState<Record<string, boolean>>({});
   const { user, logout } = useAuthStore();
   // F1.3 — فیلتر منو بر اساس permission کاربر
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -41,6 +43,18 @@ export default function MainLayout() {
     const activeKey = findActiveSection(location.pathname);
     // Only the active section stays open — others collapse
     setExpanded(activeKey ? { [activeKey]: true } : {});
+
+    // auto-expand subsection of active route
+    const activeSection = MENU.find(s => s.key === activeKey);
+    if (activeSection?.subsections) {
+      const matchingSub = activeSection.subsections.find(sub =>
+        sub.items.some(it => location.pathname === it.to || location.pathname.startsWith(it.to + '/'))
+      );
+      if (matchingSub) {
+        setExpandedSubs(prev => ({ ...prev, [activeKey + ':' + matchingSub.key]: true }));
+      }
+    }
+
     setSidebarMobileOpen(false);
   }, [location.pathname]);
 
@@ -49,6 +63,13 @@ export default function MainLayout() {
       const isCurrentlyOpen = !!prev[key];
       // Accordion: only one section can be open at a time
       return isCurrentlyOpen ? {} : { [key]: true };
+    });
+  };
+
+  const toggleSub = (sectionKey: string, subKey: string) => {
+    setExpandedSubs((prev) => {
+      const composite = sectionKey + ':' + subKey;
+      return { ...prev, [composite]: !prev[composite] };
     });
   };
 
@@ -179,35 +200,61 @@ export default function MainLayout() {
                         </NavLink>
                       );
                     })}
-                    {section.subsections?.map((sub) => (
-                      <div key={sub.key} className="mt-3 mb-1">
-                        <div className="text-[10px] uppercase tracking-wider text-brand-300/80 font-semibold px-3 py-1.5 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand-400/60" />
-                          {sub.title}
+                    {section.subsections?.map((sub) => {
+                      const composite = section.key + ':' + sub.key;
+                      const subOpen = !!expandedSubs[composite];
+                      const hasActiveSubItem = sub.items.some(
+                        (it) => location.pathname === it.to || location.pathname.startsWith(it.to + '/'),
+                      );
+                      return (
+                        <div key={sub.key} className="mt-3 mb-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleSub(section.key, sub.key)}
+                            className={clsx(
+                              'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-xs',
+                              hasActiveSubItem
+                                ? 'text-brand-200 bg-brand-500/10'
+                                : 'text-brand-300/80 hover:text-brand-200 hover:bg-sidebar-light/40',
+                            )}
+                          >
+                            <span className="font-semibold flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand-400/60" />
+                              {sub.title}
+                            </span>
+                            {subOpen
+                              ? <ChevronDown className="w-3.5 h-3.5" />
+                              : <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                            }
+                          </button>
+                          {subOpen && (
+                            <div className="mt-1 me-1">
+                              {sub.items.map((m) => {
+                                const Icon = m.icon;
+                                return (
+                                  <NavLink
+                                    key={m.to}
+                                    to={m.to}
+                                    end={m.to === '/accounting'}
+                                    className={({ isActive }) =>
+                                      clsx(
+                                        'flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 transition-all text-sm',
+                                        isActive
+                                          ? 'bg-brand-600 text-white shadow-md shadow-brand-900/40 ring-1 ring-brand-400/50 font-semibold'
+                                          : 'text-slate-300 hover:bg-sidebar-light/70 hover:text-white',
+                                      )
+                                    }
+                                  >
+                                    <Icon className="w-4 h-4 shrink-0" />
+                                    <span className="text-xs font-medium">{m.label}</span>
+                                  </NavLink>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                        {sub.items.map((m) => {
-                          const Icon = m.icon;
-                          return (
-                            <NavLink
-                              key={m.to}
-                              to={m.to}
-                              end={m.to === '/accounting'}
-                              className={({ isActive }) =>
-                                clsx(
-                                  'flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 transition-all text-sm',
-                                  isActive
-                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-900/40 ring-1 ring-brand-400/50 font-semibold'
-                                    : 'text-slate-300 hover:bg-sidebar-light/70 hover:text-white',
-                                )
-                              }
-                            >
-                              <Icon className="w-4 h-4 shrink-0" />
-                              <span className="text-xs font-medium">{m.label}</span>
-                            </NavLink>
-                          );
-                        })}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
