@@ -464,8 +464,9 @@ export class JournalsService {
     const snapshot = {
       journal: {
         id: journal.id,
-        no: journal.no,
-        date: journal.date,
+        code: journal.code,
+        entryNumber: journal.entryNumber,
+        entryDate: journal.entryDate,
         status: journal.status,
         description: journal.description,
         fiscalYearId: journal.fiscalYearId,
@@ -486,8 +487,8 @@ export class JournalsService {
     await this.prisma.journalDeletionLog.create({
       data: {
         journalId: journal.id,
-        journalNo: journal.no,
-        journalDate: journal.date,
+        journalNo: journal.code,
+        journalDate: journal.entryDate,
         fiscalYearId: journal.fiscalYearId,
         status: journal.status,
         description: journal.description,
@@ -507,6 +508,7 @@ export class JournalsService {
       where: { id },
       data: {
         deletedAt: new Date(),
+        deletedById: user.id,
       } as any,
     });
 
@@ -532,7 +534,7 @@ export class JournalsService {
 
     await this.prisma.journalEntry.update({
       where: { id },
-      data: { deletedAt: null } as any,
+      data: { deletedAt: null, deletedById: null } as any,
     });
 
     return { ok: true, id, restored: true, by: userId || null };

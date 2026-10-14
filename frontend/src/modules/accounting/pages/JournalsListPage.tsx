@@ -394,9 +394,9 @@ export default function JournalsListPage() {
       {/* Confirm Delete */}
       <ConfirmDialog
         isOpen={!!deletingJournal}
-        title="حذف سند پیش‌نویس"
-        message={`آیا از حذف سند «${deletingJournal?.code}» اطمینان دارید؟ این عمل قابل بازگشت نیست.`}
-        confirmLabel="بله، حذف شود"
+        title="انتقال به سطل زباله"
+        message={`سند پیش‌نویس «${deletingJournal?.code}» به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.`}
+        confirmLabel="بله، منتقل کن"
         variant="danger"
         loading={actionLoading}
         onConfirm={handleDelete}

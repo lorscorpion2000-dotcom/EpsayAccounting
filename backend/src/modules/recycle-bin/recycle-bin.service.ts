@@ -160,7 +160,12 @@ export class RecycleBinService {
     const client: any = (this.prisma as any)[def.model];
     if (!client) throw new NotFoundException('مدل پیدا نشد: ' + def.model);
 
-    const updateData: any = { deletedAt: null, deletedBy: null };
+    const updateData: any = { deletedAt: null };
+    if (def.model === 'journalEntry') {
+      updateData.deletedById = null;
+    } else {
+      updateData.deletedBy = null;
+    }
     const HAS_ISACTIVE = ['partner', 'user', 'role', 'unit', 'warehouse', 'itemCategory', 'item', 'project', 'contract', 'fiscalYear', 'equipment', 'permit', 'insurance', 'guarantee', 'technicalDocument', 'phaseChecklist'];
     if (HAS_ISACTIVE.includes(def.model)) {
       updateData.isActive = true;
