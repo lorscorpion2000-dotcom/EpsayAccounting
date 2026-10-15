@@ -25,7 +25,7 @@ export class FixedAssetsService {
   }
 
   async findAll(query?: { status?: string; projectId?: string; active?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.status) where.status = query.status;
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.fixedAsset.findMany({
@@ -131,13 +131,65 @@ export class FixedAssetsService {
     return this.prisma.fixedAsset.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
-    const a = await this.findOne(id);
-    if ((a as any).depreciationEntries?.length) {
-      throw new BadRequestException('دارایی دارای سابقه استهلاک است و قابل حذف نیست');
+  async remove(id: string, userId?: string) {
+    await this.findOne(id);
+    // soft-delete: دارایی به سطل زباله می‌رود، سابقه استهلاک حفظ می‌شود
+    await this.prisma.fixedAsset.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.fixedAsset.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('دارایی یافت نشد');
+    if (!existing.deletedAt) throw new BadRequestException('دارایی حذف نشده است');
+    await this.prisma.fixedAsset.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.fixedAsset.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('دارایی یافت نشد');
+
+    const depCount = await this.prisma.depreciationEntry.count({
+      where: { fixedAssetId: id },
+    });
+    if (depCount > 0) {
+      throw new BadRequestException(
+        'این دارایی دارای ' + depCount + ' رکورد استهلاک است — ابتدا آنها را حذف کنید یا از «آرشیو» استفاده کنید',
+      );
     }
+
     await this.prisma.fixedAsset.delete({ where: { id } });
-    return { success: true };
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.fixedAsset.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.fixedAsset.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
   async runMonthlyDepreciation(year: number, month: number, userId?: string) {

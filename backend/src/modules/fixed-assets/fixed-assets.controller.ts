@@ -45,7 +45,9 @@ export class FixedAssetsController {
 
   @Delete(':id')
   @RequirePermissions('accounting.delete')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.remove(id, userId);
+  }
 
   @Get('reports/disposals')
   @RequirePermissions('accounting.read')

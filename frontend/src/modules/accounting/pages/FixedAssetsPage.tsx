@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, RefreshCw, Building2, XCircle, CheckCircle2, Archive } from 'lucide-react';
+import { Plus, Pencil, RefreshCw, Building2, XCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import {
@@ -127,7 +127,7 @@ export default function FixedAssetsPage() {
     setBusy(true);
     try {
       await fixedAssetsApi.remove(deleteTarget.id);
-      toast.success('حذف شد');
+      toast.success('به سطل زباله منتقل شد — قابل بازیابی توسط مدیر');
       setDeleteTarget(null);
       await load();
     } catch (e: any) {
@@ -285,9 +285,9 @@ export default function FixedAssetsPage() {
                         <button
                           onClick={() => setDeleteTarget(a)}
                           className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
-                          title="حذف"
+                          title="حذف (به سطل زباله)"
                         >
-                          <Archive size={14} />
+                          <Trash2 size={14} />
                         </button>
                       </>
                     )}
@@ -335,8 +335,8 @@ export default function FixedAssetsPage() {
 
       {deleteTarget && (
         <ConfirmModal
-          title="حذف دارایی"
-          message={`آیا از حذف «${deleteTarget.name}» (${deleteTarget.code}) مطمئن هستید؟`}
+          title="انتقال به سطل زباله"
+          message={`دارایی «${deleteTarget.name}» (${deleteTarget.code}) به سطل زباله منتقل می‌شود. تا بازیابی توسط مدیر، در لیست نمایش داده نمی‌شود.`}
           danger
           busy={busy}
           onCancel={() => setDeleteTarget(null)}
