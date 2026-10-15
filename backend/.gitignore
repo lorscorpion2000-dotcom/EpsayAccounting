@@ -1,4 +1,4 @@
-node_modules/
+﻿node_modules/
 dist/
 build/
 .env
@@ -10,6 +10,7 @@ coverage/
 .idea/
 _*.mjs
 !_seed-all.mjs
+!_ci-ensure-admin.mjs
 !_seed-extra.mjs
 !_b3-0.mjs
 !_scan-perms.mjs
