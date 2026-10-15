@@ -13,7 +13,7 @@ export class GuaranteesService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; search?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.type) where.type = query.type;
     if (query?.search) {
@@ -78,11 +78,13 @@ export class GuaranteesService {
     });
   }
 
-  async remove(id: string, _options?: { force?: boolean }) {
+  async remove(id: string, userId?: string) {
     await this.findOne(id);
-    // مستقیم پاک کن (این موجودیت‌ها معمولاً ارجاعی ندارند)
-    await this.prisma.guarantee.delete({ where: { id } });
-    return { success: true, hardDeleted: true };
+    await this.prisma.guarantee.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async getExpiring(days = 60) {

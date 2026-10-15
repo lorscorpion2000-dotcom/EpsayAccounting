@@ -34,7 +34,12 @@ export class ContractsService {
   activate(id: string) { return this.contract.activate(id); }
   reactivate(id: string) { return this.contract.reactivate(id); }
   complete(id: string) { return this.contract.complete(id); }
-  remove(id: string, options?: { force?: boolean }) { return this.contract.remove(id, options); }
+  remove(id: string, userId?: string) { return this.contract.remove(id, userId); }
+  restore(id: string, userId?: string) { return this.contract.restore(id, userId); }
+  adminDelete(id: string, userId?: string, reason?: string, meta?: any) {
+    return this.contract.adminDelete(id, userId, reason, meta);
+  }
+  listDeleted(take = 100, skip = 0) { return this.contract.listDeleted(take, skip); }
 
   // ─── Parties ───
   listParties(search?: string) { return this.party.listParties(search); }

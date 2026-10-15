@@ -2776,6 +2776,9 @@ model LegalContractParty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([fullName])
   @@index([nationalId])
 }
@@ -2836,11 +2839,15 @@ model LegalContract {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([code])
   @@index([kind])
   @@index([status])
   @@index([partyId])
   @@index([projectId])
+  @@index([deletedAt])
 }
 
 model LegalContractAttachment {

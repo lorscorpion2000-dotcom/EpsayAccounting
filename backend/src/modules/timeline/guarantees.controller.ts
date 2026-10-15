@@ -52,8 +52,8 @@ export class GuaranteesController {
 
   @Delete(':id')
   @RequirePermissions('timeline.delete')
-  remove(@Param('id') id: string, @CurrentUser() _user: any) {
-    return this.s.remove(id, { force: true });
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.s.remove(id, userId);
   }
 
   // ═══════════════════════════════════════════════════════

@@ -23,7 +23,7 @@ export class ContractService {
   }
 
   async list(params: { kind?: string; status?: string; search?: string; projectId?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (params.kind) where.kind = params.kind;
     if (params.status) where.status = params.status;
     if (params.projectId) where.projectId = params.projectId;
@@ -254,34 +254,49 @@ export class ContractService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, userId?: string) {
     const existing = await this.get(id);
-    const force = options?.force === true;
-
-    if (!force) {
-      if (existing.status !== 'DRAFT' && existing.status !== 'CANCELLED') {
-        throw new BadRequestException('فقط قراردادهای پیش‌نویس یا ابطال‌شده قابل حذف هستند. برای حذف کامل از حالت مدیر استفاده کنید.');
-      }
-      await this.prisma.$transaction(async (tx) => {
-        await tx.legalContractItem.deleteMany({ where: { contractId: id } });
-        await tx.legalContract.delete({ where: { id } });
-      });
-      return { ok: true, hardDeleted: true };
+    if (existing.status !== 'DRAFT' && existing.status !== 'CANCELLED') {
+      throw new BadRequestException('فقط قراردادهای پیش‌نویس یا ابطال‌شده قابل حذف هستند — برای سایر موارد از «حذف توسط مدیر» استفاده کنید');
     }
+    await this.prisma.legalContract.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { ok: true, softDeleted: true };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.legalContract.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('قرارداد پیدا نشد');
+    if (!existing.deletedAt) throw new Error('قرارداد حذف نشده است');
+    await this.prisma.legalContract.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.legalContract.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('قرارداد پیدا نشد');
 
     const refs = await this.countReferences(id);
     const total = Object.values(refs).reduce((sum: number, n: any) => sum + Number(n || 0), 0);
-
     if (total > 0) {
       const details = Object.entries(refs)
         .filter(([, v]: any) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
-      throw new BadRequestException({
-        code: 'CONTRACT_HAS_REFS',
-        message: 'قرارداد در ' + total + ' مورد دیگر استفاده شده است. ابتدا آن‌ها را پاک کنید:\n' + details,
-        refs, total,
-      });
+      throw new BadRequestException(
+        'قرارداد در ' + total + ' مورد دیگر استفاده شده است. ابتدا آن‌ها را پاک کنید یا از «آرشیو» استفاده کنید:\n' + details,
+      );
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -289,8 +304,24 @@ export class ContractService {
       await tx.legalContractItem.deleteMany({ where: { contractId: id } });
       await tx.legalContract.delete({ where: { id } });
     });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
 
-    return { ok: true, hardDeleted: true };
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.legalContract.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.legalContract.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
   private async countReferences(id: string) {

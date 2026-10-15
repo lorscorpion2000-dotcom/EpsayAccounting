@@ -6,7 +6,7 @@
  */
 
 const SOFT_DELETE_MODELS = new Set([
-  'User', 'Role', 'Partner', 'Project', 'Contract', 'Unit', 'FiscalYear',
+  'User', 'Role', 'Partner', 'Project', 'Contract', 'LegalContract', 'LegalContractParty', 'Unit', 'FiscalYear',
   'JournalEntry', 'Cheque', 'PettyCashAccount', 'PettyCashRequest', 'PettyCashTransaction',
   'PurchaseRequest', 'RFQ', 'PurchaseOrder',
   'Warehouse', 'ItemCategory', 'Item', 'GoodsReceipt', 'GoodsIssue',

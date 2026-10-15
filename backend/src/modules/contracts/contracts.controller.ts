@@ -148,16 +148,8 @@ export class ContractsController {
 
   @Delete(':id')
   @RequirePermissions('contracts.delete')
-  async remove(
-    @Param('id') id: string,
-    @Query('force') force: string | undefined,
-    @Req() req: any,
-  ) {
-    const user = req.user || {};
-    const roles = (user.roles || []) as string[];
-    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
-    const wantForce = force === 'true' || force === '1';
-    return this.svc.remove(id, { force: wantForce && isAdmin });
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.svc.remove(id, req.user?.id);
   }
 
   // ═══════════════════════════════════════════════════════
@@ -173,7 +165,7 @@ export class ContractsController {
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
-      model: 'contract',
+      model: 'legalContract',
       id,
       user,
       reason: body?.reason || '',
@@ -189,7 +181,7 @@ export class ContractsController {
   async restore(@Param('id') id: string, @Req() req: any) {
     const user = req.user || {};
     return this.softDelete.restore({
-      model: 'contract',
+      model: 'legalContract',
       id,
       user,
       meta: {
@@ -206,7 +198,7 @@ export class ContractsController {
     @Query('skip', new OptionalIntPipe()) skip?: number,
   ) {
     return this.softDelete.listDeleted({
-      model: 'contract',
+      model: 'legalContract',
       take: take ?? 100,
       skip: skip ?? 0,
     });
