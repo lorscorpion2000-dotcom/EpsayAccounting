@@ -93,9 +93,57 @@ table td, table th {
 .print-only { display: none !important; }
 
 @media print {
+  /* FIX: تعریف صریح margin قابل چاپ */
   @page {
-    size: A4;
-    margin: 1.2cm 0.8cm 1cm 0.8cm;
+    size: A4 portrait;
+    margin: 8mm 6mm 10mm 6mm;
+  }
+
+  /* FIX-FIT: containers — آزادکردن max-width در چاپ */
+  .max-w-6xl, .max-w-5xl, .max-w-4xl, .max-w-3xl, .max-w-2xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* FIX-FIT: ظرف‌های چاپی — عرض دقیق */
+  .print-only, .print-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* FIX-FIT: جدول‌های چاپی — عرض ثابت و شکست متن */
+  .print-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+  .print-table td,
+  .print-table th {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    vertical-align: middle !important;
+  }
+  .print-table .print-num {
+    white-space: nowrap !important;
+    font-family: 'Courier New', monospace !important;
+    direction: ltr !important;
+  }
+  .print-table .print-center { text-align: center !important; }
+  .print-table .print-right  { text-align: right  !important; }
+  .print-table .print-left   { text-align: left   !important; }
+
+  table td,
+  table th {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
   }
 
   html, body, #root {
