@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, ClipboardCheck, Save, CheckCircle2, Send,
-  XCircle, TrendingUp, TrendingDown, Package, Printer, Search,
-} from 'lucide-react';
+  ArrowRight, Loader2, ClipboardCheck, Save, CheckCircle2, Send, XCircle, TrendingUp, TrendingDown, Package, Search } from 'lucide-react';
 import clsx from 'clsx';
 import { inventoryCountApi } from '../services/inventory-count.api';
 import type { InventoryCount } from '@/types/inventory-count';

@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, ArrowRightLeft, Send, CheckCircle2, XCircle,
-  Printer, Edit, Package, Truck,
-} from 'lucide-react';
+  ArrowRight, Loader2, ArrowRightLeft, Send, CheckCircle2, XCircle, Edit, Package, Truck } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseTransferApi } from '../services/inventory-count.api';
 import type { WarehouseTransfer } from '@/types/inventory-count';

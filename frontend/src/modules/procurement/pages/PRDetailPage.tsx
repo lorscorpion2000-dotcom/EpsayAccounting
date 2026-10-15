@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, ShoppingCart, FileText, Plus, Send,
-  CheckCircle2, XCircle, Printer, User, Calendar, Hash,
-  TrendingDown, Layers, Eye,
-} from 'lucide-react';
+  ArrowRight, Loader2, ShoppingCart, FileText, Plus, Send, CheckCircle2, XCircle, User, Calendar, Hash, TrendingDown, Layers, Eye } from 'lucide-react';
 import clsx from 'clsx';
 import { procurementApi } from '../services/procurement.api';
 

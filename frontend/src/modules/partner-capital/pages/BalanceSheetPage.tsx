@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Wallet, RefreshCw, FileSpreadsheet, Printer, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, Wallet, RefreshCw, FileSpreadsheet, TrendingUp, TrendingDown } from 'lucide-react';
 import { partnerCapitalApi, BalanceSheet } from '../services/partner-capital.api';
 import { formatNumber } from '@/utils/format';
 import PrintHeader from '@/components/PrintHeader';

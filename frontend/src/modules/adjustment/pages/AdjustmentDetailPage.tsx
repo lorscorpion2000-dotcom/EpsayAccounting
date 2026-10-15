@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, Calculator, CheckCircle2, Send, XCircle, Printer, BadgeCheck,
-} from 'lucide-react';
+  ArrowRight, Loader2, Calculator, CheckCircle2, Send, XCircle, BadgeCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import type { AdjustmentCalculation } from '@/types/adjustment';

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Printer, Send, Check, X, Ban, Edit, FileText } from 'lucide-react';
+import { ArrowRight, Send, Check, X, Ban, Edit, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { expensesApi } from '../services/expenses.api';
 import type { Expense } from '@/types/expense';

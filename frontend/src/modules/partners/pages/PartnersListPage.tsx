@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Users, Edit, Printer, Archive } from 'lucide-react';
+import { Plus, Search, Loader2, Users, Edit, Archive } from 'lucide-react';
 import { partnersApi } from '../services/partners.api';
 import type { Partner } from '@/types/project';
 import QuickPartnerModal from '../components/QuickPartnerModal';

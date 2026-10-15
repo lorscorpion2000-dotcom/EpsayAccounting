@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, Package, CheckCircle2, Send, XCircle, Printer, BadgeCheck,
-  TrendingUp, TrendingDown,
-} from 'lucide-react';
+  ArrowRight, Loader2, Package, CheckCircle2, Send, XCircle, BadgeCheck, TrendingUp, TrendingDown } from 'lucide-react';
 import clsx from 'clsx';
 import { adjustmentApi } from '../services/adjustment.api';
 import type { MaterialPriceDiff } from '@/types/adjustment';

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Loader2, FileSpreadsheet, Printer, Calendar, BookOpen, CheckCircle2,
-} from 'lucide-react';
+  Loader2, FileSpreadsheet, Calendar, BookOpen, CheckCircle2 } from 'lucide-react';
 import { accountingApi } from '../services/accounting.api';
 import PrintHeader from '@/components/PrintHeader';
 import { PersianDatePicker } from '@/components/PersianDatePicker';

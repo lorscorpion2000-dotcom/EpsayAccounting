@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Printer, RefreshCw, Building2, FileText, Package, Users, Truck, Wallet, TrendingUp, BarChart3, ClipboardList, Briefcase, FileSpreadsheet, PieChart, Clock } from 'lucide-react';
+import { ArrowRight, Loader2, RefreshCw, Building2, FileText, Package, Users, Truck, Wallet, TrendingUp, BarChart3, ClipboardList, Briefcase, FileSpreadsheet, PieChart, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '@/services/api';
 import PrintHeader from '@/components/PrintHeader';

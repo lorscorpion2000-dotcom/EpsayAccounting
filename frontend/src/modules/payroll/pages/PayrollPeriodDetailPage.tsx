@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Calendar, Printer, CheckCircle2, DollarSign, FileSpreadsheet, Users } from 'lucide-react';
+import { ArrowRight, Loader2, Calendar, CheckCircle2, DollarSign, FileSpreadsheet, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { payrollApi } from '../services/payroll.api';
 import type { PayrollPeriod } from '@/types/payroll';

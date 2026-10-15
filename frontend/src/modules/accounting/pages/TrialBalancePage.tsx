@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, FileSpreadsheet, Printer, BarChart3, Calculator } from 'lucide-react';
+import { Loader2, FileSpreadsheet, BarChart3, Calculator } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
 import PrintHeader from '@/components/PrintHeader';

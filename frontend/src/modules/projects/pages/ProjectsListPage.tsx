@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Building2, MapPin, Calendar, FileText, Layers, Printer, FileSpreadsheet, Edit, Eye, Archive } from 'lucide-react';
+import { Plus, Search, Loader2, Building2, MapPin, Calendar, FileText, Layers, FileSpreadsheet, Edit, Eye, Archive } from 'lucide-react';
 import { projectsApi } from '../services/projects.api';
 import type { Project, ProjectStatus } from '@/types/project';
 import {

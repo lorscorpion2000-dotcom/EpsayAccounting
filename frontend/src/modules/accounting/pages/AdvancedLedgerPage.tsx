@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Loader2, RefreshCw, BookMarked, Filter, Download, Printer,
-  TrendingUp, TrendingDown, ChevronLeft, ChevronRight, X,
-} from 'lucide-react';
+  Loader2, RefreshCw, BookMarked, Filter, Download, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
 import { useRef } from 'react';

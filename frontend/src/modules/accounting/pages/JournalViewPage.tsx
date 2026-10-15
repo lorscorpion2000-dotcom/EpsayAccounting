@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, Printer, Edit, XCircle, CheckCircle2,
-  FileText, AlertCircle,
-} from 'lucide-react';
+  ArrowRight, Loader2, Edit, XCircle, CheckCircle2, FileText, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
 import type { JournalEntry, JournalStatus } from '@/types/accounting';
