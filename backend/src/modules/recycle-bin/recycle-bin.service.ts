@@ -36,6 +36,7 @@ const ENTITIES: EntityDef[] = [
   { key: 'role',      model: 'role',      label: 'نقش', codeField: 'code', titleField: 'name', linkFn: () => '/settings/roles' },
   { key: 'partner',   model: 'partner',   label: 'شخص / طرف حساب', codeField: 'code', titleField: 'name', linkFn: () => '/directory' },
   { key: 'project',   model: 'project',   label: 'پروژه', codeField: 'code', titleField: 'name', linkFn: () => '/projects' },
+  { key: 'project-budget', model: 'projectBudget', label: 'بودجه پروژه', amountField: 'amount', linkFn: (r) => '/projects/' + r.projectId + '/budgets' },
   { key: 'contract',  model: 'contract',  label: 'قرارداد', codeField: 'code', titleField: 'title', amountField: 'baseAmount', linkFn: () => '/contracts' },
   { key: 'unit',      model: 'unit',      label: 'واحد اندازه‌گیری', codeField: 'code', titleField: 'name', linkFn: () => '/settings/units' },
   { key: 'warehouse', model: 'warehouse', label: 'انبار', codeField: 'code', titleField: 'name', linkFn: () => '/warehouse/warehouses' },

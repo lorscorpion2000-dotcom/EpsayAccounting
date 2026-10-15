@@ -42,8 +42,9 @@ export class BudgetVsActualService {
   constructor(private prisma: PrismaService) {}
 
   private isExpenseAccount(code: string): boolean {
-    return code === '6' || code === '7' ||
-           code.startsWith('6.') || code.startsWith('7.');
+    // 5.x = هزینه‌های عمومی، 6.x = اداری/فروش، 7.x = بهای تمام‌شده
+    const first = code.charAt(0);
+    return first === '5' || first === '6' || first === '7';
   }
 
   async buildReport(projectId: string, fromISO: string, toISO: string): Promise<BudgetVsActualReport> {
@@ -94,6 +95,7 @@ export class BudgetVsActualService {
         projectId,
         journalEntry: {
           deletedAt: null,
+          status: { in: ['POSTED', 'REVERSED'] },
           entryDate: { gte: from, lte: to },
         },
       },

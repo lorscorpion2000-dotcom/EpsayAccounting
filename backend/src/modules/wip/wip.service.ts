@@ -20,7 +20,7 @@ export class WipService {
       where: {
         projectId,
         account: { code: { startsWith: '5' } },
-        journalEntry: { status: 'POSTED' },
+        journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
       },
       _sum: { debit: true, credit: true },
     });
@@ -31,7 +31,7 @@ export class WipService {
       where: {
         projectId,
         account: { code: { startsWith: '4' } },
-        journalEntry: { status: 'POSTED' },
+        journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
       },
       _sum: { debit: true, credit: true },
     });
@@ -170,7 +170,7 @@ export class WipService {
       where: {
         projectId,
         account: { code: { startsWith: '4' } },
-        journalEntry: { status: 'POSTED' },
+        journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
       },
       include: { journalEntry: { select: { entryDate: true } } },
     });
