@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Lock, Edit, RefreshCw, FileSpreadsheet, AlertTriangle, Archive } from 'lucide-react';
+import { Plus, Search, Loader2, Lock, Edit, RefreshCw, FileSpreadsheet, AlertTriangle, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { timelineApi, Guarantee, GuaranteeType } from '../services/timeline.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
@@ -192,7 +192,7 @@ export default function GuaranteesPage() {
                           </button>
                           <button onClick={() => setDeleting(g)}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
-                            <Archive className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

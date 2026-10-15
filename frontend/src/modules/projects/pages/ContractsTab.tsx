@@ -10,6 +10,7 @@ import type { Project, Contract } from '@/types/project';
 import { CONTRACT_TYPE_LABELS, CONTRACT_STATUS_LABELS } from '@/types/project';
 import { formatNumber, toPersianDigits, formatJalaliDate } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: 'bg-emerald-50 text-emerald-700',
@@ -226,10 +227,17 @@ export default function ContractsTab() {
                             <PlayCircle className="w-4 h-4" />
                           </button>
                         )}
+                        <AdminDeleteButton
+                          endpoint="/project-contracts"
+                          id={c.id}
+                          itemLabel={c.code || c.description || ''}
+                          onSuccess={loadData}
+                          size="sm"
+                        />
                         <button
                           onClick={() => setDeletingContract(c)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                          title="حذف"
+                          title="حذف (به سطل زباله)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
