@@ -47,15 +47,19 @@ const PRINT_CSS = `
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   body { background: white !important; }
-  @page { size: A4 portrait; margin: 15mm; }
+  @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
   .print-header { text-align: center; margin-bottom: 8mm; border-bottom: 2px solid #000; padding-bottom: 4mm; }
   .print-company { font-size: 16pt; font-weight: bold; }
   .print-title { font-size: 14pt; margin-top: 2mm; }
   .print-meta { display: flex; justify-content: space-between; margin-bottom: 6mm; font-size: 10pt; }
-  .print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-  .print-table th, .print-table td { border: 1px solid #333; padding: 2mm; }
-  .print-table th { background: #f0f0f0; font-weight: bold; text-align: center; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
+  .print-table th, .print-table td { border: 1px solid #333; padding: 2mm; word-wrap: break-word; }
+  .print-table th { background: #f0f0f0; font-weight: bold; }
+  .print-table th.align-right  { text-align: right; }
+  .print-table th.align-center { text-align: center; }
+  .print-table th.align-left   { text-align: left; }
   .print-table tfoot td { font-weight: bold; background: #f8f8f8; }
+  .print-table td { text-align: right; }
   .print-num { text-align: left; font-family: monospace; }
   .print-center { text-align: center; }
   .print-right { text-align: right; }
@@ -468,7 +472,7 @@ export default function JournalFormPage() {
             <button type="button" onClick={() => navigate('/accounting/journals')} className="btn-secondary">انصراف</button>
             <button id="journal-submit" type="submit" disabled={saving || !isBalanced} className="btn-primary">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isEdit ? 'ذخیره تغییرات' : 'ثبت سند'}
+              {isEdit ? 'ذخیره تغییرات' : 'ذخیره پیش‌نویس'}
             </button>
           </div>
         </div>
@@ -485,14 +489,22 @@ export default function JournalFormPage() {
           <span><b>سال مالی:</b> {currentFyName}</span>
         </div>
         <table className="print-table">
+          <colgroup>
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '17%' }} />
+            <col style={{ width: '30%' }} />
+            <col style={{ width: '17%' }} />
+            <col style={{ width: '17%' }} />
+          </colgroup>
           <thead>
             <tr>
-              <th>#</th>
-              <th>کد حساب</th>
-              <th>نام حساب</th>
-              <th>شرح</th>
-              <th>بدهکار</th>
-              <th>بستانکار</th>
+              <th className="align-center">#</th>
+              <th className="align-left">کد حساب</th>
+              <th className="align-right">نام حساب</th>
+              <th className="align-right">شرح</th>
+              <th className="align-left">بدهکار</th>
+              <th className="align-left">بستانکار</th>
             </tr>
           </thead>
           <tbody>

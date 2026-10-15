@@ -289,7 +289,7 @@ export default function FiscalYearsPage() {
       <ConfirmDialog
         isOpen={!!closing}
         title="بستن سال مالی"
-        message={'آیا از بستن سال مالی «' + (closing?.name || '') + '» مطمئن هستید؟ پس از بستن، اسناد جدید در این سال ثبت نمی‌شوند.'}
+        message={'آیا از بستن سال مالی «' + (closing?.name || '') + '» مطمئن هستید؟ پس از بستن، اسناد جدید در این سال ثبت نمی‌شوند. اگر سند پیش‌نویس (DRAFT) در این سال وجود داشته باشد، ابتدا باید آن‌ها را ثبت یا ابطال کنید.'}
         confirmLabel="بله، بستن"
         variant="warning"
         loading={actionLoading}

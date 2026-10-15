@@ -7,6 +7,7 @@ import QuickPartnerModal from '../components/QuickPartnerModal';
 import EditPartnerModal from '../components/EditPartnerModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 const TYPE_LABELS: Record<string, string> = {
   CLIENT: 'کارفرما',
   CONSULTANT: 'مشاور / ناظر',
@@ -127,10 +128,7 @@ export default function PartnersListPage() {
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
-          <button onClick={() => window.print()} className="btn-secondary">
-            <Printer className="w-4 h-4" />
-            چاپ
-          </button>
+          <PagePrintButton documentTitle="اشخاص" />
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import {
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function PRDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -120,9 +121,7 @@ export default function PRDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 no-print">
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> چاپ
-            </button>
+            <PagePrintButton documentTitle="درخواست خرید" />
             <AdminDeleteButton endpoint="/procurement/requests" id={pr.id} itemLabel={(pr as any).code} onSuccess={() => navigate('/procurement/requests')} variant="button" />
             {pr.status === 'DRAFT' && (
               <>

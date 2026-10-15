@@ -11,6 +11,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function JournalBookPage() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [currentFy, setCurrentFy] = useState('');
@@ -102,10 +103,7 @@ export default function JournalBookPage() {
             <FileSpreadsheet className="w-4 h-4" />
             Excel
           </button>
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" />
-            چاپ
-          </button>
+          <PagePrintButton documentTitle="دفتر روزنامه" />
         </div>
       </div>
 

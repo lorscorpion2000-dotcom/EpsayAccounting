@@ -10,6 +10,7 @@ import { formatNumber } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function TrialBalancePage() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [currentFy, setCurrentFy] = useState('');
@@ -101,10 +102,7 @@ export default function TrialBalancePage() {
             <FileSpreadsheet className="w-4 h-4" />
             Excel
           </button>
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" />
-            چاپ
-          </button>
+          <PagePrintButton documentTitle="تراز آزمایشی" />
         </div>
       </div>
 

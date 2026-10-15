@@ -10,6 +10,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function PayrollPeriodDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -118,9 +119,7 @@ export default function PayrollPeriodDetailPage() {
             <button className="btn-secondary" onClick={handleExportExcel}>
               <FileSpreadsheet className="w-4 h-4" /> Excel
             </button>
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> چاپ
-            </button>
+            <PagePrintButton documentTitle="دوره حقوق" />
             {(period.status === 'DRAFT' || period.status === 'CALCULATED') && (
               <button className="btn-secondary" onClick={() => setActionItem({ action: 'calculateFromAttendance' })}>
                 <FileSpreadsheet className="w-4 h-4" /> محاسبه از حاضری

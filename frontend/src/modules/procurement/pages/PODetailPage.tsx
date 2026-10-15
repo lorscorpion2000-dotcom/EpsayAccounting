@@ -9,6 +9,37 @@ import { PO_STATUS_LABELS, PR_UNIT_LABELS } from '@/types/procurement';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
+import { printHtml, standardHeader, standardSignatures, escapeHtml, getTodayJalali } from '@/utils/print-document'; // STANDALONE_PRINT_V3
+
+const PRINT_CSS = `
+@media print {
+  @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
+  .print-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .print-table th,
+  .print-table td {
+    padding: 5px 6px !important;
+    font-size: 10pt !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    vertical-align: middle !important;
+    line-height: 1.35 !important;
+    white-space: normal !important;
+  }
+  .print-table .print-center { text-align: center !important; }
+  .print-table .print-right  { text-align: right  !important; }
+  .print-table .print-left   { text-align: left   !important; }
+  .print-table .print-num {
+    font-family: 'Courier New', monospace !important;
+    direction: ltr !important;
+    unicode-bidi: embed !important;
+    white-space: nowrap !important;
+  }
+}
+`;
 
 export default function PODetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,8 +86,71 @@ export default function PODetailPage() {
   </div>;
   if (!po) return null;
 
+  const handleStandalonePrint = () => {
+    if (!po) return;
+    const meta = `<div>شماره: <span class="val num">${po.code}</span></div>
+                  <div>تاریخ چاپ: <span class="val">${getTodayJalali()}</span></div>`;
+
+    const itemsHtml = (po.items || []).map((it) => `
+      <tr>
+        <td class="c num">${it.rowNumber}</td>
+        <td class="r">${escapeHtml(it.description || '')}</td>
+        <td class="c num">${it.quantity}</td>
+        <td class="c">${escapeHtml(PR_UNIT_LABELS[it.unit] || '')}</td>
+        <td class="l num">${formatNumber(Number(it.unitPrice))}</td>
+        <td class="l num">${formatNumber(Number(it.totalPrice))}</td>
+      </tr>`).join('');
+
+    const body = `
+      ${standardHeader({ title: 'دستور خرید', subtitle: 'Purchase Order', meta })}
+      <div class="meta-grid">
+        <div class="meta-row"><span class="lbl">کد دستور:</span><span class="val num">${escapeHtml(po.code)}</span></div>
+        <div class="meta-row"><span class="lbl">تأمین‌کننده:</span><span class="val">${escapeHtml(po.supplier?.name || '—')}</span></div>
+        <div class="meta-row"><span class="lbl">تاریخ صدور:</span><span class="val num">${formatJalaliDate(po.poDate)}</span></div>
+        <div class="meta-row"><span class="lbl">تلفن:</span><span class="val num">${escapeHtml(po.supplier?.phone || '—')}</span></div>
+        ${po.deliveryDate ? `<div class="meta-row"><span class="lbl">تاریخ تحویل:</span><span class="val num">${formatJalaliDate(po.deliveryDate)}</span></div>` : ''}
+        <div class="meta-row"><span class="lbl">آدرس:</span><span class="val">${escapeHtml(po.supplier?.address || '—')}</span></div>
+        <div class="meta-row"><span class="lbl">پروژه:</span><span class="val">${escapeHtml(po.project?.name || '—')}</span></div>
+        ${po.pr ? `<div class="meta-row"><span class="lbl">مرجع PR:</span><span class="val num">${escapeHtml(po.pr.code)}</span></div>` : ''}
+      </div>
+      <table class="print-table">
+        <colgroup>
+          <col style="width:6%"><col style="width:30%"><col style="width:10%">
+          <col style="width:10%"><col style="width:22%"><col style="width:22%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="c">#</th>
+            <th class="r">شرح کالا / خدمات</th>
+            <th class="c">مقدار</th>
+            <th class="c">واحد</th>
+            <th class="l">قیمت واحد</th>
+            <th class="l">مبلغ کل</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+        <tfoot>
+          <tr><td colspan="5" class="r">جمع اقلام</td><td class="l num">${formatNumber(Number(po.subtotal || 0))}</td></tr>
+          <tr><td colspan="5" class="r">مالیات (${po.taxPercent || 0}٪)</td><td class="l num">${formatNumber(Number(po.taxAmount || 0))}</td></tr>
+          <tr><td colspan="5" class="r">مبلغ نهایی</td><td class="l num">${formatNumber(Number(po.totalAmount || 0))} ریال</td></tr>
+        </tfoot>
+      </table>
+      ${po.notes ? `<div class="notes-box"><div class="lbl">توضیحات</div><div>${escapeHtml(po.notes)}</div></div>` : ''}
+      ${standardSignatures(['تهیه‌کننده', 'مدیر فنی', 'مدیر پروژه'])}
+      <div class="status-bar">
+        <span>وضعیت: ${escapeHtml(PO_STATUS_LABELS[po.status] || po.status)}</span>
+        <span>سیستم حسابداری اپسای</span>
+      </div>`;
+
+    printHtml(body, {
+      title: 'دستور خرید ' + po.code,
+      orientation: 'portrait',
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-slate-500 no-print">
         <button onClick={() => navigate('/procurement/orders')} className="hover:text-brand-600 flex items-center gap-1">
@@ -68,7 +162,7 @@ export default function PODetailPage() {
 
       {/* Header actions */}
       <div className="flex items-center justify-end gap-2 no-print">
-        <button className="btn-secondary" onClick={() => window.print()}>
+        <button className="btn-secondary" onClick={handleStandalonePrint}>
           <Printer className="w-4 h-4" /> چاپ / PDF
         </button>
         <AdminDeleteButton endpoint="/procurement/orders" id={po.id} itemLabel={(po as any).code} onSuccess={() => navigate('/procurement/orders')} variant="button" />
@@ -155,26 +249,34 @@ export default function PODetailPage() {
         </div>
 
         {/* Items Table */}
-        <table className="w-full border-collapse mb-4 text-sm">
+        <table className="print-table w-full border-collapse mb-4 text-sm">
+          <colgroup>
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '28%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '23%' }} />
+            <col style={{ width: '23%' }} />
+          </colgroup>
           <thead>
             <tr className="bg-brand-600 text-white">
-              <th className="border border-brand-700 px-2 py-2 text-center w-10">#</th>
-              <th className="border border-brand-700 px-2 py-2 text-right">شرح کالا / خدمات</th>
-              <th className="border border-brand-700 px-2 py-2 text-center w-20">مقدار</th>
-              <th className="border border-brand-700 px-2 py-2 text-center w-20">واحد</th>
-              <th className="border border-brand-700 px-2 py-2 text-left w-32">قیمت واحد</th>
-              <th className="border border-brand-700 px-2 py-2 text-left w-32">مبلغ کل</th>
+              <th className="border border-brand-700 px-2 py-2 text-center print-center">#</th>
+              <th className="border border-brand-700 px-2 py-2 text-right print-right">شرح کالا / خدمات</th>
+              <th className="border border-brand-700 px-2 py-2 text-center print-center">مقدار</th>
+              <th className="border border-brand-700 px-2 py-2 text-center print-center">واحد</th>
+              <th className="border border-brand-700 px-2 py-2 text-left print-left">قیمت واحد</th>
+              <th className="border border-brand-700 px-2 py-2 text-left print-left">مبلغ کل</th>
             </tr>
           </thead>
           <tbody>
             {po.items?.map((it) => (
               <tr key={it.id}>
-                <td className="border border-slate-300 px-2 py-2 text-center num">{toPersianDigits(it.rowNumber)}</td>
+                <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.rowNumber)}</td>
                 <td className="border border-slate-300 px-2 py-2">{it.description}</td>
-                <td className="border border-slate-300 px-2 py-2 text-center num">{toPersianDigits(it.quantity)}</td>
-                <td className="border border-slate-300 px-2 py-2 text-center">{PR_UNIT_LABELS[it.unit]}</td>
-                <td className="border border-slate-300 px-2 py-2 text-left num">{formatNumber(Number(it.unitPrice))}</td>
-                <td className="border border-slate-300 px-2 py-2 text-left num">{formatNumber(Number(it.totalPrice))}</td>
+                <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.quantity)}</td>
+                <td className="border border-slate-300 px-2 py-2 text-center print-center">{PR_UNIT_LABELS[it.unit]}</td>
+                <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.unitPrice))}</td>
+                <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.totalPrice))}</td>
               </tr>
             ))}
           </tbody>

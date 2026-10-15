@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
-import { useReactToPrint } from 'react-to-print';
 import { useRef } from 'react';
 import { advancedLedgerApi } from '../services/advanced-ledger.api';
 import { api } from '@/services/api';
@@ -15,6 +14,7 @@ import type { AdvLedgerResponse } from '@/types/advanced-ledger';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import PrintHeader from '@/components/PrintHeader';
+import PagePrintButton from '@/components/PagePrintButton'; // ADV_LEDGER_BTN_FIX
 import { todayLocalISO } from '@/utils/local-date';
 
 function todayISO(): string {
@@ -96,10 +96,7 @@ export default function AdvancedLedgerPage() {
     } finally { setLoading(false); }
   };
 
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: 'ledger-' + todayLocalISO(),
-  });
+  /* ADV_LEDGER_PRINT_FIX: handlePrint removed */
 
   const handleExportExcel = () => {
     if (!data) return;
@@ -160,9 +157,7 @@ export default function AdvancedLedgerPage() {
               <button className="btn-secondary" onClick={handleExportExcel}>
                 <Download className="w-4 h-4" /> خروجی اکسل
               </button>
-              <button className="btn-secondary" onClick={handlePrint}>
-                <Printer className="w-4 h-4" /> چاپ
-              </button>
+              <PagePrintButton documentTitle="دفتر معین پیشرفته" /> {/* ADV_LEDGER_BTN_FIX */}
             </>
           )}
         </div>

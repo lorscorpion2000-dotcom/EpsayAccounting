@@ -77,7 +77,7 @@ export default function DetailedTrialBalancePage() {
           <p className="text-sm text-slate-500 mt-1">با مانده ابتدا گردش دوره و مانده انتها</p>
         </div>
         <div className="flex gap-2">
-          <PrintButton contentRef={printRef} documentTitle="تراز آزمایشی تفصیلی" />
+          <PrintButton contentRef={printRef} documentTitle="تراز آزمایشی تفصیلی" / orientation="landscape" /> {/* LANDSCAPE_PATCH */}
           <button className="btn-secondary" onClick={() => load()}><RefreshCw className="w-4 h-4" /></button>
           <button className="btn-secondary" onClick={exportExcel} disabled={!data}><FileSpreadsheet className="w-4 h-4" /> Excel</button>
         </div>

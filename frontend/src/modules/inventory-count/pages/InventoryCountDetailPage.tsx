@@ -12,6 +12,7 @@ import {
   INV_COUNT_STATUS_LABELS, INV_COUNT_STATUS_COLORS,
 } from '@/types/inventory-count';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function InventoryCountDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -149,9 +150,7 @@ export default function InventoryCountDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 no-print flex-wrap">
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> چاپ
-            </button>
+            <PagePrintButton documentTitle="انبارگردانی" />
             {isDraft && Object.keys(editing).length > 0 && (
               <button className="btn-primary" onClick={handleSaveAll} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

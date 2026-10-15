@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { expensesApi } from '../services/expenses.api';
 import type { Expense } from '@/types/expense';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT:      { label: 'پیش‌نویس',  color: 'bg-slate-100 text-slate-700' },
@@ -65,9 +66,7 @@ export default function ExpenseDetailPage() {
           {canEdit && <button className="btn-secondary" onClick={() => nav('/expenses/' + e.id + '/edit')}>
             <Edit className="w-4 h-4" /> ویرایش
           </button>}
-          {canPrint && <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" /> چاپ
-          </button>}
+          {canPrint && <PagePrintButton documentTitle="هزینه" />}
           {canSubmit && <button className="btn-primary" onClick={() => act(() => expensesApi.submit(e.id), 'ارسال شد')}>
             <Send className="w-4 h-4" /> ارسال برای تأیید
           </button>}

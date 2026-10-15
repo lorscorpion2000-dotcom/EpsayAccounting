@@ -10,6 +10,7 @@ import { accountingApi } from '../services/accounting.api';
 import type { JournalEntry, JournalStatus } from '@/types/accounting';
 import { JOURNAL_STATUS_LABELS, JOURNAL_STATUS_COLORS } from '@/types/accounting';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function JournalViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -153,13 +154,7 @@ export default function JournalViewPage() {
             )}
             {journal.status === 'POSTED' && (
               <>
-                <button
-                  onClick={() => window.print()}
-                  className="btn-secondary"
-                >
-                  <Printer className="w-4 h-4" />
-                  چاپ
-                </button>
+                <PagePrintButton documentTitle="سند حسابداری" />
                 <button
                   onClick={() => setShowReverseModal(true)}
                   className="btn-danger"

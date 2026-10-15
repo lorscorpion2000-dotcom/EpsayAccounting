@@ -8,6 +8,7 @@ import PrintHeader from '@/components/PrintHeader';
 import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format';
 import { todayLocalISO, firstDayOfCurrentJalaliYearISO } from '@/utils/local-date';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 type Tab =
   | 'overview'
@@ -95,7 +96,7 @@ export default function ProjectReportsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="btn-secondary"><RefreshCw className="w-4 h-4" /></button>
-          <button onClick={() => window.print()} className="btn-secondary"><Printer className="w-4 h-4" /> چاپ</button>
+          <PagePrintButton documentTitle="گزارش پروژه" />
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function KardexPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -99,9 +100,7 @@ export default function KardexPage() {
           <button className="btn-secondary" onClick={handleExportExcel} disabled={!result}>
             <FileSpreadsheet className="w-4 h-4" /> Excel
           </button>
-          <button className="btn-secondary" onClick={() => window.print()} disabled={!result}>
-            <Printer className="w-4 h-4" /> چاپ
-          </button>
+          <PagePrintButton documentTitle="کاردکس" />
         </div>
       </div>
 

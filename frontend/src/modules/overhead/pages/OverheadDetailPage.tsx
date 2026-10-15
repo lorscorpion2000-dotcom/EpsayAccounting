@@ -9,6 +9,7 @@ import {
   OVERHEAD_METHOD_LABELS, OVERHEAD_STATUS_LABELS, OVERHEAD_STATUS_COLORS,
 } from '@/types/overhead';
 import { toPersianDigits } from '@/utils/format';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function OverheadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -86,9 +87,7 @@ export default function OverheadDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 no-print">
-            <button className="btn-secondary" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> چاپ
-            </button>
+            <PagePrintButton documentTitle="تخصیص سربار" />
             {item.status === 'DRAFT' && (
               <button className="btn-primary" onClick={handlePost}>
                 <CheckCircle2 className="w-4 h-4" /> ثبت در حسابداری

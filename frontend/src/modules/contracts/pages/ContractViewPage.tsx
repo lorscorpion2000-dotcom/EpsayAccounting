@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<LegalContractStatus, string> = {
 
 const PRINT_STYLES = `
 @media print {
-  @page { size: A4; margin: 24mm 12mm 18mm 12mm; }
+  @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
 
   html, body {
     height: auto !important;
@@ -80,7 +80,8 @@ const PRINT_STYLES = `
   }
 
   .print-area {
-    padding-top: 4mm !important;
+    padding-top: 28mm !important;   /* جای هدر ثابت 22mm + 6mm فاصله */
+    padding-bottom: 20mm !important; /* جای فوتر ثابت 14mm + 6mm فاصله */
     height: auto !important;
     overflow: visible !important;
     position: static !important;
@@ -335,7 +336,7 @@ export default function ContractViewPage() {
             </div>
           </div>
           <div className='flex items-center gap-2'>
-            <PrintButton contentRef={printRef} documentTitle={data.title} />
+            <PrintButton contentRef={printRef} documentTitle={data.title} pageMargin="28mm 12mm 20mm 12mm" /> {/* CONTRACT_PRINT_MARGIN_FIX */}
             <button onClick={handleWordExport} className='btn-secondary' title='خروجی Word'>
               <FileText className='w-4 h-4' />
               Word

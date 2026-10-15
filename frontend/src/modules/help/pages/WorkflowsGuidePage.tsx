@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
@@ -26,59 +26,333 @@ interface Workflow {
 }
 
 const WORKFLOWS: Workflow[] = [
+  // ═══════════════════════════════════════════════════════
+  // ۵ کارت اصلاح‌شده (طبق کشفیات جلسه ۴)
+  // ═══════════════════════════════════════════════════════
   {
     key: 'fiscal-year',
     title: 'مدیریت سال مالی',
-    description: 'ایجاد، جاری‌سازی، بستن، بازگشایی و حذف سال‌های مالی — مبنای همه اسناد حسابداری',
+    description: 'ایجاد، جاری‌سازی، تولید اسناد افتتاحیه/اختتامیه، بستن و بازگشایی سال‌های مالی — مبنای همه اسناد حسابداری',
     icon: Calendar,
     color: 'cyan',
     route: '/settings/fiscal-years',
     steps: [
-      { actor: 'مدیر ارشد', action: 'ایجاد سال مالی جدید (کد + نام + بازه)', icon: User, color: 'slate', target: 'سال مالی جدید' },
-      { actor: 'مدیر ارشد', action: 'تنظیم به‌عنوان سال جاری', icon: CheckCircle2, color: 'emerald', target: 'مبنای ثبت اسناد' },
-      { actor: 'مدیر ارشد', action: 'تولید سند افتتاحیه (از سال قبل)', icon: FileText, color: 'blue', target: 'سند افتتاحیه' },
-      { actor: 'مدیر ارشد', action: 'تولید سند اختتامیه (بستن حساب‌های موقت)', icon: FileText, color: 'violet', target: 'سند اختتامیه' },
+      { actor: 'مدیر ارشد', action: 'ایجاد سال مالی جدید (کد + نام + بازه)', icon: User, color: 'slate', target: 'رکورد FiscalYear' },
+      { actor: 'مدیر ارشد', action: 'تنظیم به‌عنوان سال جاری (isCurrent=true)', icon: CheckCircle2, color: 'emerald', target: 'مبنای ثبت اسناد' },
+      { actor: 'حسابدار', action: 'ثبت اسناد در طول سال مالی', icon: FileText, color: 'blue', target: 'JournalEntry' },
+      { actor: 'حسابدار', action: 'تولید سند اختتامیه (بستن حساب‌های موقت ۴.x و ۵.x)', icon: FileText, color: 'violet', target: 'سند اختتامیه' },
       { actor: 'مدیر ارشد', action: 'بستن سال مالی', icon: Lock, color: 'amber', target: 'سال بسته‌شده' },
     ],
     onApprove: [
-      'فقط یک سال مالی می‌تواند «جاری» باشد — با تغییر جاری، قبلی غیرجاری می‌شود',
-      'سند افتتاحیه: ماندهای دائمی (دارایی/بدهی/سرمایه) از سال قبل منتقل می‌شود',
-      'سند اختتامیه: حساب‌های موقت (درآمد ۴.x و هزینه ۵.x) بسته و به سود و زیان انباشته (۳.۳) منتقل می‌شوند',
-      'سال مالی «جاری» قابل بستن یا آرشیو نیست',
-      'برای حذف: از دکمه «آرشیو» (زرد) استفاده کنید — قابل بازیابی از سوابق حذف',
+      'فقط یک سال مالی می‌تواند «جاری» باشد — با set-current، سال قبلی خودکار غیرجاری می‌شود',
+      'close رد می‌شود اگر در آن سال حتی یک سند DRAFT باشد — ابتدا همه DRAFTها را post یا ابطال کنید',
+      'پس از close، هر JE جدید در آن سال با PERIOD_LOCKED رد می‌شود',
+      'بازگشایی (reopen): سال CLOSED را به OPEN برمی‌گرداند؛ پرچم isCurrent سایر سال‌ها دست‌نخورده می‌ماند',
+      'سند افتتاحیه: مانده‌های دائمی (دارایی/بدهی/سرمایه) از سال قبل منتقل می‌شود',
+      'سند اختتامیه: حساب‌های موقت (۴.x درآمد و ۵.x هزینه) بسته و به سود و زیان انباشته (۳.۳) منتقل می‌شوند',
     ],
     onReject: [
-      'سال مالی «بسته» قابل بازگشایی است (دکمه Unlock) — ولی باید ابتدا مطمئن شوید که اسناد جدیدی لازم نیست',
-      'حذف دائمی (قرمز — فقط مدیر ارشد): کاملاً از دیتابیس حذف می‌شود و قابل بازیابی نیست',
-      'اگر سال مالی در جای دیگری ارجاع داشته باشد، حذف دائمی خطا می‌دهد',
-      'برای بازگرداندن اشتباه: از «سوابق حذف» (Recycle Bin) استفاده کنید',
+      'سال مالی باز است حتی اگر اسناد و تراکنش‌ها داشته باشد — close فقط با DRAFTهای موجود مسدود می‌شود',
+      'اگر می‌خواهید فقط یک ماه خاص قفل شود، از «قفل دوره مالی» استفاده کنید (سبک‌تر از close)',
+      'برای حذف: از دکمه «آرشیو» (soft-delete، قابل بازیابی از سوابق حذف) استفاده کنید',
+      'حذف دائمی فقط توسط admin (غیرقابل بازیابی) — اگر ارجاع داشته باشد خطا می‌دهد',
+    ],
+  },
+  {
+    key: 'period-lock',
+    title: 'قفل دوره مالی',
+    description: 'جلوگیری از ثبت اسناد حسابداری در ماه‌های قفل‌شده — مستقل از بستن کل سال',
+    icon: Lock,
+    color: 'orange',
+    route: '/settings/period-lock',
+    steps: [
+      { actor: 'حسابدار', action: 'قفل کردن ماه (monthKey میلادی YYYY-MM)', icon: Lock, color: 'slate', target: 'ذخیره در FiscalYear.lockedMonths' },
+      { actor: 'سیستم', action: 'چک خودکار در هر ثبت سند (journalsService.create، sales-invoice.approve، ...)', icon: XCircle, color: 'red', target: 'PERIOD_LOCKED' },
+      { actor: 'حسابدار', action: 'بازکردن قفل (در صورت نیاز)', icon: Lock, color: 'emerald', target: 'unlock-month' },
+    ],
+    onApprove: [
+      'monthKey به فرمت میلادی YYYY-MM است (مثال: "2026-10" — نه شمسی)',
+      'مسیر قفل: POST /api/fiscal-years/{fiscalYearId}/lock-month با بدنه { monthKey: "2026-10" }',
+      'مسیر بازکردن: POST /api/fiscal-years/{id}/unlock-month با همان بدنه',
+      'بررسی در JournalsService.create() با assertPeriodOpen انجام می‌شود',
+      'در صورت قفل بودن ماه → 400 PERIOD_LOCKED با پیام «month YYYY-MM is locked»',
+      'قفل روی همه‌ی سرویس‌های نویسنده اعمال می‌شود: /journals، /sales-invoices/:id/approve، /sales-receipts',
+      'قفل ماه مستقل از close سال است — می‌توان ماه را قفل کرد و سال باز ماند',
+    ],
+    onReject: [
+      'اگر می‌خواهید کل سال بسته شود → close سال مالی (به کارت «مدیریت سال مالی» مراجعه کنید)',
+      'سرویس‌هایی که به سال جاری وابسته‌اند (مانند شارژ تنخواه) نیاز دارند حداقل یک FiscalYear با isCurrent=true & status=OPEN وجود داشته باشد',
+      'برای رفع خطای «هیچ سال مالی جاری فعالی وجود ندارد»: PATCH /api/fiscal-years/:id/set-current روی یک سال با status=OPEN',
     ],
   },
   {
     key: 'petty-charge',
     title: 'درخواست شارژ تنخواه',
-    description: 'درخواست تأمین نقدینگی تنخواه‌دار از مدیر و پرداخت توسط حسابداری',
+    description: 'درخواست تأمین نقدینگی تنخواه‌دار از مدیر و پرداخت توسط حسابداری — با سند خودکار',
     icon: Wallet,
     color: 'emerald',
     route: '/petty-cash',
     steps: [
-      { actor: 'تنخواه‌دار', action: 'ثبت درخواست شارژ', icon: User, color: 'slate', target: 'کارتابل مدیر' },
-      { actor: 'مدیر', action: 'تأیید یا رد', icon: CheckCircle2, color: 'amber', target: 'کارتابل حسابداری' },
-      { actor: 'حسابداری', action: 'پرداخت + انتخاب حساب مبدأ', icon: Wallet, color: 'blue', target: 'سند دوبل خودکار' },
-      { actor: 'سیستم', action: 'ثبت سند + افزایش موجودی تنخواه', icon: FileText, color: 'emerald' },
+      { actor: 'تنخواه‌دار', action: 'ثبت درخواست شارژ (accountId + amount + reason)', icon: User, color: 'slate', target: 'PENDING' },
+      { actor: 'مدیر', action: 'تأیید یا رد', icon: CheckCircle2, color: 'amber', target: 'APPROVED/REJECTED' },
+      { actor: 'حسابدار', action: 'پرداخت با انتخاب حساب مبدأ (sourceAccountId)', icon: Wallet, color: 'blue', target: 'PATCH /:id/pay' },
+      { actor: 'سیستم', action: 'ثبت JE + افزایش موجودی تنخواه', icon: FileText, color: 'emerald', target: 'PETTY_CASH_CHARGE' },
     ],
     onApprove: [
-      'درخواست از کارتابل مدیر حذف و به کارتابل حسابداری منتقل می‌شود',
-      'حسابداری دکمه «پرداخت» را می‌بیند',
-      'پس از پرداخت: موجودی تنخواه افزایش می‌یابد',
-      'سند دوبل خودکار: بدهکار تنخواه / بستانکار حساب بانک',
+      'فیلد sourceAccountId در pay الزامی است — حساب بانک یا صندوق که از آن پرداخت می‌شود',
+      'بدنه pay: { sourceAccountId: "<account-id>" } — فقط این فیلد',
+      'سند خودکار: Dr 1.1.5 (تنخواه‌گردان‌ها) / Cr حساب مبدأ',
+      'sourceType = PETTY_CASH_CHARGE، کد JE: JE-PC-YYYY-####',
+      'تراکنش متناظر از نوع FUNDING ساخته و به JE لینک می‌شود',
+      'موجودی تنخواه به مقدار amount افزایش می‌یابد',
+      '⚠ پیش‌نیاز: حداقل یک FiscalYear با isCurrent=true و status=OPEN باید وجود داشته باشد',
     ],
     onReject: [
-      'درخواست در وضعیت REJECTED قرار می‌گیرد',
-      'دلیل رد در کارتابل تنخواه‌دار نمایش داده می‌شود',
+      'درخواست در وضعیت REJECTED قرار می‌گیرد و دلیل رد نمایش داده می‌شود',
       'تنخواه‌دار می‌تواند ویرایش و دوباره ارسال کند',
+      'اگر pay با «هیچ سال مالی جاری فعالی وجود ندارد» مواجه شد، ابتدا یک سال را با set-current جاری کنید',
+      'حذف نرم با DELETE /petty-cash/requests/:id/admin (soft-delete پیش‌فرض)',
     ],
   },
+  {
+    key: 'journal',
+    title: 'سند حسابداری دستی',
+    description: 'ثبت سند دوبل با کنترل تراز خودکار و مدیریت وضعیت DRAFT/POSTED',
+    icon: FileText,
+    color: 'emerald',
+    route: '/accounting/journals',
+    steps: [
+      { actor: 'حسابدار', action: 'ثبت سند (DRAFT) با بدنه { fiscalYearId, entryDate, description, lines: [...] }', icon: User, color: 'slate', target: 'JournalEntry.DRAFT' },
+      { actor: 'حسابدار', action: 'بازبینی سند', icon: CheckCircle2, color: 'emerald', target: 'پیش‌نمایش' },
+      { actor: 'حسابدار', action: 'ثبت نهایی (PATCH /:id/post)', icon: CheckCircle2, color: 'emerald', target: 'POSTED' },
+      { actor: 'مدیر مالی', action: 'ابطال (در صورت نیاز)', icon: Ban, color: 'red', target: 'سند معکوس' },
+    ],
+    onApprove: [
+      'مسیر ثبت: POST /api/journals',
+      'مسیر ثبت نهایی: PATCH /api/journals/{id}/post (توجه: POST /post کار نمی‌کند، فقط PATCH)',
+      'entryDate باید داخل بازه FiscalYear مربوطه باشد',
+      'برای یافتن DRAFTهای یک سال: GET /api/journals?status=DRAFT&fiscalYearId={id}',
+      'توجه: پارامتر take/limit در GET /journals نادیده گرفته می‌شود (همیشه حداکثر ۵۰ رکورد) — برای نتایج دقیق‌تر از فیلتر status/fiscalYearId استفاده کنید',
+      'برای close سال مالی، draftCount باید صفر باشد — ابتدا همه DRAFTها را post یا ابطال کنید',
+      'سند POSTED قابل حذف نیست — فقط ابطال (reversal)',
+    ],
+    onReject: [
+      'سند ابطال‌شده: یک سند معکوس خودکار ثبت می‌شود',
+      'دلیل ابطال در سند اصلی نمایش داده می‌شود',
+      'فیلدهای sourceType و sourceId مشخص می‌کنند سند دستی است یا خودکار',
+      'برای حذف نرم سند POSTED: از admin (soft-delete) یا ابطال رسمی استفاده کنید',
+    ],
+  },
+  {
+    key: 'admin-hard-delete',
+    title: 'حذف نرم و بازگردانی (Recycle Bin)',
+    description: 'حذف نرم پیش‌فرض، بازیابی از سوابق، و حذف دائمی توسط admin',
+    icon: Trash2,
+    color: 'red',
+    route: '/recycle-bin',
+    steps: [
+      { actor: 'کاربر', action: 'حذف رکورد → DELETE /{resource}/{id}/admin', icon: Trash2, color: 'slate', target: 'soft-delete پیش‌فرض' },
+      { actor: 'سیستم', action: 'ثبت deletedAt + deletedBy در رکورد', icon: ClipboardList, color: 'amber', target: 'hidden from list' },
+      { actor: 'کاربر', action: 'بازیابی از سوابق حذف', icon: CheckCircle2, color: 'emerald', target: 'PATCH /:id/restore' },
+      { actor: 'مدیر ارشد', action: 'حذف دائمی (hard)', icon: Ban, color: 'red', target: 'adminHardDelete' },
+    ],
+    onApprove: [
+      'مسیر adminDelete در سرویس مشترک الان **soft-delete** می‌زند (deletedAt + deletedBy)',
+      'رکورد soft-deleted از لیست عادی پنهان است اما در /deleted/list نمایش داده می‌شود',
+      'restore با استفاده از __withDeleted: true رکورد را برمی‌گرداند',
+      'اگر رکورد soft-deleted با همان کلید یونیک دوباره ساخته شود → 400/409 (کلید همچنان اشغال است)',
+      'موجودیت‌های پشتیبانی: اسناد، اشخاص، پروژه، قرارداد، کالا، انبار، مشتری، قرارداد فروش، پرسنل، تنخواه و ...',
+    ],
+    onReject: [
+      'حذف دائمی: متد adminHardDelete در SoftDeleteService — فقط در موارد استثنایی',
+      'اگر رکورد در جای دیگری ارجاع داشته باشد، hard-delete خطا می‌دهد',
+      'بازگرداندن hard-delete فقط از طریق بازیابی DB ممکن است',
+      'برای دیدن لیست soft-deleted: GET /{resource}/deleted/list?take=&skip=',
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // ۶ کارت جدید
+  // ═══════════════════════════════════════════════════════
+  {
+    key: 'sales-unit-flow',
+    title: 'چرخه فروش واحد',
+    description: 'از تعریف واحد و مشتری تا قرارداد، فعال‌سازی، فاکتور و دریافت — با اسناد حسابداری خودکار',
+    icon: ShoppingBag,
+    color: 'violet',
+    route: '/sales/units',
+    steps: [
+      { actor: 'کارشناس فروش', action: 'تعریف واحد قابل فروش (projectId + unitNumber)', icon: User, color: 'slate', target: 'SalesUnit.AVAILABLE' },
+      { actor: 'کارشناس فروش', action: 'تعریف مشتری (fullName + nationalId)', icon: User, color: 'slate', target: 'SalesCustomer + تفصیل 1.1.2' },
+      { actor: 'کارشناس فروش', action: 'ثبت قرارداد DRAFT + اقساط', icon: FileText, color: 'indigo', target: 'SalesUnit.RESERVED' },
+      { actor: 'مدیر فروش', action: 'فعال‌سازی قرارداد', icon: CheckCircle2, color: 'emerald', target: 'ACTIVE + unit SOLD' },
+      { actor: 'کارشناس فروش', action: 'صدور فاکتور فروش (DRAFT)', icon: FileText, color: 'blue', target: 'SalesInvoice' },
+      { actor: 'مدیر مالی', action: 'تأیید فاکتور', icon: CheckCircle2, color: 'emerald', target: 'JE SALES_INVOICE' },
+      { actor: 'حسابداری', action: 'ثبت دریافت (CASH/BANK)', icon: Wallet, color: 'blue', target: 'JE SALES_RECEIPT + PAID' },
+    ],
+    onApprove: [
+      'SalesUnit compound unique: (projectId, unitNumber, block)',
+      'SalesContract flow: DRAFT → activate() → ACTIVE، یا cancel(reason) → CANCELLED',
+      'اثر جانبی ایجاد قرارداد: unit.status = RESERVED',
+      'اثر جانبی activate: unit.status = SOLD',
+      'اثر جانبی cancel/remove: unit.status = AVAILABLE',
+      'فاکتور فروش: 10% VAT پیش‌فرض — total = subtotal − discount + tax',
+      'JE تأیید فاکتور (SALES_INVOICE):',
+      '  Dr: تفصیل مشتری 1.1.2.NN به مبلغ total',
+      '  Cr: حساب درآمد (mapping SALES_INVOICE_REVENUE — معمولاً 4.1.1 درآمد قراردادها)',
+      '  Cr: حساب VAT فروش 2.1.3.01 به مبلغ taxAmount',
+      'JE دریافت (SALES_RECEIPT):',
+      '  Dr: صندوق 1.1.1.01 (CASH) یا حساب بانک (BANK_TRANSFER با bankAccountId)',
+      '  Cr: تفصیل مشتری 1.1.2.NN',
+      'approve فاکتور و ثبت receipt به Period Lock احترام می‌گذارند',
+      'روش‌های پرداخت CASH و BANK_TRANSFER پشتیبانی می‌شوند؛ CHEQUE/OTHER فعلاً نه',
+    ],
+    onReject: [
+      'حذف قرارداد بدون force فقط در وضعیت DRAFT یا CANCELLED ممکن است',
+      'بعد از activate اگر پرداختی ثبت شده باشد، حذف قرارداد رد می‌شود',
+      'حذف مشتری فقط با force=true و بعد از پاک‌سازی ارجاعات',
+      'فاکتور فقط در وضعیت DRAFT قابل ویرایش یا حذف است',
+    ],
+  },
+  {
+    key: 'petty-expense',
+    title: 'هزینه از تنخواه',
+    description: 'ثبت هزینه، تأیید، و ثبت سند حسابداری خودکار با کاهش موجودی تنخواه',
+    icon: Wallet,
+    color: 'orange',
+    route: '/petty-cash/transactions',
+    steps: [
+      { actor: 'تنخواه‌دار', action: 'ثبت تراکنش EXPENSE (amount + recipient + category)', icon: User, color: 'slate', target: 'DRAFT' },
+      { actor: 'تنخواه‌دار', action: 'ارسال برای تأیید (PATCH /:id/submit)', icon: Send, color: 'amber', target: 'SUBMITTED' },
+      { actor: 'حسابدار', action: 'تأیید (PATCH /:id/approve)', icon: CheckCircle2, color: 'emerald', target: 'APPROVED + JE' },
+      { actor: 'سیستم', action: 'کاهش موجودی تنخواه', icon: FileText, color: 'emerald', target: 'PETTYCASH_EXPENSE' },
+    ],
+    onApprove: [
+      'سند خودکار: Dr حساب هزینه (بسته به category) / Cr 1.1.5 (تنخواه‌گردان‌ها)',
+      'sourceType = PETTYCASH_EXPENSE',
+      'موجودی تنخواه به مقدار amount کاهش می‌یابد',
+      'فیلدهای اختیاری: partnerId (طرف حساب)، projectId، wbsItemId، invoiceNumber، invoiceImage',
+      'submit و approve هر دو با PATCH انجام می‌شوند (نه POST)',
+      'پس از approve، JE در journal entries با کد JV-YYYY-NNNNN ثبت می‌شود',
+    ],
+    onReject: [
+      'تراکنش در وضعیت REJECTED قرار می‌گیرد — موجودی تنخواه تغییری نمی‌کند',
+      'دلیل رد ثبت می‌شود',
+      'حذف نرم با DELETE /petty-cash/transactions/:id/admin',
+    ],
+  },
+  {
+    key: 'payroll',
+    title: 'دوره حقوق و دستمزد',
+    description: 'محاسبه حقوق از حضور و غیاب، تأیید و پرداخت — با ثبت سند PAYROLL_ACCRUAL',
+    icon: Calendar,
+    color: 'cyan',
+    route: '/payroll/periods',
+    steps: [
+      { actor: 'مدیر مالی', action: 'ایجاد دوره حقوق (year + month + startDate + endDate)', icon: User, color: 'slate', target: 'PayrollPeriod DRAFT' },
+      { actor: 'مدیر مالی', action: 'محاسبه از حضور و غیاب (calculate-from-attendance)', icon: ClipboardList, color: 'amber', target: 'PayrollRecord' },
+      { actor: 'مدیر مالی', action: 'تأیید دوره (PATCH /approve)', icon: CheckCircle2, color: 'emerald', target: 'APPROVED + JE' },
+      { actor: 'مدیر مالی', action: 'پرداخت (PATCH /pay)', icon: Wallet, color: 'blue', target: 'PAID' },
+    ],
+    onApprove: [
+      'مسیر: POST /api/payroll/periods { year, month, title, startDate, endDate, projectId? }',
+      'قبل از محاسبه، attendance باید ثبت شده باشد (کارت «حضور و غیاب گروهی»)',
+      'calculate-from-attendance: PATCH /api/payroll/periods/:id/calculate-from-attendance',
+      'JE PAYROLL_ACCRUAL در مرحله approve ساخته می‌شود (نه قبل)',
+      '⚠ باگ #۱۵ (جلسه ۳): JE فعلی فقط net را ثبت می‌کند — سهم بیمه کارمند دور می‌رود',
+      'گزارش مالیاتی: GET /api/tax-reports/payroll-tax?year=1405&month=3',
+      'کد دوره حقوق: توالی در جدول PayrollPeriod',
+    ],
+    onReject: [
+      'حذف DRAFT دوره با DELETE /:id (soft-delete)',
+      'اگر دوره pay شده باشد، حذف مجاز نیست',
+      'برای رفع مشکل JE حقوق، باگ #۱۵ را در اولویت قرار دهید',
+    ],
+  },
+  {
+    key: 'attendance',
+    title: 'حضور و غیاب گروهی',
+    description: 'ثبت حضور روزانه پرسنل — پایه محاسبه دوره حقوق',
+    icon: ClipboardList,
+    color: 'indigo',
+    route: '/payroll/attendance',
+    steps: [
+      { actor: 'سرپرست کارگاه', action: 'ثبت گروهی حضور (BulkAttendance)', icon: ClipboardList, color: 'indigo', target: 'attendances table' },
+      { actor: 'سیستم', action: 'ذخیره با compound unique (employeeId, attendanceDate)', icon: CheckCircle2, color: 'emerald', target: 'upsert' },
+      { actor: 'مدیر مالی', action: 'استفاده در calculate-from-attendance', icon: Wallet, color: 'blue', target: 'PayrollRecord' },
+    ],
+    onApprove: [
+      '⚠ نکته کلیدی: employeeId در attendance = Partner.id (نه EmployeeProfile.id)',
+      'مصرف‌کننده باید partnerId را از EmployeeProfile بگیرد و به‌عنوان employeeId بفرستد',
+      'مسیر: POST /api/payroll/attendance/bulk { projectId?, items: [{ employeeId, attendanceDate, status, checkIn?, checkOut?, workHours?, overtimeHours?, notes? }] }',
+      'status: PRESENT | ABSENT | LEAVE | SICK | MISSION | HOLIDAY',
+      'compound unique (employeeId, attendanceDate) — ثبت مجدد، رکورد قبلی را به‌روزرسانی می‌کند (upsert)',
+      'پچ #۱۳ (جلسه ۳) روی soft-delete.middleware این compound unique را فعال می‌کند',
+    ],
+    onReject: [
+      'تاریخ‌های آینده معمولاً مجاز نیستند',
+      'اگر کارمندی partner ندارد، ابتدا EmployeeProfile با partnerId بسازید',
+      'برای بازبینی: GET /api/payroll/attendance?employeeId=<partnerId>',
+    ],
+  },
+  {
+    key: 'adjustment',
+    title: 'تعدیل صورت‌وضعیت پیمانکار',
+    description: 'محاسبه تعدیل بر اساس شاخص‌های تعدیل (مصالح/دستمزد) و ثبت سند خودکار',
+    icon: FileCheck2,
+    color: 'amber',
+    route: '/accounting/adjustments',
+    steps: [
+      { actor: 'مدیر پروژه', action: 'ثبت شاخص تعدیل (مصالح/دستمزد) برای هر ماه', icon: ClipboardList, color: 'amber', target: 'AdjustmentIndex' },
+      { actor: 'حسابدار', action: 'محاسبه تعدیل روی صورت‌وضعیت (calculate)', icon: FileCheck2, color: 'slate', target: 'DRAFT' },
+      { actor: 'مدیر مالی', action: 'تأیید محاسبه (confirm)', icon: CheckCircle2, color: 'emerald', target: 'CONFIRMED' },
+      { actor: 'حسابدار', action: 'ثبت سند (post)', icon: FileText, color: 'blue', target: 'JE adjustment' },
+    ],
+    onApprove: [
+      'مسیر محاسبه: POST /api/adjustments/calculate { projectId, statementId?, contractId?, periodFrom, periodTo, category, baseAmount, currentYear, currentMonth }',
+      'category: MATERIALS یا LABOR (یا مشابه)',
+      'شاخص‌ها ابتدا باید در adjustment_indices ثبت شده باشند: GET/POST /adjustment-indices',
+      'JE adjustment: Dr/Cr حساب تعدیل پرداختنی و هزینه تعدیل',
+      '⚠ باگ #۱۷ (جلسه ۳): coefficient=1 پیش‌فرض است — adjusted_amount = base_amount بدون تغییر',
+      'بین confirm و post، محاسبه قابل ویرایش است',
+      'در نمونه جلسه ۳: تعدیل 300M با JE JV-1405-00115 ثبت شد',
+    ],
+    onReject: [
+      'اگر شاخص ماه مقصد ثبت نشده باشد، محاسبه رد می‌شود',
+      'اگر محاسبه confirm شده باشد، فقط با ابطال قابل تغییر است',
+      'حذف محاسبه DRAFT با DELETE /adjustments/:id',
+    ],
+  },
+  {
+    key: 'goods-issue',
+    title: 'حواله انبار (Goods Issue)',
+    description: 'خروج کالا از انبار به کارگاه — کاهش موجودی + ثبت سند GOODS_ISSUE',
+    icon: PackagePlus,
+    color: 'indigo',
+    route: '/warehouse/issues',
+    steps: [
+      { actor: 'سرپرست کارگاه', action: 'ثبت حواله (GIN-YYYY-####) با ردیف‌ها', icon: User, color: 'slate', target: 'DRAFT' },
+      { actor: 'انباردار', action: 'تأیید + ثبت نهایی', icon: CheckCircle2, color: 'amber', target: 'POSTED' },
+      { actor: 'سیستم', action: 'کاهش Stock + StockMovement + JE GOODS_ISSUE', icon: FileText, color: 'emerald', target: 'JE GOODS_ISSUE' },
+    ],
+    onApprove: [
+      'وضعیت: DRAFT → SUBMITTED → APPROVED → POSTED',
+      'JE: Dr حساب مصرف (بسته به پروژه/WBS) / Cr انبار',
+      'sourceType = GOODS_ISSUE',
+      'کاهش Stock با FIFO یا میانگین (بسته به تنظیمات)',
+      'گزارش کاردکس: GET /api/warehouse/reports/kardex?itemId=',
+      '⚠ باگ #۴ (جلسه ۳): POST /:id/post پاسخ body خالی می‌دهد (فقط status 200) — ولی JE ثبت می‌شود',
+    ],
+    onReject: [
+      'اگر حواله APPROVED نشده باشد، موجودی کاهش نمی‌یابد',
+      'پس از POSTED، ابطال فقط با سند معکوس',
+      '⚠ باگ #۵ (جلسه ۳): پیام تأیید daily-report گمراه‌کننده است',
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // ۱۱ کارت حفظ‌شده (بدون تغییر)
+  // ═══════════════════════════════════════════════════════
   {
     key: 'purchase-request',
     title: 'درخواست خرید (PR)',
@@ -101,6 +375,7 @@ const WORKFLOWS: Workflow[] = [
     onReject: [
       'PR status → REJECTED',
       'دلیل رد برای درخواست‌کننده ارسال می‌شود',
+      '⚠ باگ #۱۰ (جلسه ۳): PR حذف نمی‌شود مگر DRAFT باشد',
     ],
   },
   {
@@ -120,6 +395,11 @@ const WORKFLOWS: Workflow[] = [
       'PO به تأمین‌کننده ارسال می‌شود (status → SENT)',
       'پس از دریافت کالا، انباردار رسید ثبت می‌کند',
       'موجودی انبار خودکار افزایش می‌یابد',
+      '⚠ باگ #۱ (جلسه ۳): PO service پیش‌فرض taxPercent=10 می‌گذارد، PI کپی نمی‌کند',
+    ],
+    onReject: [
+      'حذف PO فقط در وضعیت DRAFT',
+      'پس از ثبت GRN، PO قابل ابطال نیست',
     ],
   },
   {
@@ -138,10 +418,13 @@ const WORKFLOWS: Workflow[] = [
       'رسید status → POSTED',
       'موجودی انبار افزایش می‌یابد',
       'تراکنش StockMovement ثبت می‌شود',
+      'JE GOODS_RECEIPT ساخته می‌شود',
     ],
     onReject: [
       'رسید status → CANCELLED',
       'ثبت نهایی انجام نمی‌شود',
+      '⚠ باگ #۲ (جلسه ۳): DELETE /:id/admin نیاز به reason دارد',
+      '⚠ باگ #۳ (جلسه ۳): حرکات انبار یتیم بعد از soft-delete رسید',
     ],
   },
   {
@@ -152,15 +435,17 @@ const WORKFLOWS: Workflow[] = [
     color: 'indigo',
     route: '/payroll/subcontractor-statements',
     steps: [
-      { actor: 'سرپرست کارگاه', action: 'ثبت صورت‌وضعیت', icon: User, color: 'slate', target: 'کارتابل مدیر پروژه' },
+      { actor: 'سرپرست کارگاه', action: 'ثبت صورت‌وضعیت (SS-YYYY-####) + ردیف‌های WBS', icon: User, color: 'slate', target: 'کارتابل مدیر پروژه' },
       { actor: 'مدیر پروژه', action: 'پیوست نقشه + تأیید', icon: CheckCircle2, color: 'indigo', target: 'کارتابل مدیر ارشد' },
       { actor: 'مدیر ارشد', action: 'تأیید نهایی', icon: CheckCircle2, color: 'emerald', target: 'کارتابل حسابداری' },
-      { actor: 'حسابداری', action: 'پرداخت + ثبت سند', icon: Wallet, color: 'blue' },
+      { actor: 'حسابداری', action: 'پرداخت + ثبت سند', icon: Wallet, color: 'blue', target: 'PAID' },
     ],
     onApprove: [
-      'صورت‌وضعیت در وضعیت‌های مختلف (DRAFT → SUBMITTED → APPROVED → PAID) حرکت می‌کند',
+      'وضعیت‌ها: DRAFT → SUBMITTED → APPROVED → PAID',
       'در هر مرحله، تأییدکننده می‌تواند فایل‌های پیوست اضافه کند',
       'پس از تأیید نهایی، به کارتابل حسابداری منتقل می‌شود',
+      '⚠ باگ #۱۶ (جلسه ۳): contractId به LegalContract وصل می‌شود نه ProjectContract — این فیلد را نفرستید',
+      'JE PAYROLL_ACCRUAL برای صورت‌وضعیت: Dr هزینه پیمانکاری / Cr حساب پرداختنی پیمانکار',
     ],
     onReject: [
       'صورت‌وضعیت status → REJECTED',
@@ -186,6 +471,7 @@ const WORKFLOWS: Workflow[] = [
     onReject: [
       'گزارش status → REJECTED',
       'سرپرست باید دلایل را اصلاح کند',
+      '⚠ باگ #۵ (جلسه ۳): پیام approve گمراه‌کننده است',
     ],
   },
   {
@@ -211,28 +497,6 @@ const WORKFLOWS: Workflow[] = [
     ],
   },
   {
-    key: 'journal',
-    title: 'سند حسابداری دستی',
-    description: 'ثبت سند دوبل با کنترل تراز خودکار',
-    icon: FileText,
-    color: 'emerald',
-    route: '/accounting/journals',
-    steps: [
-      { actor: 'حسابدار', action: 'ثبت سند (DRAFT)', icon: User, color: 'slate', target: 'پیش‌نویس' },
-      { actor: 'حسابدار', action: 'بازبینی + ثبت نهایی', icon: CheckCircle2, color: 'emerald', target: 'POSTED' },
-      { actor: 'مدیر مالی', action: 'ابطال (در صورت نیاز)', icon: Ban, color: 'red', target: 'سند معکوس' },
-    ],
-    onApprove: [
-      'سند DRAFT → POSTED',
-      'در گزارشات مالی لحاظ می‌شود',
-      'پس از POSTED، حذف ممکن نیست — فقط ابطال',
-    ],
-    onReject: [
-      'سند ابطال‌شده: یک سند معکوس خودکار ثبت می‌شود',
-      'دلیل ابطال در سند اصلی نمایش داده می‌شود',
-    ],
-  },
-  {
     key: 'budget-check',
     title: 'کنترل بودجه در تأیید PO',
     description: 'هنگام تأیید دستور خرید، مجموع تعهدات و واقعی با بودجه WBS مقایسه می‌شود',
@@ -253,6 +517,7 @@ const WORKFLOWS: Workflow[] = [
     ],
     onReject: [
       'اگر کاربر تأیید نکند، PO در DRAFT باقی می‌ماند',
+      '⚠ باگ #۷ (جلسه ۳): Budget vs Actual endpoint نیست',
     ],
   },
   {
@@ -294,43 +559,6 @@ const WORKFLOWS: Workflow[] = [
     ],
   },
   {
-    key: 'period-lock',
-    title: 'قفل دوره مالی',
-    description: 'جلوگیری از ثبت اسناد حسابداری در ماه‌های قفل‌شده',
-    icon: Lock,
-    color: 'orange',
-    route: '/settings/period-lock',
-    steps: [
-      { actor: 'حسابدار', action: 'قفل کردن ماه', icon: Lock, color: 'slate', target: 'ذخیره در FiscalYear.lockedMonths' },
-      { actor: 'سیستم', action: 'رد کردن سند با تاریخ ماه قفل‌شده', icon: XCircle, color: 'red' },
-      { actor: 'حسابدار', action: 'بازکردن قفل (در صورت نیاز)', icon: Lock, color: 'emerald' },
-    ],
-    onApprove: [
-      'در لحظه ثبت هر سند (JournalsService.create)، چک می‌شود',
-      'اگر ماه قفل باشد → PERIOD_LOCKED با پیام فارسی',
-      'در صفحه فاکتور/سند/صورت‌وضعیت نمایش داده می‌شود',
-    ],
-  },
-  {
-    key: 'admin-hard-delete',
-    title: 'حذف کامل توسط مدیر (Hard Delete)',
-    description: 'امکان حذف کامل برای admin روی همه‌ی موجودیت‌های main',
-    icon: Trash2,
-    color: 'red',
-    route: '/recycle-bin',
-    steps: [
-      { actor: 'کاربر', action: 'کلیک حذف روی رکورد', icon: Trash2, color: 'slate', target: 'مودال اول' },
-      { actor: 'سیستم', action: 'چک ارجاع‌ها', icon: ClipboardList, color: 'amber', target: 'مودال دوم (admin)' },
-      { actor: 'مدیر', action: 'تأیید حذف کامل', icon: CheckCircle2, color: 'red', target: 'پاک‌سازی' },
-    ],
-    onApprove: [
-      'اگر رکورد ارجاعی نداشته باشد → پاک می‌شود',
-      'اگر داشته باشد → حالت پیش‌فرض soft delete (غیرفعال) با پیام هشدار',
-      'اگر admin تأیید کند → تمام ارجاع‌ها حذف و رکورد اصلی پاک می‌شود',
-      'موجودیت‌های پشتیبانی: اسناد، اشخاص، پروژه، قرارداد، کالا، انبار، دسته، ماشین، مشتری، قرارداد فروش، چک، مجوز، بیمه، تضمین، سند فنی، چک‌لیست، پرسنل',
-    ],
-  },
-  {
     key: 'telegram-alerts',
     title: 'هشدار تلگرام در مانیتورینگ',
     description: 'ارسال پیام تلگرام در صورت خطا یا restart سرویس‌ها',
@@ -341,7 +569,7 @@ const WORKFLOWS: Workflow[] = [
       { actor: 'سیستم', action: 'در صورت ERROR/WARN/RESTART → تلگرام', icon: Send, color: 'amber' },
     ],
     onApprove: [
-      'تنظیمات در E:\EpsayAccounting\tools\telegram.config.json',
+      'تنظیمات در E:\\EpsayAccounting\\tools\\telegram.config.json',
       'levels: ERROR, WARN, RESTART',
       'rateLimitSeconds: فاصله حداقل بین پیام‌های هم‌سطح',
       'در هر پیام: نام کامپیوتر + سطح + متن خطا',
@@ -364,7 +592,8 @@ const WORKFLOWS: Workflow[] = [
       'واحدهای کاربری اگر در اسناد استفاده نشده باشند قابل حذف هستند',
       'کش در useUnits مشترک است — یک بار از API خوانده می‌شود',
     ],
-  },];
+  },
+];
 
 const COLOR_MAP: Record<string, { bg: string; text: string; border: string; gradient: string }> = {
   emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', gradient: 'from-emerald-500 to-emerald-700' },
@@ -384,7 +613,6 @@ export default function WorkflowsGuidePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* هدر */}
       <div className="flex items-center justify-between flex-wrap gap-4 no-print">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -398,7 +626,6 @@ export default function WorkflowsGuidePage() {
         <PrintButton contentRef={printRef} documentTitle="راهنمای گردش کارها" />
       </div>
 
-      {/* اطلاعات کلی */}
       <div ref={printRef} className="space-y-6">
         <PrintHeader title="راهنمای گردش کارها" subtitle="Epsay Accounting — نقشه فرایندها" />
 
@@ -412,18 +639,17 @@ export default function WorkflowsGuidePage() {
               <p className="text-sm text-blue-700 leading-6">
                 برای هر سند، مراحل گردش کار، اقدامات پس از تأیید و اقدامات پس از رد نمایش داده شده است.
                 برای رفتن به صفحه هر سند، روی دکمه «مشاهده» کلیک کنید.
+                موارد علامت‌گذاری‌شده با ⚠ باگ شناخته‌شده یا نکته مهم است.
               </p>
             </div>
           </div>
         </div>
 
-        {/* راهنمای همه گردش‌ها */}
         {WORKFLOWS.map((wf) => {
           const Icon = wf.icon;
           const colors = COLOR_MAP[wf.color] || COLOR_MAP.slate;
           return (
             <div key={wf.key} className="card overflow-hidden">
-              {/* هدر سند */}
               <div className={clsx('p-5 border-b', colors.bg, colors.border)}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex items-start gap-3">
@@ -447,7 +673,6 @@ export default function WorkflowsGuidePage() {
                 </div>
               </div>
 
-              {/* مراحل */}
               <div className="p-5">
                 <h3 className="text-xs font-bold text-slate-500 uppercase mb-3">مراحل گردش کار</h3>
                 <div className="space-y-2">
@@ -487,13 +712,12 @@ export default function WorkflowsGuidePage() {
                   })}
                 </div>
 
-                {/* نتایج تأیید/رد */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-5 border-t">
                   {wf.onApprove && wf.onApprove.length > 0 && (
                     <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span className="text-xs font-bold text-emerald-800">پس از تأیید</span>
+                        <span className="text-xs font-bold text-emerald-800">نکات و پس از تأیید</span>
                       </div>
                       <ul className="space-y-1">
                         {wf.onApprove.map((item, i) => (
@@ -510,7 +734,7 @@ export default function WorkflowsGuidePage() {
                     <div className="p-3 bg-red-50 rounded-lg border border-red-200">
                       <div className="flex items-center gap-2 mb-2">
                         <XCircle className="w-4 h-4 text-red-600" />
-                        <span className="text-xs font-bold text-red-800">پس از رد</span>
+                        <span className="text-xs font-bold text-red-800">محدودیت‌ها و پس از رد</span>
                       </div>
                       <ul className="space-y-1">
                         {wf.onReject.map((item, i) => (
@@ -528,11 +752,10 @@ export default function WorkflowsGuidePage() {
           );
         })}
 
-        {/* پانویس */}
         <div className="card p-4 bg-slate-50 text-center">
           <p className="text-xs text-slate-500">
             این راهنما برای درک بهتر گردش کارهای سیستم ساخته شده است.
-            برای اطلاعات دقیق‌تر درباره هر سند، به راهنمای همان صفحه مراجعه کنید (آیکون ؟ در هدر).
+            موارد ⚠ باگ‌های شناخته‌شده‌ای هستند که در جلسه ۴ کشف شدند.
           </p>
         </div>
       </div>

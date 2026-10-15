@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { RequirePermission } from '@/components/RequirePermission';
 import { getRoutePermission } from '@/config/route-permissions';
 const ExecutiveDashboardPage = lazy(() => import('@/modules/dashboard/pages/ExecutiveDashboardPage'));
+const HomePage = lazy(() => import('@/modules/home/pages/HomePage'));
 
 // ─── Lazy-loaded pages ─────────────────────────────────────
 const CapitalAccountsPage = lazy(() => import('@/modules/partner-capital/pages/CapitalAccountsPage'));
@@ -211,7 +212,8 @@ export default function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route element={<PermissionGuard />}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/dashboard" element={<ExecutiveDashboardPage />} />
         <Route path="/reports" element={<ReportsHubPage />} />
         <Route path="/reports/project" element={<ProjectReportsPickerPage />} />
@@ -448,7 +450,7 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
     </Suspense>
   );

@@ -11,6 +11,7 @@ import { CONTRACT_TYPE_LABELS, CONTRACT_STATUS_LABELS } from '@/types/project';
 import { formatNumber, toPersianDigits, formatJalaliDate } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: 'bg-emerald-50 text-emerald-700',
@@ -81,10 +82,7 @@ export default function ContractsTab() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="font-bold text-slate-800">قراردادهای این پروژه</h2>
         <div className="flex items-center gap-2">
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" />
-            چاپ لیست
-          </button>
+          <PagePrintButton documentTitle="قراردادهای پروژه" />
           <button
             onClick={() => navigate('/projects/' + project.id + '/contracts/new')}
             className="btn-primary"

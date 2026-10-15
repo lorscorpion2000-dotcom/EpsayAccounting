@@ -10,6 +10,7 @@ import {
 import { formatNumber, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
+import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function ProjectsListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,10 +119,7 @@ export default function ProjectsListPage() {
             ))}
           </select>
 
-          <button className="btn-secondary" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" />
-            چاپ
-          </button>
+          <PagePrintButton documentTitle="پروژه‌ها" />
           <button className="btn-secondary" onClick={loadData}>
             <FileSpreadsheet className="w-4 h-4" />
             به‌روزرسانی

@@ -52,16 +52,16 @@ interface PendingData {
 
 // نقشه: هر تب برای کدام نقش‌ها نمایش داده شود
 const TAB_ROLES: Record<string, string[]> = {
-  all: ['admin'],
-  pettyCashTransactions: ['admin', 'accountant', 'approver'],
-  pettyCashRequests: ['admin', 'accountant', 'approver'],
-  purchaseRequests: ['admin', 'purchaser', 'site_supervisor', 'approver'],
-  purchaseOrders: ['admin', 'purchaser', 'approver'],
-  dailyReports: ['admin', 'site_supervisor', 'project_manager', 'approver'],
-  goodsReceipts: ['admin', 'accountant', 'purchaser', 'warehouse_keeper', 'approver'],
-  subcontractorStatements: ['admin', 'project_manager', 'accountant', 'approver'],
-  leaveRequests: ['admin', 'hr', 'approver'],
-  advanceRequests: ['admin', 'hr', 'accountant', 'approver'],
+  all: ['super_admin'],
+  pettyCashTransactions: ['super_admin', 'accountant', 'financial_manager'],
+  pettyCashRequests: ['super_admin', 'accountant', 'financial_manager'],
+  purchaseRequests: ['super_admin', 'procurement_officer', 'project_manager'],
+  purchaseOrders: ['super_admin', 'procurement_officer', 'project_manager'],
+  dailyReports: ['super_admin', 'project_manager'],
+  goodsReceipts: ['super_admin', 'accountant', 'procurement_officer', 'warehouse_keeper'],
+  subcontractorStatements: ['super_admin', 'project_manager', 'accountant', 'financial_manager'],
+  leaveRequests: ['super_admin', 'project_manager'],
+  advanceRequests: ['super_admin', 'accountant', 'financial_manager'],
 };
 
 function canSeeTab(tab: string, roles: string[]): boolean {
@@ -148,27 +148,12 @@ export default function ApprovalsPage() {
       .filter(([k]) => k !== 'all' && canSeeTab(k, roles))
       .map(([k]) => k);
 
-    if (!availableTabs.includes(tab) && availableTabs.length > 0) {
-      setTab(availableTabs[0] as Tab);
-    }
-  }, [user]);
-
-  // انتخاب خودکار تب بر اساس نقش کاربر
-  useEffect(() => {
-    if (!user) return;
-    const roles = (user.roles || []) as string[];
-    if (roles.includes('admin') || roles.includes('super_admin')) return; // admin می‌تواند تب را دستی انتخاب کند
-
-    const availableTabs = Object.entries(TAB_ROLES)
-      .filter(([k]) => k !== 'all' && canSeeTab(k, roles))
-      .map(([k]) => k);
-
-    // اگر تب فعلی در دسترس نیست، اولین تب مجاز انتخاب شود
     if (!availableTabs.includes(tab)) {
       if (availableTabs.length > 0) {
         setTab(availableTabs[0] as Tab);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const allItems: PendingApproval[] = [
