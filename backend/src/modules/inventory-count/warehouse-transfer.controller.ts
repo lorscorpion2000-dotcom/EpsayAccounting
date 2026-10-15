@@ -1,4 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import {
@@ -12,7 +15,10 @@ import { WarehouseTransferStatus } from '@prisma/client';
 @ApiBearerAuth()
 @Controller('warehouse-transfers')
 export class WarehouseTransferController {
-  constructor(private service: WarehouseTransferService) {}
+  constructor(
+    private service: WarehouseTransferService,
+    private softDelete: SoftDeleteService,
+  ) {}
 
   @Get()
   @RequirePermissions('warehouse-transfer.read')
@@ -59,5 +65,42 @@ export class WarehouseTransferController {
 
   @Delete(':id')
   @RequirePermissions('warehouse-transfer.manage')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) { return this.service.remove(id, userId); }
+
+  // Admin Delete / Restore
+  @Delete(':id/admin')
+  @RequirePermissions('warehouse-transfer.manage')
+  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+    return this.softDelete.adminDelete({
+      model: 'warehouseTransfer',
+      id,
+      user: req.user || {},
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('warehouse-transfer.manage')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    return this.softDelete.restore({
+      model: 'warehouseTransfer',
+      id,
+      user: req.user || {},
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('warehouse-transfer.manage')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'warehouseTransfer',
+      take: take ?? 100,
+      skip: skip ?? 0,
+    });
+  }
 }

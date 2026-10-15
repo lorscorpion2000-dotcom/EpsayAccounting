@@ -27,7 +27,7 @@ export class WarehouseTransferService {
   }
 
   async list(query?: { fromWarehouseId?: string; toWarehouseId?: string; status?: string; projectId?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.fromWarehouseId) where.fromWarehouseId = query.fromWarehouseId;
     if (query?.toWarehouseId) where.toWarehouseId = query.toWarehouseId;
     if (query?.status) where.status = query.status;
@@ -44,8 +44,8 @@ export class WarehouseTransferService {
   }
 
   async get(id: string) {
-    const t = await this.prisma.warehouseTransfer.findUnique({
-      where: { id },
+    const t = await this.prisma.warehouseTransfer.findFirst({
+      where: { id, deletedAt: null },
       include: {
         fromWarehouse: true,
         toWarehouse: true,
@@ -259,12 +259,15 @@ export class WarehouseTransferService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const t = await this.get(id);
     if (t.status !== 'DRAFT' && t.status !== 'CANCELLED') {
       throw new BadRequestException('فقط پیش‌نویس یا لغو‌شده قابل حذف است');
     }
-    await this.prisma.warehouseTransfer.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.warehouseTransfer.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 }

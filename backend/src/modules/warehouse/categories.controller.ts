@@ -48,7 +48,7 @@ export class CategoriesController {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
-    return this.s.remove(id, { force: wantForce && isAdmin });
+    return this.s.remove(id, { force: wantForce && isAdmin, userId: user?.id });
   }
 
   // ═══════════════════════════════════════════════════════

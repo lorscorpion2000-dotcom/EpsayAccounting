@@ -1,14 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;;;
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';;;;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { SoftDeleteService } from '../../common/services/soft-delete.service';
-import { ReasonDto } from '../../common/dto';
-import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
-
 @ApiTags('Warehouses - انبارها')
 @ApiBearerAuth()
 @Controller('warehouses')
@@ -49,7 +48,7 @@ export class WarehousesController {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
-    return this.s.remove(id, { force: wantForce && isAdmin });
+    return this.s.remove(id, { force: wantForce && isAdmin, userId: user?.id });
   }
 
   // ═══════════════════════════════════════════════════════

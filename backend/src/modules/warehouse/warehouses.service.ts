@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
@@ -14,7 +14,7 @@ export class WarehousesService {
   }
 
   async findAll(query?: { active?: boolean; projectId?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.active !== undefined) where.isActive = query.active;
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.warehouse.findMany({
@@ -25,8 +25,8 @@ export class WarehousesService {
   }
 
   async findOne(id: string) {
-    const wh = await this.prisma.warehouse.findUnique({
-      where: { id },
+    const wh = await this.prisma.warehouse.findFirst({
+      where: { id, deletedAt: null },
       include: { _count: { select: { stocks: true, receipts: true, issues: true } } },
     });
     if (!wh) throw new NotFoundException('انبار یافت نشد');
@@ -65,47 +65,18 @@ export class WarehousesService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
-    await this.findOne(id);
-    const force = options?.force === true;
+  async remove(id: string, options?: { force?: boolean; userId?: string }) {
+        const force = options?.force === true;
+    const refs = await this.prisma.stock.count({ where: { warehouseId: id } });
 
-    const stockCount = await this.prisma.stock.count({
-      where: { warehouseId: id, quantity: { gt: 0 } },
-    });
-
-    if (!force) {
-      if (stockCount > 0) {
-        throw new BadRequestException('انبار دارای موجودی است و قابل حذف نیست — از حالت مدیر برای حذف کامل استفاده کنید');
-      }
-      await this.prisma.warehouse.update({ where: { id }, data: { isActive: false } });
+    if (!force || refs > 0) {
+      await this.prisma.warehouse.update({
+        where: { id },
+        data: { deletedAt: new Date(), deletedBy: options?.userId ?? null },
+      });
       return { success: true, softDeleted: true };
     }
-
-    // force (admin)
-    const refs = await this.countReferences(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
-
-    // force بدون تأیید اضافه: چون admin خودش انتخاب کرده
-    await this.prisma.$transaction(async (tx) => {
-      await tx.stock.deleteMany({ where: { warehouseId: id } });
-      await tx.stockMovement.deleteMany({ where: { warehouseId: id } });
-      await tx.warehouse.delete({ where: { id } });
-    });
-
-    return { success: true, hardDeleted: true, refs, total };
-  }
-
-  private async countReferences(id: string) {
-    const p = this.prisma;
-    const [stocks, movements, receipts, issues, inventoryCounts, transfersFrom, transfersTo] = await Promise.all([
-      p.stock.count({ where: { warehouseId: id } }),
-      p.stockMovement.count({ where: { warehouseId: id } }),
-      p.goodsReceipt.count({ where: { warehouseId: id } }),
-      p.goodsIssue.count({ where: { warehouseId: id } }),
-      p.inventoryCount.count({ where: { warehouseId: id } }).catch(() => 0),
-      p.warehouseTransfer.count({ where: { fromWarehouseId: id } }).catch(() => 0),
-      p.warehouseTransfer.count({ where: { toWarehouseId: id } }).catch(() => 0),
-    ]);
-    return { stocks, movements, receipts, issues, inventoryCounts, transfersFrom, transfersTo };
+    await this.prisma.warehouse.delete({ where: { id } });
+    return { success: true, hardDeleted: true };
   }
 }

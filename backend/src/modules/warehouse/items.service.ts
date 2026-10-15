@@ -15,6 +15,7 @@ export class ItemsService {
 
   async findAll(query?: { type?: string; categoryId?: string; search?: string; active?: boolean }) {
     const where: any = {};
+    where.deletedAt = null;
     if (query?.type) where.type = query.type;
     if (query?.categoryId) where.categoryId = query.categoryId;
     if (query?.active !== undefined) where.isActive = query.active;
@@ -52,8 +53,8 @@ export class ItemsService {
   }
 
   async findOne(id: string) {
-    const item = await this.prisma.item.findUnique({
-      where: { id },
+    const item = await this.prisma.item.findFirst({
+      where: { id, deletedAt: null },
       include: {
         category: true,
         stocks: { include: { warehouse: true } },
@@ -101,7 +102,7 @@ export class ItemsService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, options?: { force?: boolean; userId?: string }) {
     await this.findOne(id);
     const force = options?.force === true;
 
@@ -133,10 +134,13 @@ export class ItemsService {
       return { success: true, hardDeleted: true, refs: totalRefs };
     }
 
-    await this.prisma.item.update({ where: { id }, data: { isActive: false } });
+    await this.prisma.item.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: options?.userId ?? null },
+    });
     return {
       success: true,
-      message: 'کالا غیرفعال شد (دارای وابستگی: ' + totalRefs + ' مورد)',
+      message: 'کالا به سطل زباله منتقل شد (وابستگی: ' + totalRefs + ' مورد)',
       refs: { moves, receipts, issues, stocks, invCounts, transfers },
     };
   }

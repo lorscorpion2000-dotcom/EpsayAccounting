@@ -26,6 +26,7 @@ export class InventoryCountService {
 
   async list(query?: { warehouseId?: string; status?: string; fromDate?: string; toDate?: string }) {
     const where: any = {};
+    where.deletedAt = null;
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
     if (query?.status) where.status = query.status;
     if (query?.fromDate || query?.toDate) {
@@ -44,8 +45,8 @@ export class InventoryCountService {
   }
 
   async get(id: string) {
-    const c = await this.prisma.inventoryCount.findUnique({
-      where: { id },
+    const c = await this.prisma.inventoryCount.findFirst({
+      where: { id, deletedAt: null },
       include: {
         warehouse: true,
         items: {
@@ -247,10 +248,13 @@ export class InventoryCountService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const c = await this.get(id);
     if (c.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
-    await this.prisma.inventoryCount.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.inventoryCount.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 }

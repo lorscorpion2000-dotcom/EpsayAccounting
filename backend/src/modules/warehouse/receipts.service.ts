@@ -98,6 +98,7 @@ export class ReceiptsService {
 
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
     const where: Prisma.GoodsReceiptWhereInput = {};
+    where.deletedAt = null;
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.status) where.status = query.status as ReceiptStatus;
@@ -114,8 +115,8 @@ export class ReceiptsService {
   }
 
   async findOne(id: string) {
-    const r = await this.prisma.goodsReceipt.findUnique({
-      where: { id },
+    const r = await this.prisma.goodsReceipt.findFirst({
+      where: { id, deletedAt: null },
       include: {
         warehouse: true,
         project: { select: { id: true, code: true, name: true } },
@@ -311,11 +312,14 @@ export class ReceiptsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const r = await this.findOne(id);
     if (r.status !== 'DRAFT') throw new BadRequestException('فقط رسید پیش‌نویس قابل حذف است');
-    await this.prisma.goodsReceipt.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.goodsReceipt.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async submit(id: string) {

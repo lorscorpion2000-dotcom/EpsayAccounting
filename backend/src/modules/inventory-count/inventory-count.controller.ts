@@ -1,4 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';
+import { Req } from '@nestjs/common';
+import { SoftDeleteService } from '../../common/services/soft-delete.service';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';;
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { InventoryCountService } from './inventory-count.service';
 import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
@@ -10,7 +14,10 @@ import { InventoryCountStatus } from '@prisma/client';
 @ApiBearerAuth()
 @Controller('inventory-counts')
 export class InventoryCountController {
-  constructor(private service: InventoryCountService) {}
+  constructor(
+    private service: InventoryCountService,
+    private softDelete: SoftDeleteService,
+  ) {}
 
   @Get()
   @RequirePermissions('inventory-count.read')
@@ -59,5 +66,43 @@ export class InventoryCountController {
 
   @Delete(':id')
   @RequirePermissions('inventory-count.manage')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.remove(id, userId);
+  }
+
+  @Delete(':id/admin')
+  @RequirePermissions('inventory-count.manage')
+  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+    return this.softDelete.adminDelete({
+      model: 'inventoryCount',
+      id,
+      user: req.user || {},
+      reason: body?.reason || '',
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('inventory-count.manage')
+  async restore(@Param('id') id: string, @Req() req: any) {
+    return this.softDelete.restore({
+      model: 'inventoryCount',
+      id,
+      user: req.user || {},
+      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+    });
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('inventory-count.manage')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.softDelete.listDeleted({
+      model: 'inventoryCount',
+      take: take ?? 100,
+      skip: skip ?? 0,
+    });
+  }
 }

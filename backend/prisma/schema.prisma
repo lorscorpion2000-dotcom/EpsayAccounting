@@ -3930,6 +3930,12 @@ model InventoryCount {
   @@index([warehouseId])
   @@index([status])
   @@map("inventory_counts")
+  deletedAt     DateTime?
+  deletedBy     String?
+  deletedReason String?
+
+  @@index([deletedAt])
+  @@index([deletedBy])
 }
 
 model InventoryCountItem {
@@ -3978,6 +3984,12 @@ model WarehouseTransfer {
   @@index([toWarehouseId])
   @@index([status])
   @@map("warehouse_transfers")
+  deletedAt     DateTime?
+  deletedBy     String?
+  deletedReason String?
+
+  @@index([deletedAt])
+  @@index([deletedBy])
 }
 
 model WarehouseTransferItem {

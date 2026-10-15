@@ -14,6 +14,7 @@ export class CategoriesService {
 
   async findAll() {
     return this.prisma.itemCategory.findMany({
+      where: { deletedAt: null },
       include: { _count: { select: { items: true, children: true } } },
       orderBy: { name: 'asc' },
     });
@@ -21,6 +22,7 @@ export class CategoriesService {
 
   async findTree() {
     const cats = await this.prisma.itemCategory.findMany({
+      where: { deletedAt: null },
       include: { _count: { select: { items: true } } },
     });
     const map = new Map<string, any>();
@@ -36,8 +38,8 @@ export class CategoriesService {
   }
 
   async findOne(id: string) {
-    const cat = await this.prisma.itemCategory.findUnique({
-      where: { id },
+    const cat = await this.prisma.itemCategory.findFirst({
+      where: { id, deletedAt: null },
       include: { parent: true, children: true },
     });
     if (!cat) throw new NotFoundException('دسته یافت نشد');
@@ -70,33 +72,33 @@ export class CategoriesService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, options?: { force?: boolean; userId?: string }) {
     const cat = await this.findOne(id);
     const force = options?.force === true;
 
     if (!force) {
-      if (cat.children.length > 0) throw new BadRequestException('ابتدا زیردستهها را حذف کنید');
+      if (cat.children.length > 0) throw new BadRequestException('ابتدا زیردسته‌ها را حذف کنید');
       const itemsCount = await this.prisma.item.count({ where: { categoryId: id } });
       if (itemsCount > 0) throw new BadRequestException('این دسته دارای کالا است');
-      await this.prisma.itemCategory.delete({ where: { id } });
-      return { success: true, hardDeleted: true };
+      await this.prisma.itemCategory.update({
+        where: { id },
+        data: { deletedAt: new Date(), deletedBy: options?.userId ?? null },
+      });
+      return { success: true, softDeleted: true };
     }
 
-    // force: بررسی ارجاعها
     const items = await this.prisma.item.count({ where: { categoryId: id } });
     const children = await this.prisma.itemCategory.count({ where: { parentId: id } });
-
     if (items > 0 || children > 0) {
       const parts: string[] = [];
       if (children > 0) parts.push('زیردسته: ' + children);
       if (items > 0) parts.push('کالا: ' + items);
       throw new BadRequestException({
         code: 'CATEGORY_HAS_REFS',
-        message: 'این دسته در موارد زیر استفاده شده است. ابتدا آنها را پاک کنید یا از حالت غیرفعال استفاده کنید:\n  - ' + parts.join('\n  - '),
+        message: 'این دسته در موارد زیر استفاده شده است.\n  - ' + parts.join('\n  - '),
         refs: { children, items }, total: children + items,
       });
     }
-
     await this.prisma.itemCategory.delete({ where: { id } });
     return { success: true, hardDeleted: true };
   }

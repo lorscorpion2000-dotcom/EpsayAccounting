@@ -21,6 +21,7 @@ export class IssuesService {
 
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
     const where: any = {};
+    where.deletedAt = null;
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.status) where.status = query.status;
@@ -37,8 +38,8 @@ export class IssuesService {
   }
 
   async findOne(id: string) {
-    const r = await this.prisma.goodsIssue.findUnique({
-      where: { id },
+    const r = await this.prisma.goodsIssue.findFirst({
+      where: { id, deletedAt: null },
       include: {
         warehouse: true,
         project: { select: { id: true, code: true, name: true } },
@@ -147,11 +148,14 @@ export class IssuesService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const r = await this.findOne(id);
     if (r.status !== 'DRAFT') throw new BadRequestException('فقط حواله پیش‌نویس قابل حذف است');
-    await this.prisma.goodsIssue.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.goodsIssue.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async submit(id: string) {
