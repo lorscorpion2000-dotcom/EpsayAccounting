@@ -74,7 +74,7 @@ export class ClientStatementCrudService {
   }
 
   async list(query?: { projectId?: string; status?: string; search?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.status) where.status = query.status;
     if (query?.search) {
@@ -226,11 +226,61 @@ export class ClientStatementCrudService {
     return this.get(id);
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const s = await this.get(id);
     if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
-    await this.prisma.clientStatement.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.clientStatement.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.clientStatement.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
+    if (!existing.deletedAt) throw new Error('صورت‌وضعیت حذف نشده است');
+    await this.prisma.clientStatement.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.clientStatement.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
+    if (existing.status !== 'DRAFT') {
+      throw new Error('فقط پیش‌نویس قابل حذف قطعی است — چون تاییدشده سند حسابداری دارد');
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.clientStatementItem.deleteMany({ where: { statementId: id } });
+      await tx.clientStatement.delete({ where: { id } });
+    });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.clientStatement.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.clientStatement.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
   async stats(projectId?: string) {

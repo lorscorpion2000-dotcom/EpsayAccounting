@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SubcontractorStatementsService } from './subcontractor-statements.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { StatementStatus } from '@prisma/client';
 
 @ApiTags('Subcontractor Statements - صورت‌وضعیت پیمانکاران')
@@ -56,15 +58,32 @@ export class SubcontractorStatementsController {
 
   @Delete(':id')
   @RequirePermissions('payroll.delete')
-  remove(
-    @Param('id') id: string,
-    @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.s.remove(id, userId);
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('payroll.update')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
   ) {
-    const roles = (user?.roles || []) as string[];
-    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
-    const wantForce = force === 'true' || force === '1';
-    return this.s.remove(id, { force: wantForce && isAdmin });
+    return this.s.listDeleted(take ?? 100, skip ?? 0);
+  }
+
+  @Delete(':id/admin')
+  @RequirePermissions('payroll.update')
+  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+    return this.s.adminDelete(id, req.user?.id, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers?.['user-agent'],
+    });
+  }
+
+  @Patch(':id/restore')
+  @RequirePermissions('payroll.update')
+  restore(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.s.restore(id, userId);
   }
 
   @Patch(':id/submit')

@@ -30,7 +30,12 @@ export class ClientStatementService {
   get(id: string) { return this.crud.get(id); }
   create(dto: CreateCSDto) { return this.crud.create(dto); }
   update(id: string, dto: UpdateCSDto) { return this.crud.update(id, dto); }
-  remove(id: string) { return this.crud.remove(id); }
+  remove(id: string, userId?: string) { return this.crud.remove(id, userId); }
+  restore(id: string, userId?: string) { return this.crud.restore(id, userId); }
+  adminDelete(id: string, userId?: string, reason?: string, meta?: any) {
+    return this.crud.adminDelete(id, userId, reason, meta);
+  }
+  listDeleted(take = 100, skip = 0) { return this.crud.listDeleted(take, skip); }
   stats(projectId?: string) { return this.crud.stats(projectId); }
   nextStatementNumber(projectId: string) { return this.crud.nextStatementNumber(projectId); }
 

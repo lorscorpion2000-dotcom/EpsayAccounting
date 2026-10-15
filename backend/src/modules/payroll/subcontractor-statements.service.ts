@@ -19,7 +19,7 @@ export class SubcontractorStatementsService {
   }
 
   async findAll(query?: { projectId?: string; contractorId?: string; status?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.contractorId) where.contractorId = query.contractorId;
     if (query?.status) where.status = query.status;
@@ -188,42 +188,63 @@ export class SubcontractorStatementsService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, userId?: string) {
     const s = await this.findOne(id);
-    const force = options?.force === true;
-
-    const isDraftOrSubmitted = s.status === 'DRAFT' || s.status === 'SUBMITTED';
-
-    if (!isDraftOrSubmitted && !force) {
-      throw new BadRequestException('فقط پیشنویس یا ارسالشده قابل حذف است. برای حذف صورتوضعیت تاییدشده نیاز به دسترسی مدیر دارید.');
+    if (s.status !== 'DRAFT') {
+      throw new BadRequestException('فقط پیش‌نویس قابل حذف است — برای تاییدشده از «حذف توسط مدیر» استفاده کنید');
     }
+    await this.prisma.subcontractorStatement.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
 
-    if (isDraftOrSubmitted) {
-      // حذف مستقیم
-      await this.prisma.$transaction(async (tx) => {
-        await tx.subcontractorStatementItem.deleteMany({ where: { statementId: id } });
-        await tx.subcontractorStatement.delete({ where: { id } });
-      });
-      return { success: true, hardDeleted: true };
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.subcontractorStatement.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
+    if (!existing.deletedAt) throw new Error('صورت‌وضعیت حذف نشده است');
+    await this.prisma.subcontractorStatement.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.subcontractorStatement.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
+    if (existing.status !== 'DRAFT') {
+      throw new Error('فقط پیش‌نویس قابل حذف قطعی است — چون تاییدشده سند حسابداری دارد');
     }
-
-    // force (admin) — برای APPROVED/PAID
-    // 1) ابطال سند JE اگر وجود داشته
-    const jeId = (s as any).journalEntryId || (s as any).approvedJournalEntryId;
-    if (jeId) {
-      await this.prisma.journalEntry.update({
-        where: { id: jeId },
-        data: { deletedAt: new Date() } as any,
-      }).catch(() => {});
-    }
-
-    // 2) حذف اجزا + صورتوضعیت
     await this.prisma.$transaction(async (tx) => {
       await tx.subcontractorStatementItem.deleteMany({ where: { statementId: id } });
       await tx.subcontractorStatement.delete({ where: { id } });
     });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
 
-    return { success: true, hardDeleted: true, journalEntryInvalidated: !!jeId };
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.subcontractorStatement.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.subcontractorStatement.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
   async submit(id: string) {

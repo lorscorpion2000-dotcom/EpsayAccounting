@@ -2306,6 +2306,9 @@ model SubcontractorStatement {
 
   items SubcontractorStatementItem[]
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@unique([projectId, contractorId, statementNumber])
   @@index([status])
   @@map("subcontractor_statements")
@@ -3760,6 +3763,9 @@ model ClientStatement {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   items ClientStatementItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([projectId, statementNumber])
   @@index([projectId])

@@ -23,7 +23,7 @@ export class WorkerStatementsService {
   }
 
   async findAll(query?: { projectId?: string; partnerId?: string; status?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.partnerId) where.partnerId = query.partnerId;
     if (query?.status) where.status = query.status;
@@ -326,11 +326,14 @@ export class WorkerStatementsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const s = await this.findOne(id);
     if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
-    await this.prisma.workerStatement.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.workerStatement.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async submit(id: string) {
