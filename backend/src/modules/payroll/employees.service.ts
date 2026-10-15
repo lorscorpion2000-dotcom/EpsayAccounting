@@ -231,19 +231,20 @@ export class EmployeesService {
     });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, options?: { force?: boolean; userId?: string }) {
     await this.findOne(id);
     const force = options?.force === true;
+    const userId = options?.userId;
 
     if (!force) {
-      const records = await this.prisma.payrollRecord.count({ where: { employeeProfileId: id } });
-      if (records > 0) {
-        throw new BadRequestException('این پرسنل دارای سابقه حقوق است — از حالت مدیر برای حذف کامل استفاده کنید');
-      }
-      // soft: غیرفعال
+      // soft-delete: انتقال به سطل زباله + غیرفعال‌سازی
       await this.prisma.employeeProfile.update({
         where: { id },
-        data: { isActive: false },
+        data: {
+          isActive: false,
+          deletedAt: new Date(),
+          deletedBy: userId ?? null,
+        },
       });
       return { success: true, softDeleted: true };
     }

@@ -46,7 +46,9 @@ export class PayrollPeriodsController {
 
   @Delete(':id')
   @RequirePermissions('payroll.delete')
-  remove(@Param('id') id: string) { return this.s.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.s.remove(id, userId);
+  }
 
   @Patch(':id/calculate')
   @RequirePermissions('payroll.update')

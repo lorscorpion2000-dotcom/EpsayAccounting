@@ -15,7 +15,7 @@ export class PayrollPeriodsService {
   }
 
   async findAll(query?: { year?: number; status?: string; projectId?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.year) where.year = query.year;
     if (query?.status) where.status = query.status;
     if (query?.projectId) where.projectId = query.projectId;
@@ -68,11 +68,14 @@ export class PayrollPeriodsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const p = await this.findOne(id);
     if (p.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
-    await this.prisma.payrollPeriod.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.payrollPeriod.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 
   async approve(id: string, userId?: string) {
