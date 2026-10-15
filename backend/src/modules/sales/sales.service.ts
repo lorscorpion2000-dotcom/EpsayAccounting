@@ -172,7 +172,7 @@ export class SalesService {
 
     if (!force) {
       return this.prisma.$transaction(async (tx: any) => {
-        await tx.salesCustomer.update({ where: { id }, data: { isActive: false } });
+        await tx.salesCustomer.update({ where: { id }, data: { isActive: false, deletedAt: new Date() } as any });
         const acc = await tx.account.findFirst({ where: { detailType: 'CUSTOMER', detailId: id } });
         if (acc) await tx.account.update({ where: { id: acc.id }, data: { isActive: false } });
         return { success: true, softDeleted: true };
@@ -347,9 +347,11 @@ export class SalesService {
       }
       return this.prisma.$transaction(async (tx) => {
         await tx.salesUnit.update({ where: { id: c.unitId }, data: { status: 'AVAILABLE' } });
-        await tx.salesInstallment.deleteMany({ where: { contractId: id } });
-        await tx.salesContract.delete({ where: { id } });
-        return { success: true, hardDeleted: true };
+        await tx.salesContract.update({
+          where: { id },
+          data: { deletedAt: new Date() } as any,
+        });
+        return { success: true, softDeleted: true };
       });
     }
 

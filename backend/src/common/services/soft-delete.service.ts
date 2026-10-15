@@ -52,7 +52,7 @@ export class SoftDeleteService {
    * حذف دائمی (hard delete) توسط مدیر — کاملاً از دیتابیس حذف می‌شود.
    * اگر رکورد در جای دیگری ارجاع داشته باشد، لیست وابستگی‌ها نمایش داده می‌شود.
    */
-  async adminDelete(params: {
+  async adminHardDelete(params: {
     model: string;
     id: string;
     user: AdminUser;
@@ -62,7 +62,7 @@ export class SoftDeleteService {
     const reason = this.validateReason(params.reason);
     const client = this.getClient(params.model);
 
-    const existing = await client.findUnique({ where: { id: params.id } });
+    const existing = await client.findUnique({ where: { id: params.id }, __withDeleted: true });
     if (!existing) throw new NotFoundException('رکورد یافت نشد');
 
     // تلاش برای حذف دائمی
@@ -109,6 +109,58 @@ export class SoftDeleteService {
    * پیدا کردن وابستگی‌های یک رکورد قبل از hard-delete.
    * از Prisma DMMF استفاده می‌کند تا برای همه مدل‌ها کار کند.
    */
+
+  /**
+   * حذف نرم توسط مدیر (deletedAt/deletedBy) — پیش‌فرض جدید.
+   * رکورد در DB باقی می‌ماند و از طریق /deleted/list و /restore قابل مدیریت است.
+   */
+  async adminDelete(params: {
+    model: string;
+    id: string;
+    user: AdminUser;
+    reason: string;
+    meta?: DeleteMeta;
+  }) {
+    const reason = this.validateReason(params.reason);
+    const client = this.getClient(params.model);
+
+    const existing = await client.findUnique({
+      where: { id: params.id },
+      __withDeleted: true,
+    });
+    if (!existing) throw new NotFoundException('رکورد یافت نشد');
+
+    if ((existing as any).deletedAt) {
+      return { ok: true, id: params.id, alreadyDeleted: true };
+    }
+
+    await client.update({
+      where: { id: params.id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: params.user?.id ?? null,
+      } as any,
+    });
+
+    try {
+      await this.audit.log({
+        userId: params.user.id,
+        action: 'ADMIN_SOFT_DELETE',
+        entity: params.model,
+        entityId: params.id,
+        payload: {
+          reason,
+          username: params.user.username,
+          fullName: params.user.fullName,
+        },
+        ipAddress: params.meta?.ipAddress,
+        userAgent: params.meta?.userAgent,
+      });
+    } catch { /* silent */ }
+
+    return { ok: true, id: params.id, softDeleted: true, reason };
+  }
+
   private async findDependencies(
     modelName: string,
     id: string,
@@ -247,7 +299,7 @@ export class SoftDeleteService {
   async restore(params: { model: string; id: string; user: AdminUser; meta?: DeleteMeta }) {
     const client = this.getClient(params.model);
 
-    const existing = await client.findUnique({ where: { id: params.id } });
+    const existing = await client.findUnique({ where: { id: params.id }, __withDeleted: true });
     if (!existing) throw new NotFoundException('رکورد یافت نشد');
     if (!existing.deletedAt) {
       return { ok: true, id: params.id, alreadyActive: true };

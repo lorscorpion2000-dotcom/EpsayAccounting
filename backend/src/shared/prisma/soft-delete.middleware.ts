@@ -68,11 +68,44 @@ export async function softDeleteMiddleware(params: any, next: any) {
     return next(params);
   }
 
-  // ۴. findUnique → تبدیل به findFirst
+    // ۴. findUnique → تبدیل به findFirst
+  // ⚠️ نسخه‌ی اصلاح‌شده: اگر where شامل compound unique key باشد (مثل employeeId_attendanceDate)،
+  //    قبل از تبدیل، flatten می‌کنیم چون findFirst این کلید را پشتیبانی نمی‌کند.
   if (UNIQUE_ACTIONS.has(params.action)) {
-    params.action = params.action === 'findUnique' ? 'findFirst' : 'findFirstOrThrow';
+    const original = params.action;
     params.args = params.args || {};
     if (!params.args.where) params.args.where = {};
+
+    // ✨ flatten compound unique
+    const nonDeletedKeys = Object.keys(params.args.where).filter(k => k !== 'deletedAt');
+    if (nonDeletedKeys.length === 1) {
+      const key = nonDeletedKeys[0];
+      const val = params.args.where[key];
+      const isCompoundCandidate =
+        key.includes('_') &&
+        val && typeof val === 'object' &&
+        !Array.isArray(val) &&
+        !(val instanceof Date);
+
+      if (isCompoundCandidate) {
+        const innerKeys = Object.keys(val);
+        const parts = key.split('_');
+        // Only flatten if inner keys match the split parts — confirms compound unique
+        const matches = parts.length >= 2
+          && parts.length === innerKeys.length
+          && parts.every((p, i) => p === innerKeys[i]);
+        if (matches) {
+          for (const [ik, iv] of Object.entries(val)) {
+            if (params.args.where[ik] === undefined) {
+              params.args.where[ik] = iv;
+            }
+          }
+          delete params.args.where[key];
+        }
+      }
+    }
+
+    params.action = original === 'findUnique' ? 'findFirst' : 'findFirstOrThrow';
     if (params.args.where.deletedAt === undefined) {
       params.args.where.deletedAt = null;
     }

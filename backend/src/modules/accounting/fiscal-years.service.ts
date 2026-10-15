@@ -110,11 +110,8 @@ export class FiscalYearsService {
       throw new BadRequestException('ابتدا ' + draftCount + ' سند پیش‌نویس را ثبت یا ابطال کنید');
     }
 
-    await this.prisma.fiscalYear.updateMany({
-      where: { isCurrent: true },
-      data: { isCurrent: false },
-    });
-
+    // FIX #27: فقط خودِ این سال را می‌بندیم — isCurrent سایر سال‌ها دست‌نخورده می‌ماند.
+    // قبلاً updateMany({where:{isCurrent:true}}) پرچم سال جاری را از بین می‌برد.
     return this.prisma.fiscalYear.update({
       where: { id },
       data: { status: 'CLOSED', isCurrent: false },

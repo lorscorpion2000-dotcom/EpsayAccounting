@@ -146,6 +146,13 @@ export class JournalsService {
     if (!hasValue) {
       throw new BadRequestException('Entry must have at least one valued line');
     }
+    // رُند به ۲ رقم اعشار برای رفع باگ float
+
+    totalDebit = totalDebit.toDP(2);
+
+    totalCredit = totalCredit.toDP(2);
+
+
     if (!totalDebit.equals(totalCredit)) {
       throw new BadRequestException(
         `Entry is not balanced. Debit: ${totalDebit.toFixed(2)} | Credit: ${totalCredit.toFixed(2)}`,

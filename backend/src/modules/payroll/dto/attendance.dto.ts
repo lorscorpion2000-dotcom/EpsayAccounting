@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
 
 export enum AttendanceStatusDto2 {
   PRESENT = 'PRESENT',
@@ -44,5 +45,9 @@ export class BulkAttendanceItemDto {
 
 export class BulkAttendanceDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() projectId?: string;
-  @ApiProperty({ type: [BulkAttendanceItemDto] }) items!: BulkAttendanceItemDto[];
+  @ApiProperty({ type: [BulkAttendanceItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkAttendanceItemDto)
+  items!: BulkAttendanceItemDto[];
 }

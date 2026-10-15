@@ -56,9 +56,7 @@ import { HealthController } from './common/health/health.controller';
       load: [configuration],
       envFilePath: ['.env.local', '.env'],
     }),
-    ThrottlerModule.forRoot([
-      { ttl: 60_000, limit: 1000 },
-    ]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100000 }]),
     CommonModule,
     UnitsModule,
     RecycleBinModule,
