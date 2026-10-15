@@ -4,6 +4,7 @@ import { CapitalAccountsService } from './accounts.service';
 import { CreateCapitalAccountDto } from './dto/capital-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
+import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Partner Capital Accounts - حساب‌های سرمایه شرکا')
 @ApiBearerAuth()
@@ -52,6 +53,15 @@ export class CapitalAccountsController {
   async restore(@Param('id') id: string, @Req() req: any) {
     const user = req.user || {};
     return this.s.restore(id, user.id);
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('capitalaccount.delete')
+  listDeleted(
+    @Query('take', new OptionalIntPipe()) take?: number,
+    @Query('skip', new OptionalIntPipe()) skip?: number,
+  ) {
+    return this.s.listDeleted(take ?? 100, skip ?? 0);
   }
 
 }

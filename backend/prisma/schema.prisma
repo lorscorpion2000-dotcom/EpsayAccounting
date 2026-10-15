@@ -2380,6 +2380,9 @@ model ProjectPartnerShare {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([projectId])
   @@index([partnerId])
   @@map("project_partner_shares")
@@ -2447,6 +2450,9 @@ model PartnerCapitalContribution {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
   @@index([accountId])
   @@index([partnerId])
   @@index([projectId])
@@ -2482,6 +2488,9 @@ model PartnerCapitalWithdrawal {
   createdById String?  @map("created_by_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([accountId])
   @@index([partnerId])

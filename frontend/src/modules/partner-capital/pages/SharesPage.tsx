@@ -7,6 +7,7 @@ import { partnerCapitalApi, PartnerShare } from '../services/partner-capital.api
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ShareFormModal from '../components/ShareFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
@@ -167,8 +168,15 @@ export default function SharesPage() {
                                 className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600">
                                 <Edit className="w-4 h-4" />
                               </button>
+                              <AdminDeleteButton
+                                endpoint="/partner-capital/shares"
+                                id={s.id}
+                                itemLabel={s.partner?.name + ' - ' + s.project?.name}
+                                onSuccess={load}
+                                size="sm"
+                              />
                               <button onClick={() => setDeleting(s)}
-                                className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
+                                className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف (به سطل زباله)">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>

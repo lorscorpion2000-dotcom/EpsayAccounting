@@ -13,7 +13,7 @@ const SOFT_DELETE_MODELS = new Set([
   'DailyReport',
   'EmployeeProfile', 'PayrollPeriod', 'PayrollRecord', 'Attendance',
   'DailyWorkLog', 'LeaveRequest', 'AdvanceRequest',
-  'PartnerCapitalAccount',
+  'PartnerCapitalAccount', 'PartnerCapitalContribution', 'PartnerCapitalWithdrawal', 'ProjectPartnerShare',
   'Permit', 'Insurance', 'Guarantee', 'TechnicalDocument', 'PhaseChecklist',
   'SalesUnit', 'SalesCustomer', 'SalesContract',
   'Attachment', 'FixedAsset', 'PurchaseInvoice', 'SupplierPayment',

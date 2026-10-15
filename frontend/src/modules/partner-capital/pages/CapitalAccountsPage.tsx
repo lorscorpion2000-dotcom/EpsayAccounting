@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Wallet, RefreshCw, FolderOpen, FileSpreadsheet, Archive } from 'lucide-react';
+import { Plus, Search, Loader2, Wallet, RefreshCw, FolderOpen, FileSpreadsheet, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { partnerCapitalApi, CapitalAccount } from '../services/partner-capital.api';
 import { formatNumber } from '@/utils/format';
@@ -150,7 +150,7 @@ export default function CapitalAccountsPage() {
                 <button onClick={() => setDeleting(a)}
                   className="p-1.5 rounded-lg bg-white shadow-sm border hover:bg-red-50 text-slate-600"
                   title="حذف">
-                  <Archive className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
                 <AdminDeleteButton
                   endpoint="/partner-capital/accounts"

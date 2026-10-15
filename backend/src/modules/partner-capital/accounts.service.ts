@@ -121,7 +121,10 @@ export class CapitalAccountsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.partnerCapitalAccount.findUnique({ where: { id } });
+    const existing: any = await this.prisma.partnerCapitalAccount.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
     if (!existing) throw new Error('رکورد یافت نشد');
     if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
 
@@ -133,10 +136,44 @@ export class CapitalAccountsService {
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    // For hard delete by admin — soft delete first then optionally purge
-    // For safety we only do soft delete by default; uncomment hard delete below if needed
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.partnerCapitalAccount.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new Error('رکورد یافت نشد');
+
+    const contribCount = await this.prisma.partnerCapitalContribution.count({
+      where: { accountId: id },
+    });
+    const withdrawCount = await this.prisma.partnerCapitalWithdrawal.count({
+      where: { accountId: id },
+    });
+    if (contribCount > 0 || withdrawCount > 0) {
+      throw new Error(
+        'این حساب دارای ' + (contribCount + withdrawCount) + ' رکورد آورده/برداشت است — ابتدا آنها را حذف کنید یا از «آرشیو» استفاده کنید',
+      );
+    }
+
+    await this.prisma.partnerCapitalAccount.delete({ where: { id } });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.partnerCapitalAccount.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.partnerCapitalAccount.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
 }

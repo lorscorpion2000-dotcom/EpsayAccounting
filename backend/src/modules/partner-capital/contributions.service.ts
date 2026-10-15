@@ -17,7 +17,7 @@ export class ContributionsService {
   }
 
   async findAll(query?: { partnerId?: string; projectId?: string; status?: string }) {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (query?.partnerId) where.partnerId = query.partnerId;
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.status) where.status = query.status;
@@ -84,11 +84,58 @@ export class ContributionsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const c = await this.findOne(id);
     if (c.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
+    await this.prisma.partnerCapitalContribution.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.partnerCapitalContribution.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('آورده یافت نشد');
+    if (!existing.deletedAt) throw new Error('آورده حذف نشده است');
+    await this.prisma.partnerCapitalContribution.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.partnerCapitalContribution.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('آورده یافت نشد');
+    if (existing.status !== 'DRAFT') {
+      throw new Error('فقط آورده‌های پیش‌نویس قابل حذف قطعی هستند — چون تأییدشده موجودی حساب را تغییر داده');
+    }
     await this.prisma.partnerCapitalContribution.delete({ where: { id } });
-    return { success: true };
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.partnerCapitalContribution.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.partnerCapitalContribution.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
   async submit(id: string) {

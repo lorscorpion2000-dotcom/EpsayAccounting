@@ -9,6 +9,7 @@ import { partnerCapitalApi, Withdrawal } from '../services/partner-capital.api';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import WithdrawalFormModal from '../components/WithdrawalFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import AdminDeleteButton from '@/components/AdminDeleteButton';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
@@ -203,8 +204,15 @@ export default function WithdrawalsPage() {
                               className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600" title="ارسال">
                               <Send className="w-4 h-4" />
                             </button>
+                            <AdminDeleteButton
+                              endpoint="/partner-capital/withdrawals"
+                              id={w.id}
+                              itemLabel={w.code}
+                              onSuccess={load}
+                              size="sm"
+                            />
                             <button onClick={() => setActionItem({ item: w, action: 'delete' })}
-                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف">
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-red-600" title="حذف (به سطل زباله)">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </>
