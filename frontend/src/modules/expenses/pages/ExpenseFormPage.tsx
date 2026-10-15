@@ -7,7 +7,14 @@ import { expensesApi, expenseCategoriesApi } from '../services/expenses.api';
 import type { ExpenseCategory, ExpensePayFromType } from '@/types/expense';
 import { api } from '@/services/api';
 
-interface AccountOpt { id: string; code: string; name: string; }
+interface AccountOpt {
+  id: string;
+  code: string;
+  name: string;
+  level?: string;
+  detailType?: string | null;
+  isPostable?: boolean;
+}
 interface ProjectOpt { id: string; name: string; }
 interface PartnerOpt { id: string; name: string; }
 
@@ -40,12 +47,21 @@ export default function ExpenseFormPage() {
       expenseCategoriesApi.list().catch(() => []),
       api.get('/projects').then((r) => r.data).catch(() => []),
       api.get('/partners').then((r) => r.data).catch(() => []),
-      api.get('/accounting/accounts').then((r) => r.data).catch(() => []),
+      api.get('/accounts/postable').then((r) => r.data).catch(() => []),
     ]).then(([c, p, pt, a]) => {
       setCats(c as ExpenseCategory[]);
       setProjects((p as any[]).map((x) => ({ id: x.id, name: x.name })));
       setPartners((pt as any[]).map((x) => ({ id: x.id, name: x.name })));
-      setAccounts((a as any[]).filter((x: any) => x.isPostable && x.isActive).map((x: any) => ({ id: x.id, code: x.code, name: x.name })));
+      setAccounts((a as any[])
+        .filter((x: any) => x.isPostable && x.isActive)
+        .map((x: any) => ({
+          id: x.id,
+          code: x.code,
+          name: x.name,
+          level: x.level,
+          detailType: x.detailType ?? null,
+          isPostable: x.isPostable,
+        })));
     });
     if (isEdit && id) {
       expensesApi.get(id).then((e) => {
@@ -94,12 +110,30 @@ export default function ExpenseFormPage() {
     finally { setSaving(false); }
   };
 
-  const payFromAccounts = accounts.filter((a) =>
-    form.payFromType === 'BANK' ? a.code.startsWith('1.1.1.02') || a.code.startsWith('1.1.1.03') :
-    form.payFromType === 'PETTY_CASH' ? a.code.startsWith('1.1.1.03') :
-    a.code.startsWith('1.1.1.01'),
+  // ─── فیلتر حساب پرداخت‌کننده بر اساس detailType و level ───
+  const payFromAccounts = accounts.filter((a) => {
+    // فقط تفضیلی‌ها
+    if (a.level !== 'DETAIL') return false;
+
+    if (form.payFromType === 'BANK') {
+      // بانک‌ها — detailType = BANK
+      return a.detailType === 'BANK';
+    }
+    if (form.payFromType === 'CASH') {
+      // صندوق‌ها — detailType = CASH_REGISTER
+      return a.detailType === 'CASH_REGISTER';
+    }
+    if (form.payFromType === 'PETTY_CASH') {
+      // تنخواه‌ها — detailType = PETTY_CASH
+      return a.detailType === 'PETTY_CASH';
+    }
+    return false;
+  });
+
+  // ─── حساب هزینه — ۵.x ───
+  const expenseAccounts = accounts.filter((a) =>
+    a.code.startsWith('5.') || a.code.startsWith('5')
   );
-  const expenseAccounts = accounts.filter((a) => a.code.startsWith('5.'));
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -146,7 +180,7 @@ export default function ExpenseFormPage() {
             <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
           <Field label="نوع پرداخت *">
-            <select className="input" value={form.payFromType} onChange={(e) => setForm({ ...form, payFromType: e.target.value as ExpensePayFromType })}>
+            <select className="input" value={form.payFromType} onChange={(e) => setForm({ ...form, payFromType: e.target.value as ExpensePayFromType, payFromAccountId: '' })}>
               <option value="BANK">بانک</option>
               <option value="CASH">صندوق</option>
               <option value="PETTY_CASH">تنخواه</option>
@@ -157,6 +191,13 @@ export default function ExpenseFormPage() {
               <option value="">انتخاب...</option>
               {payFromAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
             </select>
+            {payFromAccounts.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">
+                {form.payFromType === 'BANK' && 'هیچ حساب بانکی تفضیلی تعریف نشده. ابتدا از /accounting/banks یک حساب بانکی بسازید.'}
+                {form.payFromType === 'CASH' && 'هیچ صندوق تفضیلی تعریف نشده.'}
+                {form.payFromType === 'PETTY_CASH' && 'هیچ تنخواه تفضیلی تعریف نشده. ابتدا از /petty-cash یک تنخواه بسازید.'}
+              </p>
+            )}
           </Field>
           <Field label="حساب هزینه (بدهکار) *" className="md:col-span-2">
             <select className="input" value={form.expenseAccountId} onChange={(e) => setForm({ ...form, expenseAccountId: e.target.value })}>

@@ -89,13 +89,65 @@ export class ExpenseCategoriesService {
     return this.prisma.expenseCategory.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const c = await this.findOne(id);
     const childCount = await this.prisma.expenseCategory.count({ where: { parentId: id, deletedAt: null } });
     if (childCount > 0) throw new BadRequestException('این دسته فرزند دارد');
     const expCount = await this.prisma.expense.count({ where: { categoryId: id, deletedAt: null } });
     if (expCount > 0) throw new BadRequestException('این دسته در هزینه‌های موجود استفاده شده است');
-    await this.prisma.expenseCategory.update({ where: { id: c.id }, data: { deletedAt: new Date() } });
-    return { success: true };
+    await this.prisma.expenseCategory.update({
+      where: { id: c.id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
+  }
+
+  async restore(id: string, userId?: string) {
+    const existing: any = await this.prisma.expenseCategory.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('دسته یافت نشد');
+    if (!existing.deletedAt) throw new Error('دسته حذف نشده است');
+    await this.prisma.expenseCategory.update({
+      where: { id },
+      data: { deletedAt: null, deletedBy: null },
+    });
+    return { ok: true, id, restored: true, by: userId ?? null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.expenseCategory.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new NotFoundException('دسته یافت نشد');
+    const childCount = await this.prisma.expenseCategory.count({
+      where: { parentId: id, deletedAt: null },
+    });
+    if (childCount > 0) throw new BadRequestException('این دسته فرزند دارد — ابتدا آنها را حذف کنید');
+    const expCount = await this.prisma.expense.count({
+      where: { categoryId: id, deletedAt: null },
+    });
+    if (expCount > 0) throw new BadRequestException('این دسته در هزینه‌های موجود استفاده شده است');
+    await this.prisma.expenseCategory.delete({ where: { id } });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.expenseCategory.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.expenseCategory.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 }

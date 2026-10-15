@@ -1,6 +1,13 @@
-import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEnum, MaxLength } from 'class-validator';
+
+export enum BankAccountTypeDto {
+  BANK = 'BANK',
+  CASH_REGISTER = 'CASH_REGISTER',
+}
 
 export class CreateBankAccountDto {
+  @IsOptional() @IsEnum(BankAccountTypeDto) type?: BankAccountTypeDto;
+
   @IsString() @MaxLength(200) name!: string;
   @IsOptional() @IsString() @MaxLength(200) bankName?: string;
   @IsOptional() @IsString() @MaxLength(200) branchName?: string;

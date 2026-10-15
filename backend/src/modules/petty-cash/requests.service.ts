@@ -279,7 +279,10 @@ export class PettyCashRequestsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.pettyCashRequest.findUnique({ where: { id } });
+    const existing: any = await this.prisma.pettyCashRequest.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
     if (!existing) throw new Error('رکورد یافت نشد');
     if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
 
@@ -291,10 +294,14 @@ export class PettyCashRequestsService {
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    // For hard delete by admin — soft delete first then optionally purge
-    // For safety we only do soft delete by default; uncomment hard delete below if needed
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.pettyCashRequest.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    await this.prisma.pettyCashRequest.delete({ where: { id } });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
   }
 
 }

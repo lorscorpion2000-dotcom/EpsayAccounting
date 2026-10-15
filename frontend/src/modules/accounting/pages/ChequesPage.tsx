@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, RefreshCw, ScrollText, CheckCircle2, Undo2, XCircle, Search, Archive } from 'lucide-react';
+import { Plus, Pencil, RefreshCw, ScrollText, CheckCircle2, Undo2, XCircle, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import {
@@ -315,7 +315,7 @@ export default function ChequesPage() {
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-center gap-1">
                         <AdminDeleteButton
-                          endpoint="/bank/cheques"
+                          endpoint="/cheques"
                           id={c.id}
                           itemLabel={(c as any).code || (c as any).name || (c as any).title || (c as any).fullName || (c as any).serialNumber || ''}
                           onSuccess={load}
@@ -358,7 +358,7 @@ export default function ChequesPage() {
                         className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
                         title="حذف"
                       >
-                        <Archive size={14} />
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>

@@ -1,9 +1,17 @@
 import { api } from '@/services/api';
 
+export type BankAccountType = 'BANK' | 'CASH_REGISTER';
+
+export const BANK_ACCOUNT_TYPE_LABELS: Record<BankAccountType, string> = {
+  BANK: 'بانک',
+  CASH_REGISTER: 'صندوق',
+};
+
 export interface BankAccount {
   id: string;
   code: string;
   name: string;
+  type: BankAccountType;
   bankName?: string | null;
   branchName?: string | null;
   accountNumber?: string | null;
@@ -19,6 +27,7 @@ export interface BankAccount {
 
 export interface BankAccountInput {
   name: string;
+  type?: BankAccountType;
   bankName?: string | null;
   branchName?: string | null;
   accountNumber?: string | null;

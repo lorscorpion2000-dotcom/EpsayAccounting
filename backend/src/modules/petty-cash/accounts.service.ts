@@ -138,24 +138,19 @@ export class PettyCashAccountsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     await this.findOne(id);
-    const txCount = await this.prisma.pettyCashTransaction.count({ where: { accountId: id } });
+    const txCount = await this.prisma.pettyCashTransaction.count({
+      where: { accountId: id, deletedAt: null },
+    });
     if (txCount > 0) {
       throw new BadRequestException('این حساب دارای تراکنش است و قابل حذف نیست');
     }
-
-    return this.prisma.$transaction(async (tx: any) => {
-      // ─── غیرفعال‌سازی تفضیل قبل از حذف ───
-      const detail = await tx.account.findFirst({
-        where: { detailType: AccountDetailType.PETTY_CASH, detailId: id },
-      });
-      if (detail) {
-        await tx.account.update({ where: { id: detail.id }, data: { isActive: false } });
-      }
-      await tx.pettyCashAccount.delete({ where: { id } });
-      return { success: true };
+    await this.prisma.pettyCashAccount.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
     });
+    return { success: true, softDeleted: true };
   }
 
   /**
@@ -196,7 +191,10 @@ export class PettyCashAccountsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
+    const existing: any = await this.prisma.pettyCashAccount.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
     if (!existing) throw new Error('رکورد یافت نشد');
     if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
 
@@ -208,8 +206,31 @@ export class PettyCashAccountsService {
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+    const existing: any = await this.prisma.pettyCashAccount.findUnique({
+      where: { id },
+      ...({ __withDeleted: true } as any),
+    });
+    if (!existing) throw new Error('رکورد یافت نشد');
+    await this.prisma.pettyCashAccount.delete({ where: { id } });
+    return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
+  }
+
+  async listDeleted(take = 100, skip = 0) {
+    const [items, total] = await Promise.all([
+      this.prisma.pettyCashAccount.findMany({
+        where: { deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+        take: Math.min(take, 500),
+        skip,
+        ...({ __withDeleted: true } as any),
+      }),
+      this.prisma.pettyCashAccount.count({
+        where: { deletedAt: { not: null } },
+        ...({ __withDeleted: true } as any),
+      }),
+    ]);
+    return { items, total, take, skip };
   }
 
 }

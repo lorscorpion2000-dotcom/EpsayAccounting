@@ -50,7 +50,21 @@ export class PettyCashTransactionsController {
 
   @Delete(':id')
   @RequirePermissions('petty-cash.delete')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.remove(id, userId);
+  }
+
+  @Get('deleted/list')
+  @RequirePermissions('petty-cash.delete')
+  listDeleted(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.service.listDeleted(
+      take ? parseInt(take, 10) : 100,
+      skip ? parseInt(skip, 10) : 0,
+    );
+  }
 
   @Patch(':id/submit')
   @RequirePermissions('petty-cash.update')

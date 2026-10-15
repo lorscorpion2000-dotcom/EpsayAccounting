@@ -91,12 +91,15 @@ export class AdvanceRequestsService {
     return Number(result._sum.amount || 0);
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const a = await this.findOne(id);
     if (a.status === 'PAID') {
       throw new BadRequestException('مساعده پرداخت‌شده قابل حذف نیست');
     }
-    await this.prisma.advanceRequest.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.advanceRequest.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 }

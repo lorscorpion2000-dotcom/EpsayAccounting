@@ -3,8 +3,10 @@ import { Plus, Pencil, Trash2, RefreshCw, Landmark, Search, Power } from 'lucide
 import { toast } from 'sonner';
 import {
   bankAccountsApi,
+  BANK_ACCOUNT_TYPE_LABELS,
   type BankAccount,
   type BankAccountInput,
+  type BankAccountType,
 } from '../services/bank-accounts.api';
 
 export default function BankAccountsPage() {
@@ -250,6 +252,7 @@ function BAFormModal({
   onSubmit: (payload: BankAccountInput) => void;
 }) {
   const [name, setName] = useState(editing?.name ?? '');
+  const [type, setType] = useState<BankAccountType>(editing?.type ?? 'BANK');
   const [bankName, setBankName] = useState(editing?.bankName ?? '');
   const [branchName, setBranchName] = useState(editing?.branchName ?? '');
   const [accountNumber, setAccountNumber] = useState(editing?.accountNumber ?? '');
@@ -262,10 +265,11 @@ function BAFormModal({
     if (!name.trim()) { toast.error('نام الزامی است'); return; }
     onSubmit({
       name: name.trim(),
-      bankName: bankName.trim() || null,
-      branchName: branchName.trim() || null,
+      type,
+      bankName: type === 'BANK' ? (bankName.trim() || null) : null,
+      branchName: type === 'BANK' ? (branchName.trim() || null) : null,
       accountNumber: accountNumber.trim() || null,
-      shabaNumber: shabaNumber.trim() || null,
+      shabaNumber: type === 'BANK' ? (shabaNumber.trim() || null) : null,
       description: description.trim() || null,
       isActive,
     });
@@ -286,6 +290,29 @@ function BAFormModal({
 
         <div className="px-6 py-4 space-y-4">
           <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">نوع *</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['BANK', 'CASH_REGISTER'] as BankAccountType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={
+                    'px-3 py-2 rounded-lg text-sm font-medium border transition ' +
+                    (type === t
+                      ? 'bg-sky-600 text-white border-sky-600'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50')
+                  }
+                >
+                  {BANK_ACCOUNT_TYPE_LABELS[t]}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              بانک برای حساب‌های بانکی، صندوق برای صندوق‌های نقدی
+            </p>
+          </div>
+          <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">نام حساب *</label>
             <input
               type="text"
@@ -296,28 +323,30 @@ function BAFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">بانک</label>
-              <input
-                type="text"
-                value={bankName ?? ''}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="مثلاً: ملت"
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+          {type === 'BANK' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">بانک</label>
+                <input
+                  type="text"
+                  value={bankName ?? ''}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="مثلاً: ملت"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">شعبه</label>
+                <input
+                  type="text"
+                  value={branchName ?? ''}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  placeholder="مثلاً: مرکزی"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">شعبه</label>
-              <input
-                type="text"
-                value={branchName ?? ''}
-                onChange={(e) => setBranchName(e.target.value)}
-                placeholder="مثلاً: مرکزی"
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -330,17 +359,19 @@ function BAFormModal({
                 className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">شبا (بدون IR)</label>
-              <input
-                type="text"
-                value={shabaNumber ?? ''}
-                onChange={(e) => setShabaNumber(e.target.value)}
-                dir="ltr"
-                maxLength={24}
-                className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
+            {type === 'BANK' && (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">شبا (بدون IR)</label>
+                <input
+                  type="text"
+                  value={shabaNumber ?? ''}
+                  onChange={(e) => setShabaNumber(e.target.value)}
+                  dir="ltr"
+                  maxLength={24}
+                  className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+            )}
           </div>
 
           <div>

@@ -69,10 +69,13 @@ export class LeaveRequestsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const l = await this.findOne(id);
     if (l.status !== 'PENDING') throw new BadRequestException('فقط درخواست‌های در انتظار قابل حذف هستند');
-    await this.prisma.leaveRequest.delete({ where: { id } });
-    return { success: true };
+    await this.prisma.leaveRequest.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: userId ?? null },
+    });
+    return { success: true, softDeleted: true };
   }
 }

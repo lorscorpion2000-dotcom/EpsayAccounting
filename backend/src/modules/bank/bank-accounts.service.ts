@@ -45,10 +45,16 @@ export class BankAccountsService {
 
   async create(dto: CreateBankAccountDto) {
     const code = await this.generateCode();
+    const type = (dto as any).type || 'BANK';
+    const detailType = type === 'CASH_REGISTER'
+      ? AccountDetailType.CASH_REGISTER
+      : AccountDetailType.BANK;
+
     return this.prisma.$transaction(async (tx: any) => {
       const account = await tx.bankAccount.create({
         data: {
           code,
+          type: type as any,
           name: dto.name,
           bankName: dto.bankName,
           branchName: dto.branchName,
@@ -61,7 +67,7 @@ export class BankAccountsService {
 
       try {
         const detail = await this.detailAccounts.ensureDetailAccount(tx, {
-          detailType: AccountDetailType.BANK,
+          detailType,
           entityId: account.id,
           entityName: dto.name,
           parentAccountCode: '1.1.1',
