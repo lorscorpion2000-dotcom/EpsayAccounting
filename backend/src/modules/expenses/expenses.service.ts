@@ -269,13 +269,13 @@ export class ExpensesService {
         throw new Error('برای هزینه کارفرما، انتخاب کارفرما الزامی است');
       }
 
-      // حساب تفصیلی کارفرما (CUSTOMER)
-      const clientAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
-        detailType: 'CUSTOMER' as any,
+      // حساب واسط پاس‌تروگ اختصاصی کارفرما (زیر 1.1.6)
+      const passThroughAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
+        detailType: 'PASS_THROUGH_CLIENT' as any,
         entityId: (e as any).clientId,
         entityName: (e as any).client?.name || 'کارفرما',
       });
-      if (!clientAcc) throw new Error('حساب تفصیلی کارفرما ساخته نشد');
+      if (!passThroughAcc) throw new Error('حساب واسط پاس‌تروگ برای کارفرما ساخته نشد');
 
       // حساب تفصیلی تأمین‌کننده (SUPPLIER)
       let creditAccId: string | null = null;
@@ -298,7 +298,7 @@ export class ExpensesService {
 
       const lines: any[] = [
         {
-          accountId: clientAcc.id,
+          accountId: passThroughAcc.id,
           debit: total,
           credit: 0,
           description: 'هزینه کارفرما ' + e.code + ' — ' + e.category.name,

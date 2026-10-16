@@ -41,7 +41,6 @@ export default function ProjectSwitcher() {
       }
     })();
     return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // اگر کاربر عادی است و هنوز پروژه فعالی انتخاب نکرده، از defaultProjectId یا اولین پروژه استفاده کن
@@ -59,7 +58,6 @@ export default function ProjectSwitcher() {
         ? user.defaultProjectId
         : projects[0].id;
     setActiveProject(fallback);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, isStaff, activeProjectId, user?.defaultProjectId]);
 
   const current = projects.find((p) => p.id === activeProjectId) || null;

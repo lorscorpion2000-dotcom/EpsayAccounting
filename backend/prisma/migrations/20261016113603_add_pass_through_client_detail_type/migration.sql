@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AccountDetailType" ADD VALUE 'PASS_THROUGH_CLIENT';

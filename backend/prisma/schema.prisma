@@ -549,6 +549,7 @@ enum AccountDetailType {
   CONTRACTOR // Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±
   CUSTOMER // Ù…Ø´ØªØ±ÛŒ
   SUPPLIER // ØªØ£Ù…ÛŒÙ†â€ŒÚ©Ù†Ù†Ø¯Ù‡
+  PASS_THROUGH_CLIENT // کارفرما — حساب واسط پاس‌تروگ (1.1.6)
 }
 
 enum AccountNature {
@@ -3760,6 +3761,7 @@ model ClientStatement {
   contractorShareAmount     Decimal @default(0) @map("contractor_share_amount") @db.Decimal(24, 2)
   prepaymentDeductionAmount Decimal @default(0) @map("prepayment_deduction_amount") @db.Decimal(24, 2)
   netPayable                Decimal @default(0) @map("net_payable") @db.Decimal(24, 2)
+  passThroughAmount         Decimal @default(0) @map("pass_through_amount") @db.Decimal(24, 2)
 
   status ClientStatementStatus @default(DRAFT)
 
@@ -3777,7 +3779,8 @@ model ClientStatement {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  items ClientStatementItem[]
+  items               ClientStatementItem[]
+  passThroughExpenses Expense[]             @relation("ExpensePassThroughClosed")
 
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
@@ -4405,9 +4408,11 @@ model Expense {
   journalEntryId String?       @map("journal_entry_id") @db.Uuid
   journalEntry   JournalEntry? @relation("ExpenseJournal", fields: [journalEntryId], references: [id])
 
-  attachmentUrl String? @map("attachment_url") @db.VarChar(500)
-  invoiceNumber String? @map("invoice_number") @db.VarChar(64)
-  notes         String? @db.VarChar(500)
+  attachmentUrl                  String?          @map("attachment_url") @db.VarChar(500)
+  invoiceNumber                  String?          @map("invoice_number") @db.VarChar(64)
+  notes                          String?          @db.VarChar(500)
+  passThroughClosedInStatementId String?          @map("pass_through_closed_in_statement_id") @db.Uuid
+  passThroughClosedInStatement   ClientStatement? @relation("ExpensePassThroughClosed", fields: [passThroughClosedInStatementId], references: [id])
 
   createdById String? @map("created_by_id") @db.Uuid
   createdBy   User?   @relation("ExpenseCreator", fields: [createdById], references: [id])

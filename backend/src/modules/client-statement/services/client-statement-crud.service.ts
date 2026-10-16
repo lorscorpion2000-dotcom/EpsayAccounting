@@ -164,6 +164,30 @@ export class ClientStatementCrudService {
       },
       orderBy: { statementNumber: 'asc' },
     });
+    // هزینه‌های پاس‌تروگ باز (بسته‌نشده) برای کارفرمای این پروژه
+    let passThroughOpenExpenses: any[] = [];
+    let passThroughOpenAmount = 0;
+    const clientId = s.project?.clientId || null;
+    if (clientId) {
+      passThroughOpenExpenses = await this.prisma.expense.findMany({
+        where: {
+          projectId: s.projectId,
+          clientId,
+          costType: 'CLIENT_PASS_THROUGH',
+          passThroughClosedInStatementId: null,
+          status: 'POSTED',
+          deletedAt: null,
+        },
+        select: { id: true, code: true, totalAmount: true, expenseDate: true, description: true },
+        orderBy: { expenseDate: 'asc' },
+      });
+      passThroughOpenAmount = passThroughOpenExpenses.reduce(
+        (sum, e) => sum + Number(e.totalAmount),
+        0,
+      );
+    }
+
+
 
     const totalPreviousPaid = previousStatements.reduce(
       (sum, p) => sum + Number(p.netPayable),
@@ -176,6 +200,8 @@ export class ClientStatementCrudService {
       contract,
       previousStatements,
       totalPreviousPaid,
+      passThroughOpenExpenses,
+      passThroughOpenAmount,
     };
   }
 

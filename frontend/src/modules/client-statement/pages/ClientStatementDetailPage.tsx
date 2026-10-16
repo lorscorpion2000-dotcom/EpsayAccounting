@@ -460,7 +460,7 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
           <div
             key={cat}
             className="border-2 border-slate-300 p-4 mb-6"
-            style={sheetIdx < sheets.length - 1 || true ? { pageBreakAfter: "always" } : undefined}
+            style={{ pageBreakAfter: "always" }}
           >
             <PrintHeader s={s} sheetTitle={title} sheetNumber={sheetIdx + 1} totalSheets={totalSheets} />
             <table className="w-full text-xs border-collapse mt-3" style={{ border: "1px solid #cbd5e1" }}>

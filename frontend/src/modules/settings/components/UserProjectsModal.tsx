@@ -49,7 +49,6 @@ export default function UserProjectsModal({ isOpen, user, onClose, onChanged }: 
       setAssigned([]);
       setAllProjects([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user?.id]);
 
   const assignedIds = new Set(assigned.map((a) => a.projectId));

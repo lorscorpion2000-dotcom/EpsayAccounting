@@ -21,6 +21,7 @@ const DEFAULT_PARENT_BY_TYPE: Partial<Record<AccountDetailType, string>> = {
   CONTRACTOR: '2.1.5',    // پیمانکاران و تأمین‌کنندگان
   EMPLOYEE: '2.1.2',      // بدهی پرسنلی
   PETTY_CASH: '1.1.5',    // تنخواه گردان ها
+  PASS_THROUGH_CLIENT: '1.1.6', // واسط هزینه‌های پاس‌تروگ کارفرما
   // PROJECT → در فاز ۲ به عنوان CostCenter پیاده می‌شود
   // BANK/CASH_REGISTER → در فاز ۲ با مدل Bank
 };
