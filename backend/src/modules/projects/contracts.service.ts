@@ -47,7 +47,7 @@ export class ContractsService {
         type: dto.type,
         status: dto.status,
         baseAmount: dto.baseAmount,
-        coefficient: dto.coefficient,
+        coefficient: dto.coefficient ?? 1,
         signDate: dto.signDate ? new Date(dto.signDate) : null,
         durationValue: dto.durationValue,
         durationUnit: dto.durationUnit,

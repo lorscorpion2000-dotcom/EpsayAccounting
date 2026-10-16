@@ -70,7 +70,7 @@ export class ClientStatementCrudService {
       orderBy: { createdAt: 'desc' },
     });
     if (c) return { coefficient: Number(c.coefficient), prepaymentAmount: Number(c.prepaymentAmount || 0) };
-    return { coefficient: 1.07, prepaymentAmount: 0 };
+    return { coefficient: 1, prepaymentAmount: 0 };
   }
 
   async list(query?: { projectId?: string; status?: string; search?: string }) {

@@ -379,7 +379,7 @@ model Contract {
   status ContractStatus @default(ACTIVE)
 
   baseAmount  Decimal @map("base_amount") @db.Decimal(20, 2)
-  coefficient Decimal @default(1.07) @db.Decimal(5, 4)
+  coefficient Decimal @default(1) @db.Decimal(5, 4)
 
   signDate      DateTime? @map("sign_date") @db.Date
   durationValue Int?      @map("duration_value")
@@ -3737,7 +3737,7 @@ model ClientStatement {
   periodEnd       DateTime @map("period_end") @db.Date
 
   // Ø¶Ø±Ø§ÛŒØ¨
-  coefficient                Decimal @default(1.07) @db.Decimal(7, 4)
+  coefficient                Decimal @default(1) @db.Decimal(7, 4)
   contractorSharePercent     Decimal @default(7) @map("contractor_share_percent") @db.Decimal(5, 2)
   prepaymentDeductionPercent Decimal @default(20) @map("prepayment_deduction_percent") @db.Decimal(5, 2)
 
