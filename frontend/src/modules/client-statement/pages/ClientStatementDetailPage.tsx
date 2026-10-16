@@ -11,6 +11,7 @@ import {
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintButton from '@/components/PrintButton';
+import { COMPANY } from '@/config/company';
 
 const CATEGORY_ICONS: Record<CSCategory, any> = {
   MATERIAL: Package,
@@ -425,7 +426,7 @@ function Row({ label, value, bold, negative, highlight }: any) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Print: 7 sheets
+// چاپ صورت‌وضعیت
 // ═══════════════════════════════════════════════════════════
 function PrintSheets({ statement, grouped }: { statement: ClientStatement; grouped: Record<CSCategory, CSItem[]> }) {
   const s = statement;
@@ -434,47 +435,66 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
     title: CS_CATEGORY_LABELS[cat],
   }));
 
+  const hasTax = (() => {
+    const contract = s.contract;
+    const taxPercent = Number(contract?.taxPercent || 0);
+    const taxable = Number(s.contractorShareAmount || 0);
+    return taxPercent > 0 && taxable > 0;
+  })();
+  const taxPercent = Number(s.contract?.taxPercent || 0);
+  const taxAmount = hasTax ? Math.round((Number(s.contractorShareAmount || 0) * taxPercent) / 100) : 0;
+
+  const totalPreviousPaid = Number(s.totalPreviousPaid || 0);
+  const netAfterTax = Math.round(Number(s.netPayable || 0) + taxAmount);
+  const finalBalance = Math.round(netAfterTax - totalPreviousPaid);
+
+  const totalSheets = sheets.length + 2; // 5 دسته + خلاصه دسته + خلاصه کل
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {sheets.map(({ cat, title }, sheetIdx) => {
         const rows = grouped[cat] || [];
-        const subtotalKey = ('subtotal' + cat.charAt(0) + cat.slice(1).toLowerCase()) as keyof ClientStatement;
+        const subtotalKey = ("subtotal" + cat.charAt(0) + cat.slice(1).toLowerCase()) as keyof ClientStatement;
         const subtotal = Number(s[subtotalKey] || 0);
         return (
-          <div key={cat} className="border-2 border-slate-300 p-4 mb-8" style={{ pageBreakAfter: 'always' }}>
-            <PrintHeader s={s} sheetTitle={title} sheetNumber={sheetIdx + 1} />
-            <table className="w-full text-xs border-collapse mt-3" style={{ border: '1px solid #cbd5e1' }}>
+          <div
+            key={cat}
+            className="border-2 border-slate-300 p-4 mb-6"
+            style={sheetIdx < sheets.length - 1 || true ? { pageBreakAfter: "always" } : undefined}
+          >
+            <PrintHeader s={s} sheetTitle={title} sheetNumber={sheetIdx + 1} totalSheets={totalSheets} />
+            <table className="w-full text-xs border-collapse mt-3" style={{ border: "1px solid #cbd5e1" }}>
               <thead>
-                <tr style={{ background: '#f1f5f9' }}>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '30px' }}>ردیف</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '60px' }}>شماره</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px' }}>شرح عملیات</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '60px' }}>واحد</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '90px' }}>بهای واحد</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '50px' }}>مقدار</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '100px' }}>بهای کل</th>
-                  <th style={{ border: '1px solid #cbd5e1', padding: '4px', width: '70px' }}>تاریخ</th>
+                <tr style={{ background: "#f1f5f9" }}>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "30px" }}>ردیف</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "60px" }}>شماره</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px" }}>شرح عملیات</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "60px" }}>واحد</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "90px" }}>بهای واحد</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "50px" }}>مقدار</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "100px" }}>بهای کل</th>
+                  <th style={{ border: "1px solid #cbd5e1", padding: "4px", width: "70px" }}>تاریخ</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr><td colSpan={8} style={{ border: '1px solid #cbd5e1', padding: '12px', textAlign: 'center', color: '#94a3b8' }}>—</td></tr>
+                  <tr><td colSpan={8} style={{ border: "1px solid #cbd5e1", padding: "12px", textAlign: "center", color: "#94a3b8" }}>—</td></tr>
                 ) : rows.map((it, idx) => (
                   <tr key={it.id || idx}>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'center' }}>{toPersianDigits(idx + 1)}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'center', fontFamily: 'monospace' }}>{it.priceListCode || '—'}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px' }}>{it.description}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'center' }}>{it.unit || '—'}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'left' }}>{toPersianDigits(Number(it.unitPrice).toLocaleString())}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'center' }}>{toPersianDigits(Number(it.quantity))}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'left', fontWeight: 'bold' }}>{toPersianDigits(Math.round(Number(it.totalPrice)).toLocaleString())}</td>
-                    <td style={{ border: '1px solid #cbd5e1', padding: '3px', textAlign: 'center' }}>{it.itemDate ? formatJalaliDate(it.itemDate) : '—'}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "center" }}>{toPersianDigits(idx + 1)}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "center", fontFamily: "monospace" }}>{it.priceListCode || "—"}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px" }}>{it.description}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "center" }}>{it.unit || "—"}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "left" }}>{toPersianDigits(Number(it.unitPrice).toLocaleString())}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "center" }}>{toPersianDigits(Number(it.quantity))}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "left", fontWeight: "bold" }}>{toPersianDigits(Math.round(Number(it.totalPrice)).toLocaleString())}</td>
+                    <td style={{ border: "1px solid #cbd5e1", padding: "3px", textAlign: "center" }}>{it.itemDate ? formatJalaliDate(it.itemDate) : "—"}</td>
                   </tr>
                 ))}
-                <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
-                  <td colSpan={6} style={{ border: '1px solid #cbd5e1', padding: '4px', textAlign: 'left' }}>جمع کل {title}</td>
-                  <td style={{ border: '1px solid #cbd5e1', padding: '4px', textAlign: 'left' }}>{toPersianDigits(Math.round(subtotal).toLocaleString())}</td>
-                  <td style={{ border: '1px solid #cbd5e1', padding: '4px' }}></td>
+                <tr style={{ background: "#f8fafc", fontWeight: "bold" }}>
+                  <td colSpan={6} style={{ border: "1px solid #cbd5e1", padding: "4px", textAlign: "left" }}>جمع کل {title}</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "4px", textAlign: "left" }}>{toPersianDigits(Math.round(subtotal).toLocaleString())}</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "4px" }}></td>
                 </tr>
               </tbody>
             </table>
@@ -483,128 +503,189 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
         );
       })}
 
-      {/* Sheet 6: خلاصه مالی */}
-      <div className="border-2 border-slate-300 p-4 mb-8" style={{ pageBreakAfter: 'always' }}>
-        <PrintHeader s={s} sheetTitle="خلاصه مالی" sheetNumber={6} />
-        <table className="w-full text-xs border-collapse mt-3" style={{ border: '1px solid #cbd5e1' }}>
+      {/* برگه‌ی خلاصه دسته‌ها */}
+      <div className="border-2 border-slate-300 p-4 mb-6" style={{ pageBreakAfter: "always" }}>
+        <PrintHeader s={s} sheetTitle="خلاصه دسته‌ها" sheetNumber={sheets.length + 1} totalSheets={totalSheets} />
+        <table className="w-full text-xs border-collapse mt-3" style={{ border: "1px solid #cbd5e1" }}>
           <thead>
-            <tr style={{ background: '#f1f5f9' }}>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', width: '30px' }}>ردیف</th>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'right' }}>شرح</th>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', width: '150px' }}>جمع کل (ریال)</th>
+            <tr style={{ background: "#f1f5f9" }}>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", width: "30px" }}>ردیف</th>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "right" }}>شرح</th>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", width: "150px" }}>جمع کل (ریال)</th>
             </tr>
           </thead>
           <tbody>
             {CS_CATEGORY_ORDER.map((cat, idx) => {
-              const subtotalKey = ('subtotal' + cat.charAt(0) + cat.slice(1).toLowerCase()) as keyof ClientStatement;
+              const subtotalKey = ("subtotal" + cat.charAt(0) + cat.slice(1).toLowerCase()) as keyof ClientStatement;
               const val = Number(s[subtotalKey] || 0);
               return (
                 <tr key={cat}>
-                  <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'center' }}>{toPersianDigits(idx + 1)}</td>
-                  <td style={{ border: '1px solid #cbd5e1', padding: '5px' }}>{CS_CATEGORY_LABELS[cat]}</td>
-                  <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'left' }}>{toPersianDigits(Math.round(val).toLocaleString())}</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>{toPersianDigits(idx + 1)}</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>{CS_CATEGORY_LABELS[cat]}</td>
+                  <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>{toPersianDigits(Math.round(val).toLocaleString())}</td>
                 </tr>
               );
             })}
-            <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
-              <td colSpan={2} style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'left' }}>جمع هزینه‌ها</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.totalBeforeCoefficient)).toLocaleString())}</td>
+            <tr style={{ background: "#f8fafc", fontWeight: "bold" }}>
+              <td colSpan={2} style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "left" }}>جمع هزینه‌ها</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "left" }}>{toPersianDigits(Math.round(Number(s.totalBeforeCoefficient)).toLocaleString())}</td>
             </tr>
           </tbody>
         </table>
         <Signatures />
       </div>
 
-      {/* Sheet 7: خلاصه مالی کل */}
-      <div className="border-2 border-slate-300 p-4" style={{ pageBreakAfter: 'always' }}>
-        <PrintHeader s={s} sheetTitle="خلاصه مالی کل" sheetNumber={7} />
-        <table className="w-full text-xs border-collapse mt-3" style={{ border: '1px solid #cbd5e1' }}>
+      {/* برگه‌ی خلاصه مالی کل */}
+      <div className="border-2 border-slate-300 p-4" style={{ pageBreakAfter: "auto" }}>
+        <PrintHeader s={s} sheetTitle="خلاصه مالی کل" sheetNumber={sheets.length + 2} totalSheets={totalSheets} />
+        <table className="w-full text-xs border-collapse mt-3" style={{ border: "1px solid #cbd5e1" }}>
           <thead>
-            <tr style={{ background: '#f1f5f9' }}>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', width: '30px' }}>ردیف</th>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'right' }}>شرح</th>
-              <th style={{ border: '1px solid #cbd5e1', padding: '6px', width: '150px' }}>جمع کل (ریال)</th>
+            <tr style={{ background: "#f1f5f9" }}>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", width: "30px" }}>ردیف</th>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "right" }}>شرح</th>
+              <th style={{ border: "1px solid #cbd5e1", padding: "6px", width: "150px" }}>مبلغ (ریال)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'center' }}>۱</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px' }}>جمع هزینه‌ها</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.totalBeforeCoefficient)).toLocaleString())}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>۱</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>جمع هزینه‌ها</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>{toPersianDigits(Math.round(Number(s.totalBeforeCoefficient)).toLocaleString())}</td>
             </tr>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'center' }}>۲</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px' }}>جمع با احتساب ضریب {s.coefficient}</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.totalAfterCoefficient)).toLocaleString())}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>۲</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>مبلغ با اعمال ضریب ({s.coefficient})</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>{toPersianDigits(Math.round(Number(s.totalAfterCoefficient)).toLocaleString())}</td>
             </tr>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'center' }}>۳</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px' }}>حق‌العمل پیمانکار ({s.contractorSharePercent}٪)</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.contractorShareAmount)).toLocaleString())}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>۳</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>سهم پیمانکار ({s.contractorSharePercent}٪)</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>{toPersianDigits(Math.round(Number(s.contractorShareAmount)).toLocaleString())}</td>
             </tr>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'center' }}>۴</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px' }}>درصد استهلاک پیش‌پرداخت ({s.prepaymentDeductionPercent}٪)</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '5px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.prepaymentDeductionAmount)).toLocaleString())}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>۴</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>کسر استهلاک پیش‌پرداخت ({s.prepaymentDeductionPercent}٪)</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>({toPersianDigits(Math.round(Number(s.prepaymentDeductionAmount)).toLocaleString())})</td>
             </tr>
-            <tr style={{ background: '#dcfce7', fontWeight: 'bold' }}>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'center' }}>۵</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px' }}>خالص قابل دریافت</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', textAlign: 'left' }}>{toPersianDigits(Math.round(Number(s.netPayable)).toLocaleString())}</td>
+            {hasTax ? (
+              <tr>
+                <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "center" }}>۵</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "5px" }}>مالیات بر ارزش افزوده ({taxPercent}٪)</td>
+                <td style={{ border: "1px solid #cbd5e1", padding: "5px", textAlign: "left" }}>{toPersianDigits(taxAmount.toLocaleString())}</td>
+              </tr>
+            ) : null}
+            <tr style={{ background: "#dcfce7", fontWeight: "bold" }}>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "center" }}>{hasTax ? "۶" : "۵"}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px" }}>مبلغ صورت‌وضعیت</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "left" }}>{toPersianDigits(netAfterTax.toLocaleString())}</td>
+            </tr>
+            <tr style={{ background: "#fef3c7" }}>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "center" }}>{hasTax ? "۷" : "۶"}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px" }}>
+                کسر پرداختی‌های قبلی
+                {s.previousStatements && s.previousStatements.length > 0 ? (
+                  <span className="text-[10px] text-slate-600 mr-2">
+                    ({s.previousStatements.length} صورت‌وضعیت)
+                  </span>
+                ) : null}
+              </td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "left" }}>({toPersianDigits(Math.round(totalPreviousPaid).toLocaleString())})</td>
+            </tr>
+            <tr style={{ background: "#dbeafe", fontWeight: "bold" }}>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "center" }}>{hasTax ? "۸" : "۷"}</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px" }}>مانده قابل دریافت</td>
+              <td style={{ border: "1px solid #cbd5e1", padding: "6px", textAlign: "left" }}>{toPersianDigits(finalBalance.toLocaleString())}</td>
             </tr>
           </tbody>
         </table>
+
+        {/* توضیحات تکمیلی */}
+        {s.description ? (
+          <div className="mt-4 p-3 border border-slate-300 rounded bg-slate-50">
+            <div className="text-xs font-bold text-slate-700 mb-1">توضیحات:</div>
+            <div className="text-xs text-slate-700 whitespace-pre-wrap leading-5">{s.description}</div>
+          </div>
+        ) : null}
+
         <Signatures />
       </div>
     </div>
   );
 }
+function PrintHeader({ s, sheetTitle, sheetNumber, totalSheets }: any) {
+  const project = s.project || {};
+  const client = project.client || null;
+  const consultant = project.consultant || null;
+  const contract = s.contract || null;
+  const location = [project.addressProvince, project.addressCity, project.addressFull]
+    .filter(Boolean)
+    .join("، ");
 
-// ═══════════════════════════════════════════════════════════
-// Print header (repeats on each sheet)
-// ═══════════════════════════════════════════════════════════
-function PrintHeader({ s, sheetTitle, sheetNumber }: any) {
   return (
     <div>
-      <div className="flex items-start justify-between border-b-2 border-slate-800 pb-2">
-        <div className="text-xs space-y-0.5">
-          <div><span className="font-bold">پروژه: </span>{s.project?.name}</div>
-          <div><span className="font-bold">کارفرما: </span>—</div>
-          <div><span className="font-bold">مشاور: </span>—</div>
-          <div><span className="font-bold">پیمانکار: </span>—</div>
-        </div>
-        <div className="text-center">
-          <div className="font-bold text-base">{sheetTitle}</div>
-          <div className="text-xs mt-1">برگه مالی — شماره {toPersianDigits(sheetNumber)} از ۷</div>
+      {/* سربرگ شرکت (ما) */}
+      <div className="flex items-start justify-between border-b-2 border-slate-800 pb-2 mb-2">
+        <div className="flex items-center gap-3">
+          <img src={COMPANY.logo} alt={COMPANY.name} style={{ width: "48px", height: "48px", objectFit: "contain" }} />
+          <div className="text-xs">
+            <div className="font-bold text-sm">{COMPANY.name}</div>
+            <div className="text-slate-600">{COMPANY.address}</div>
+            {COMPANY.phone ? <div className="text-slate-600">تلفن: {COMPANY.phone}</div> : null}
+          </div>
         </div>
         <div className="text-xs text-left space-y-0.5">
-          <div>صورت‌وضعیت شماره <span className="num font-bold">{toPersianDigits(s.statementNumber)}</span></div>
-          <div>کد: <span className="num" style={{ fontFamily: 'monospace' }}>{s.code}</span></div>
-          <div>دوره: <span className="num">{formatJalaliDate(s.periodStart)}</span> تا <span className="num">{formatJalaliDate(s.periodEnd)}</span></div>
+          <div>تاریخ چاپ: <span className="num">{formatJalaliDate(new Date())}</span></div>
+          <div>برگه <span className="num">{toPersianDigits(sheetNumber)}</span> از <span className="num">{toPersianDigits(totalSheets)}</span></div>
         </div>
+      </div>
+
+      {/* اطلاعات پروژه */}
+      <div className="grid grid-cols-3 gap-3 text-xs mb-2 py-2 border-b border-slate-300">
+        <div className="space-y-0.5">
+          <div><span className="font-bold">پروژه: </span>{project.name || "—"}</div>
+          <div><span className="font-bold">کد پروژه: </span><span className="num">{project.code || "—"}</span></div>
+          <div><span className="font-bold">محل اجرا: </span>{location || "—"}</div>
+        </div>
+        <div className="space-y-0.5">
+          <div><span className="font-bold">کارفرما: </span>{client?.name || "—"}</div>
+          <div><span className="font-bold">مشاور: </span>{consultant?.name || "—"}</div>
+          <div><span className="font-bold">پیمانکار: </span>{COMPANY.name}</div>
+        </div>
+        <div className="space-y-0.5">
+          <div><span className="font-bold">شماره صورت‌وضعیت: </span><span className="num">{toPersianDigits(s.statementNumber)}</span></div>
+          {contract?.code ? (
+            <div><span className="font-bold">شماره قرارداد: </span><span className="num">{contract.code}</span></div>
+          ) : null}
+          <div><span className="font-bold">دوره: </span><span className="num">{formatJalaliDate(s.periodStart)}</span> تا <span className="num">{formatJalaliDate(s.periodEnd)}</span></div>
+        </div>
+      </div>
+
+      {/* عنوان برگه */}
+      <div className="text-center py-1">
+        <div className="font-bold text-sm">{sheetTitle}</div>
       </div>
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════
 // Signature block
 // ═══════════════════════════════════════════════════════════
 function Signatures() {
   return (
-    <div className="mt-6 grid grid-cols-3 gap-4 text-xs" style={{ marginTop: '40px' }}>
+    <div className="mt-6 grid grid-cols-3 gap-4 text-xs" style={{ marginTop: "40px" }}>
       <div className="text-center">
         <div className="font-bold mb-8">حسابداری پیمانکار</div>
-        <div>امضاء:</div>
+        <div className="border-t border-slate-400 pt-1">نام و امضا</div>
       </div>
       <div className="text-center">
         <div className="font-bold mb-8">نماینده اجرایی کارفرما</div>
-        <div>امضاء:</div>
+        <div className="border-t border-slate-400 pt-1">نام و امضا</div>
       </div>
       <div className="text-center">
-        <div className="font-bold mb-8">نمایندگان کارفرما</div>
-        <div>امضاء:</div>
+        <div className="font-bold mb-8">نماینده / ناظر کارفرما</div>
+        <div className="border-t border-slate-400 pt-1">نام و امضا</div>
       </div>
     </div>
   );
 }
+

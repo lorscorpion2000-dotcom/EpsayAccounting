@@ -49,7 +49,16 @@ export interface ClientStatement {
   id: string;
   code: string;
   projectId: string;
-  project?: { id: string; code: string; name: string };
+  project?: {
+    id: string;
+    code: string;
+    name: string;
+    addressFull?: string | null;
+    addressCity?: string | null;
+    addressProvince?: string | null;
+    client?: { id: string; name: string; nationalId?: string | null } | null;
+    consultant?: { id: string; name: string } | null;
+  };
   contractId?: string | null;
   statementNumber: number;
   periodStart: string;
@@ -76,6 +85,24 @@ export interface ClientStatement {
   description?: string | null;
   items?: CSItem[];
   createdAt: string;
+  contract?: {
+    id: string;
+    code: string;
+    taxPercent: string | number;
+    baseAmount: string | number;
+    prepaymentAmount: string | number | null;
+    prepaymentDepreciationPercent: string | number | null;
+  } | null;
+  previousStatements?: {
+    id: string;
+    code: string;
+    statementNumber: number;
+    netPayable: string | number;
+    paidAt?: string | null;
+    periodStart: string;
+    periodEnd: string;
+  }[];
+  totalPreviousPaid?: number;
   _count?: { items: number };
 }
 

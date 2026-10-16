@@ -7,6 +7,7 @@ import {
 } from '../dto/client-statement.dto';
 
 const CATEGORIES = ['MATERIAL', 'LABOR', 'MISC', 'TRANSPORT', 'EQUIPMENT'] as const;
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 type Category = typeof CATEGORIES[number];
 
 @Injectable()
@@ -68,7 +69,7 @@ export class ClientStatementCrudService {
   }
 
   private async resolveContractData(projectId: string, contractId?: string | null) {
-    if (contractId) {
+    if (contractId && UUID_RE.test(contractId)) {
       const c = await this.prisma.contract.findUnique({ where: { id: contractId } });
       if (c) return { coefficient: Number(c.coefficient), prepaymentAmount: Number(c.prepaymentAmount || 0) };
     }
@@ -104,7 +105,19 @@ export class ClientStatementCrudService {
     const s = await this.prisma.clientStatement.findUnique({
       where: { id },
       include: {
-        project: { select: { id: true, code: true, name: true, clientId: true } },
+        project: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            clientId: true,
+            addressFull: true,
+            addressCity: true,
+            addressProvince: true,
+            client: { select: { id: true, name: true, nationalId: true } },
+            consultant: { select: { id: true, name: true } },
+          },
+        },
         journalEntry: { select: { id: true, code: true, status: true } },
         items: {
           include: { wbsItem: { select: { id: true, code: true, title: true } } },
@@ -113,7 +126,57 @@ export class ClientStatementCrudService {
       },
     });
     if (!s) throw new NotFoundException('صورت‌وضعیت یافت نشد');
-    return s;
+
+    // اطلاعات قرارداد (relation در schema نیست — query جداگانه)
+    let contract: any = null;
+    if (s.contractId) {
+      contract = await this.prisma.contract.findUnique({
+        where: { id: s.contractId },
+        select: {
+          id: true,
+          code: true,
+          taxPercent: true,
+          baseAmount: true,
+          prepaymentAmount: true,
+          prepaymentDepreciationPercent: true,
+        },
+      });
+    }
+
+    // صورت‌وضعیت‌های قبلی همان پروژه/قرارداد که پرداخت شده‌اند
+    const previousWhere: any = {
+      projectId: s.projectId,
+      id: { not: id },
+      status: 'PAID',
+      deletedAt: null,
+    };
+    if (s.contractId) previousWhere.contractId = s.contractId;
+    const previousStatements = await this.prisma.clientStatement.findMany({
+      where: previousWhere,
+      select: {
+        id: true,
+        code: true,
+        statementNumber: true,
+        netPayable: true,
+        paidAt: true,
+        periodStart: true,
+        periodEnd: true,
+      },
+      orderBy: { statementNumber: 'asc' },
+    });
+
+    const totalPreviousPaid = previousStatements.reduce(
+      (sum, p) => sum + Number(p.netPayable),
+      0,
+    );
+
+    return {
+      ...s,
+      items: s.items,
+      contract,
+      previousStatements,
+      totalPreviousPaid,
+    };
   }
 
   async create(dto: CreateCSDto) {
@@ -149,7 +212,7 @@ export class ClientStatementCrudService {
       data: {
         code,
         projectId: dto.projectId,
-        contractId: dto.contractId,
+        contractId: dto.contractId && UUID_RE.test(dto.contractId) ? dto.contractId : null,
         statementNumber,
         periodStart: new Date(dto.periodStart),
         periodEnd: new Date(dto.periodEnd),

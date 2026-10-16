@@ -86,7 +86,7 @@ export default function ClientStatementFormPage() {
   useEffect(() => {
     Promise.all([
       api.get('/projects').then((r) => r.data).catch(() => []),
-      api.get('/contracts').then((r) => r.data).catch(() => []),
+      api.get('/project-contracts').then((r) => r.data).catch(() => []),
       api.get('/price-lists', { params: { status: 'PUBLISHED' } }).then((r) => r.data).catch(() => []),
     ]).then(([prj, ctr, pls]) => {
       setProjects(prj);
