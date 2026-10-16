@@ -51,6 +51,13 @@ const MENU: MenuSection[] = [
           { to: '/accounting/reports/ar-aging-detail', label: 'بدهکاران سنواتی', icon: TrendingUp },
         ],
       },
+      {
+        key: 'revenue',
+        title: 'درآمد',
+        items: [
+          { to: '/reports/contracting-revenue', label: 'درآمد پیمانکاری', icon: BarChart3 },
+        ],
+      },
     ],
   },
 

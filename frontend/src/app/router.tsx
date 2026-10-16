@@ -174,6 +174,7 @@ const TaxReportsPage = lazy(() => import('@/modules/tax-reports/pages/TaxReports
 
 // Operational Reports
 const OperationalReportsPage = lazy(() => import('@/modules/operational-reports/pages/OperationalReportsPage'));
+const ContractingRevenuePage = lazy(() => import('@/modules/contracting-revenue/pages/ContractingRevenuePage'));
 
 // Data I/O
 const DataIoPage = lazy(() => import('@/modules/data-io/pages/DataIoPage'));
@@ -270,6 +271,7 @@ export default function AppRouter() {
         {/* Tax Reports */}
         <Route path="/tax-reports" element={<TaxReportsPage />} />
         <Route path="/operational-reports" element={<OperationalReportsPage />} />
+        <Route path="/reports/contracting-revenue" element={<ContractingRevenuePage />} />
         <Route path="/accounting/journal-book" element={<JournalBookPage />} />
         <Route path="/accounting/mappings" element={<AccountMappingsPage />} />
         <Route path="/accounting/cost-centers" element={<CostCentersPage />} />

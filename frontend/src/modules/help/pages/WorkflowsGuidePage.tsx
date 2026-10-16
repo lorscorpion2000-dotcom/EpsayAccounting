@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users } from 'lucide-react';
+import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import PrintButton from '@/components/PrintButton';
@@ -677,6 +677,33 @@ const WORKFLOWS: Workflow[] = [
       'اگر خطای BUDGET_EXCEEDED گرفتی، مودال هشدار بودجه باز می‌شود — می‌توانی انصراف بدهی یا با force تأیید کنی.',
       'اگر ماژول مورد نظر در کارتابل نمی‌آید، اول نقش کاربر را چک کن؛ ممکن است آن نقش در TAB_ROLES همان ماژول تعریف نشده باشد.',
       'برای اینکه یک کاربر خاص فقط کارتابل ماژول خودش را ببیند، نقش او را از super_admin خارج کن — چون super_admin همه‌چیز را می‌بیند.',
+    ],
+  },
+  {
+    key: 'contracting-revenue',
+    title: 'گزارش درآمد پیمانکاری',
+    description: 'نمایش درآمد، هزینه و سود پیمانکاری به تفکیک پروژه، کارفرما و دوره — با خروجی Excel و PDF.',
+    icon: FileSpreadsheet,
+    color: 'emerald',
+    route: '/reports/contracting-revenue',
+    steps: [
+      { actor: 'حسابدار / مدیر', action: 'از منوی «داشبورد و گزارشات → درآمد → درآمد پیمانکاری» صفحه را باز کن', icon: FileSpreadsheet, color: 'slate', target: 'بازه، پروژه یا کارفرما را فیلتر کن' },
+      { actor: 'سیستم', action: 'از صورت‌وضعیت‌های تأییدشده (APPROVED) و پرداخت‌شده (PAID) درآمد را جمع می‌زند', icon: CheckCircle2, color: 'green', target: 'جمع درآمد ناخالص' },
+      { actor: 'سیستم', action: 'هزینه‌های شرکت (POSTED + COMPANY) روی همان پروژه را کسر می‌کند', icon: Wallet, color: 'orange', target: 'هزینه واقعی شرکت' },
+      { actor: 'سیستم', action: 'سود و حاشیه سود را محاسبه می‌کند', icon: TrendingUp, color: 'blue', target: 'سود = درآمد − هزینه شرکت' },
+      { actor: 'مدیر', action: 'با دکمه‌ی Excel خروجی چند شیت می‌گیرد یا با چاپ/PDF نسخه‌ی رسمی می‌سازد', icon: FileSpreadsheet, color: 'purple', target: 'خروجی Excel / PDF' },
+    ],
+    onApprove: [
+      'درآمد فقط از صورت‌وضعیت‌های تأییدشده و پرداخت‌شده محاسبه می‌شود. پیش‌نویس و ارسال‌شده شمرده نمی‌شوند.',
+      'هزینه‌ی کارفرما (CLIENT_PASS_THROUGH) جزو درآمد یا هزینه‌ی شرکت نیست — پول کارفرماست که از طرف او پرداخت شده.',
+      'هزینه‌های شرکت فقط با وضعیت POSTED (سند خورده) در محاسبه می‌آیند. DRAFT شمرده نمی‌شود.',
+      'خروجی Excel شامل چهار شیت است: خلاصه، به تفکیک پروژه، به تفکیک کارفرما، به تفکیک دوره.',
+      'نمودار میله‌ای یا خطی بین درآمد، هزینه و سود قابل تغییر است.',
+    ],
+    onReject: [
+      'اگر عدد هزینه صفر است، یعنی هنوز هزینه‌ی COMPANY با وضعیت POSTED روی پروژه ثبت نشده.',
+      'اگر پروژه‌ای در گزارش نیست، یعنی هیچ صورت‌وضعیت تأییدشده یا هزینه‌ی POSTED ندارد.',
+      'بازه‌ی تاریخ روی periodEnd صورت‌وضعیت اعمال می‌شود، نه periodStart.',
     ],
   },
 ];
