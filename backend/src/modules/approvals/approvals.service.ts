@@ -51,9 +51,56 @@ export class ApprovalsService {
     return false;
   }
 
+  private static readonly MODULE_ROLES: Record<string, string[]> = {
+    pettyCashTransactions:   ['financial_manager', 'accountant', 'petty_cash_holder'],
+    pettyCashRequests:       ['financial_manager', 'accountant'],
+    purchaseRequests:        ['project_manager', 'procurement_officer', 'financial_manager'],
+    purchaseOrders:          ['procurement_officer', 'financial_manager', 'project_manager'],
+    dailyReports:            ['project_manager', 'site_supervisor'],
+    goodsReceipts:           ['warehouse_keeper', 'procurement_officer', 'accountant'],
+    subcontractorStatements: ['project_manager', 'financial_manager', 'accountant'],
+    leaveRequests:           ['project_manager', 'hr'],
+    advanceRequests:         ['financial_manager', 'project_manager'],
+    clientStatements:        ['financial_manager', 'accountant', 'project_manager'],
+    workerStatements:        ['project_manager', 'financial_manager', 'accountant'],
+    expenses:                ['financial_manager', 'accountant', 'project_manager'],
+  };
+
+  private async getModuleAccess(userId?: string): Promise<{
+    all: boolean;
+    roleCodes: Set<string>;
+    access: Record<string, boolean>;
+  }> {
+    if (!userId) return { all: true, roleCodes: new Set(), access: {} };
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: { include: { permissions: { include: { permission: true } } } },
+          },
+        },
+      },
+    });
+    if (!user) return { all: false, roleCodes: new Set(), access: {} };
+    const roleCodes = new Set<string>();
+    for (const ur of (user as any).roles || []) {
+      if (ur.role?.code) roleCodes.add(ur.role.code);
+    }
+    const isSuper = roleCodes.has('super_admin') || roleCodes.has('admin');
+    if (isSuper) return { all: true, roleCodes, access: {} };
+    const access: Record<string, boolean> = {};
+    for (const [mod, allowed] of Object.entries(ApprovalsService.MODULE_ROLES)) {
+      access[mod] = allowed.some((r) => roleCodes.has(r));
+    }
+    return { all: false, roleCodes, access };
+  }
+
   async getPending(userId?: string) {
     const canApprove = userId ? await this.canUserApprove(userId) : true;
-    const [
+    const access = await this.getModuleAccess(userId);
+    const can = (mod: string): boolean => access.all || !!access.access?.[mod];
+    let [
       pettyCashTxs,
       pettyCashRequests,
       purchaseReqs,
@@ -204,7 +251,55 @@ export class ApprovalsService {
       }),
     ]);
 
+    if (!access.all) {
+
+
+      if (!can('pettyCashTransactions'))   pettyCashTxs = [];
+
+
+      if (!can('pettyCashRequests'))       pettyCashRequests = [];
+
+
+      if (!can('purchaseRequests'))        purchaseReqs = [];
+
+
+      if (!can('purchaseOrders'))          purchaseOrders = [];
+
+
+      if (!can('dailyReports'))            dailyReports = [];
+
+
+      if (!can('goodsReceipts'))           goodsReceipts = [];
+
+
+      if (!can('subcontractorStatements')) subcontractorStatements = [];
+
+
+      if (!can('leaveRequests'))           leaveRequests = [];
+
+
+      if (!can('advanceRequests'))         advanceRequests = [];
+
+
+      if (!can('clientStatements'))        clientStatementsPending = [];
+
+
+      if (!can('workerStatements'))        workerStatementsPending = [];
+
+
+      if (!can('expenses'))                expensesPending = [];
+
+
+    }
+
+
     return {
+      _meta: {
+        roleCodes: Array.from(access.roleCodes),
+        modulesAllowed: access.all
+          ? Object.keys(ApprovalsService.MODULE_ROLES)
+          : Object.entries(access.access || {}).filter(([, v]) => v).map(([k]) => k),
+      },
       pettyCashTransactions: pettyCashTxs.map((tx) => ({
         id: tx.id,
         module: 'petty-cash-transaction',
