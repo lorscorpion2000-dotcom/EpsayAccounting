@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Inbox, RefreshCw, User, Wallet, FolderOpen, Calendar, Hash, TrendingUp, TrendingDown, Eye, ShoppingCart, Layers, ShoppingBag, ClipboardList, Edit } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Inbox, RefreshCw, User, Wallet, FolderOpen, Calendar, Hash, TrendingUp, TrendingDown, Eye, ShoppingCart, Layers, ShoppingBag, ClipboardList, Edit, FileText, Users } from 'lucide-react';
 import { PackagePlus } from 'lucide-react';
 import clsx from 'clsx';
 import { approvalsApi, PendingApproval, ApprovalStats } from '../services/approvals.api';
@@ -36,7 +36,7 @@ const SECTION_STATUS_COLORS: Record<string, string> = {
 };
 const SECTION_ORDER = ['HEADER','PROGRESS','WORKERS','EQUIPMENTS','MATERIALS','REQUESTS','EVENTS','ATTACHMENTS'];
 
-type Tab = 'all' | 'pettyCashTransactions' | 'pettyCashRequests' | 'purchaseRequests' | 'purchaseOrders' | 'dailyReports' | 'goodsReceipts' | 'subcontractorStatements' | 'leaveRequests' | 'advanceRequests';
+type Tab = 'all' | 'pettyCashTransactions' | 'pettyCashRequests' | 'purchaseRequests' | 'purchaseOrders' | 'dailyReports' | 'goodsReceipts' | 'subcontractorStatements' | 'leaveRequests' | 'advanceRequests' | 'clientStatements' | 'workerStatements' | 'expenses';
 
 interface PendingData {
   pettyCashTransactions: PendingApproval[];
@@ -48,6 +48,9 @@ interface PendingData {
   subcontractorStatements: PendingApproval[];
   leaveRequests: PendingApproval[];
   advanceRequests: PendingApproval[];
+  clientStatements: PendingApproval[];
+  workerStatements: PendingApproval[];
+  expenses: PendingApproval[];
 }
 
 // نقشه: هر تب برای کدام نقش‌ها نمایش داده شود
@@ -62,6 +65,9 @@ const TAB_ROLES: Record<string, string[]> = {
   subcontractorStatements: ['super_admin', 'project_manager', 'accountant', 'financial_manager'],
   leaveRequests: ['super_admin', 'project_manager'],
   advanceRequests: ['super_admin', 'accountant', 'financial_manager'],
+  clientStatements: ['super_admin', 'financial_manager', 'accountant', 'project_manager'],
+  workerStatements: ['super_admin', 'project_manager', 'accountant', 'financial_manager'],
+  expenses: ['super_admin', 'financial_manager', 'accountant', 'project_manager'],
 };
 
 function canSeeTab(tab: string, roles: string[]): boolean {
@@ -91,6 +97,9 @@ export default function ApprovalsPage() {
     subcontractorStatements: [],
     leaveRequests: [],
     advanceRequests: [],
+    clientStatements: [],
+    workerStatements: [],
+    expenses: [],
   });
   const [stats, setStats] = useState<ApprovalStats | null>(null);
   const [tab, setTab] = useState<Tab>('all');
@@ -127,6 +136,9 @@ export default function ApprovalsPage() {
         subcontractorStatements: (p as any).subcontractorStatements || [],
         leaveRequests: (p as any).leaveRequests || [],
         advanceRequests: (p as any).advanceRequests || [],
+        clientStatements: (p as any).clientStatements || [],
+        workerStatements: (p as any).workerStatements || [],
+        expenses: (p as any).expenses || [],
       });
       setStats(s);
     } catch {
@@ -165,6 +177,9 @@ export default function ApprovalsPage() {
     ...pending.subcontractorStatements,
     ...pending.leaveRequests,
     ...pending.advanceRequests,
+    ...pending.clientStatements,
+    ...pending.workerStatements,
+    ...pending.expenses,
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const displayedItems =
@@ -177,7 +192,10 @@ export default function ApprovalsPage() {
     tab === 'goodsReceipts' ? pending.goodsReceipts :
     tab === 'subcontractorStatements' ? pending.subcontractorStatements :
     tab === 'leaveRequests' ? pending.leaveRequests :
-    pending.advanceRequests;
+    tab === 'advanceRequests' ? pending.advanceRequests :
+    tab === 'clientStatements' ? pending.clientStatements :
+    tab === 'workerStatements' ? pending.workerStatements :
+    pending.expenses;
   const openSectionsModal = async (item: PendingApproval) => {
     setSectionsModalItem(item);
     setSectionsLoading(true);
@@ -696,6 +714,24 @@ export default function ApprovalsPage() {
             label="مساعده"
             count={pending.advanceRequests.length}
           />}
+          {canSeeTab('clientStatements', userRoles) && <TabButton
+            active={tab === 'clientStatements'}
+            onClick={() => setTab('clientStatements')}
+            label="صورت‌وضعیت کارفرما"
+            count={pending.clientStatements.length}
+          />}
+          {canSeeTab('workerStatements', userRoles) && <TabButton
+            active={tab === 'workerStatements'}
+            onClick={() => setTab('workerStatements')}
+            label="صورت‌وضعیت کارگر"
+            count={pending.workerStatements.length}
+          />}
+          {canSeeTab('expenses', userRoles) && <TabButton
+            active={tab === 'expenses'}
+            onClick={() => setTab('expenses')}
+            label="هزینه‌ها"
+            count={pending.expenses.length}
+          />}
         </div>
       </div>
 
@@ -729,6 +765,12 @@ export default function ApprovalsPage() {
                   navigate('/warehouse/receipts/' + item.id);
                 } else if (item.module === 'subcontractor-statement') {
                   navigate('/payroll/subcontractor-statements/' + item.id);
+                } else if (item.module === 'client-statement') {
+                  navigate('/client-statements/' + item.id);
+                } else if (item.module === 'worker-statement') {
+                  navigate('/payroll/worker-statements/' + item.id);
+                } else if (item.module === 'expense') {
+                  navigate('/expenses/' + item.id);
                 }
               }}
             />
@@ -1010,7 +1052,9 @@ function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay, onEdit }: 
   const isPO = item.module === 'purchase-order';
   const isDailyReport = item.module === 'daily-report';
   const isGoodsReceipt = item.module === 'goods-receipt';
-  const isExpense = item.raw?.type === 'EXPENSE';
+  const isClientStatement = item.module === 'client-statement';
+  const isWorkerStatement = item.module === 'worker-statement';
+  const isExpense = item.module === 'expense' || item.raw?.type === 'EXPENSE';
 
   return (
     <div className="card p-5 hover:shadow-card-hover transition-shadow">
@@ -1020,6 +1064,8 @@ function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay, onEdit }: 
             'w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md shrink-0',
             isGoodsReceipt ? 'bg-gradient-to-br from-teal-500 to-teal-700' :
             isDailyReport ? 'bg-gradient-to-br from-cyan-500 to-cyan-700' :
+            isClientStatement ? 'bg-gradient-to-br from-fuchsia-500 to-fuchsia-700' :
+            isWorkerStatement ? 'bg-gradient-to-br from-orange-500 to-orange-700' :
             isPO ? 'bg-gradient-to-br from-violet-500 to-violet-700' :
             isPurchase ? 'bg-gradient-to-br from-blue-500 to-blue-700' :
             isRequest ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' :
@@ -1028,6 +1074,8 @@ function ApprovalCard({ item, onApprove, onReject, onNavigate, onPay, onEdit }: 
           )}>
             {isGoodsReceipt ? <PackagePlus className="w-6 h-6" /> :
              isDailyReport ? <ClipboardList className="w-6 h-6" /> :
+             isClientStatement ? <FileText className="w-6 h-6" /> :
+             isWorkerStatement ? <Users className="w-6 h-6" /> :
              isPO ? <ShoppingBag className="w-6 h-6" /> :
              isPurchase ? <ShoppingCart className="w-6 h-6" /> :
              isRequest ? <TrendingUp className="w-6 h-6" /> :

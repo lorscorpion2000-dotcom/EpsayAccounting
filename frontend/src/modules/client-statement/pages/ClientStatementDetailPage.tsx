@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban } from 'lucide-react';
+import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { clientStatementApi } from '../services/client-statement.api';
 import type { ClientStatement, CSItem, CSCategory } from '@/types/client-statement';
@@ -227,6 +227,45 @@ export default function ClientStatementDetailPage() {
             <div><span className="font-bold">دلیل رد: </span>{s.rejectedReason}</div>
           </div>
         )}
+
+        {/* Pass-through expenses (P2) */}
+        {(Number(s.passThroughOpenAmount || 0) > 0 || (s.status === 'APPROVED' && Number(s.passThroughAmount || 0) > 0)) && (
+          <div className={clsx(
+            'mt-4 p-4 rounded-lg border text-sm',
+            Number(s.passThroughOpenAmount || 0) > 0 && (s.status === 'DRAFT' || s.status === 'SUBMITTED')
+              ? 'bg-amber-50 border-amber-300 text-amber-900'
+              : 'bg-emerald-50 border-emerald-300 text-emerald-900',
+          )}>
+            {Number(s.passThroughOpenAmount || 0) > 0 && (s.status === 'DRAFT' || s.status === 'SUBMITTED') && (
+              <>
+                <div className="font-bold flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>هزینه‌های کارفرما — بسته‌نشده — {toPersianDigits(Math.round(Number(s.passThroughOpenAmount)).toLocaleString())} ریال</span>
+                </div>
+                <div className="text-xs mb-2 text-amber-800">
+                  این هزینه‌ها از طرف کارفرما پرداخت شده و قرار است از او پس گرفته شوند. با تأیید این صورت‌وضعیت، در همین سند به حساب کارفرما بسته می‌شوند.
+                </div>
+                <ul className="text-xs space-y-1 mt-2">
+                  {(s.passThroughOpenExpenses || []).map((e) => (
+                    <li key={e.id} className="flex items-center justify-between gap-2 py-0.5">
+                      <span className="num font-mono text-xs" dir="ltr">{e.code}</span>
+                      <span className="flex-1 text-xs text-amber-800 truncate">{e.description || '—'}</span>
+                      <span className="num font-bold text-xs">{toPersianDigits(Math.round(Number(e.totalAmount)).toLocaleString())}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {s.status === 'APPROVED' && Number(s.passThroughAmount || 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="font-bold">
+                  هزینه‌های کارفرما که در این صورت‌وضعیت بسته شد: {toPersianDigits(Math.round(Number(s.passThroughAmount)).toLocaleString())} ریال
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -282,6 +321,9 @@ export default function ClientStatementDetailPage() {
             <div className="border-t pt-3 mt-3">
               <Row label={'استهلاک پیش‌پرداخت (' + s.prepaymentDeductionPercent + '٪)'} value={Number(s.prepaymentDeductionAmount)} negative />
             </div>
+            {Number(s.passThroughAmount || 0) > 0 && (
+              <Row label="هزینه کارفرما (بستانکار)" value={Number(s.passThroughAmount)} />
+            )}
             <div className="border-t-2 pt-3 mt-3">
               <Row label="خالص قابل دریافت" value={Number(s.netPayable)} bold highlight />
             </div>

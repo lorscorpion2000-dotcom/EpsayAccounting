@@ -33,6 +33,14 @@ export interface PendingApprovalsResponse {
   pettyCashRequests: PendingApproval[];
   purchaseRequests: PendingApproval[];
   purchaseOrders: PendingApproval[];
+  dailyReports: PendingApproval[];
+  goodsReceipts: PendingApproval[];
+  subcontractorStatements: PendingApproval[];
+  leaveRequests: PendingApproval[];
+  advanceRequests: PendingApproval[];
+  clientStatements: PendingApproval[];
+  workerStatements: PendingApproval[];
+  expenses: PendingApproval[];
 }
 
 export interface ApprovalStats {
@@ -42,6 +50,14 @@ export interface ApprovalStats {
     pettyCashRequests: { count: number; amount: number };
     purchaseRequests: { count: number; amount: number };
     purchaseOrders: { count: number; amount: number };
+    dailyReports?: { count: number; amount: number };
+    goodsReceipts?: { count: number; amount: number };
+    subcontractorStatements?: { count: number; amount: number };
+    leaveRequests?: { count: number; amount: number };
+    advanceRequests?: { count: number; amount: number };
+    clientStatements?: { count: number; amount: number };
+    workerStatements?: { count: number; amount: number };
+    expenses?: { count: number; amount: number };
   };
 }
 

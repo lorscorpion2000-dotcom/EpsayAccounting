@@ -45,6 +45,14 @@ export interface CSItem {
   notes?: string | null;
 }
 
+export interface ExpenseLite {
+  id: string;
+  code: string;
+  totalAmount: string | number;
+  expenseDate: string;
+  description?: string | null;
+}
+
 export interface ClientStatement {
   id: string;
   code: string;
@@ -103,6 +111,9 @@ export interface ClientStatement {
     periodEnd: string;
   }[];
   totalPreviousPaid?: number;
+  passThroughAmount?: string | number;
+  passThroughOpenAmount?: number;
+  passThroughOpenExpenses?: ExpenseLite[];
   _count?: { items: number };
 }
 

@@ -49,7 +49,7 @@ export class ClientStatementPostService {
     //moved
 
     // ═══════════════════════════════════════════════════════
-    // بستن هزینه‌های پاس‌تروگ مرتبط با این پروژه و کارفرما
+    // بستن هزینه‌های کارفرما مرتبط با این پروژه و کارفرما
     // ═══════════════════════════════════════════════════════
     const clientId = s.project?.clientId || null;
     let passThroughExpenses: any[] = [];
@@ -84,7 +84,7 @@ export class ClientStatementPostService {
       }
     }
 
-    if (netPayable <= 0 && prepaymentDeduction <= 0 && passThroughAmount <= 0) throw new BadRequestException("empty");
+    if (netPayable <= 0 && prepaymentDeduction <= 0 && passThroughAmount <= 0) throw new BadRequestException("مبالغ صورت‌وضعیت صفر است — ابتدا ردیف یا هزینه کارفرما اضافه کنید");
 
     return this.prisma.$transaction(async (tx) => {
       const fyUpdate = await tx.fiscalYear.update({
@@ -98,7 +98,7 @@ export class ClientStatementPostService {
       const lines: any[] = [];
       let sortOrder = 1;
 
-      // Dr: دریافتنی از کارفرما (شامل پاس‌تروگ)
+      // Dr: دریافتنی از کارفرما (شامل هزینه کارفرما)
       const receivableTotal = netPayable + passThroughAmount;
       if (receivableTotal > 0) {
         lines.push({
@@ -124,11 +124,11 @@ export class ClientStatementPostService {
         debit: 0, credit: contractorShare, projectId: s.projectId, sortOrder: sortOrder++,
       });
 
-      // Cr: بستن حساب واسط پاس‌تروگ
+      // Cr: بستن حساب واسط کارفرما
       if (passThroughAmount > 0 && passThroughAcc) {
         lines.push({
           accountId: passThroughAcc.id,
-          description: 'بستن هزینه‌های پاس‌تروگ — ' + s.code + ' (' + passThroughExpenses.length + ' مورد)',
+          description: 'بستن هزینه‌های کارفرما — ' + s.code + ' (' + passThroughExpenses.length + ' مورد)',
           debit: 0, credit: passThroughAmount, projectId: s.projectId,
           partnerId: clientId ?? undefined, sortOrder: sortOrder++,
         });
@@ -152,7 +152,7 @@ export class ClientStatementPostService {
         },
       });
 
-      // علامت‌گذاری هزینه‌های پاس‌تروگ به‌عنوان بسته‌شده
+      // علامت‌گذاری هزینه‌های کارفرما به‌عنوان بسته‌شده
       if (passThroughExpenses.length > 0) {
         await tx.expense.updateMany({
           where: { id: { in: passThroughExpenses.map((e) => e.id) } },
