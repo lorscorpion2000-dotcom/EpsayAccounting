@@ -86,7 +86,7 @@ if (toCreate.length > 0) {
           code: p.code,
           module: p.module,
           action: p.action,
-          nameFa: p.code,   // ╪º┌»╪▒ ┘ü█î┘ä╪» nameFa ┘ê╪¼┘ê╪» ╪»╪º╪▒╪»
+          displayName: p.code,   // ╪º┌»╪▒ ┘ü█î┘ä╪» nameFa ┘ê╪¼┘ê╪» ╪»╪º╪▒╪»
         },
       });
       existingMap.set(p.code, created_row.id);
@@ -100,6 +100,7 @@ if (toCreate.length > 0) {
             code: p.code,
             module: p.module,
             action: p.action,
+            displayName: p.code,
           },
         });
         existingMap.set(p.code, created_row.id);
