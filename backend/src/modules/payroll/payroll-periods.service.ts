@@ -5,6 +5,8 @@ import { AccountingEngineService } from '../accounting/engine/accounting-engine.
 
 @Injectable()
 export class PayrollPeriodsService {
+  private accountCache = new Map<string, any>();
+
   constructor(
     private prisma: PrismaService,
     private engine: AccountingEngineService,
@@ -52,7 +54,7 @@ export class PayrollPeriodsService {
     const exists = await this.prisma.payrollPeriod.findFirst({
       where: { year: dto.year, month: dto.month, projectId: dto.projectId || null },
     });
-    if (exists) throw new BadRequestException('برای این ماه و پروژه قبلاً دوره ایجاد شده است');
+    if (exists) throw new BadRequestException('دوره برای این ماه و پروژه قبلاً ساخته شده');
 
     return this.prisma.payrollPeriod.create({
       data: {
@@ -70,7 +72,7 @@ export class PayrollPeriodsService {
 
   async remove(id: string, userId?: string) {
     const p = await this.findOne(id);
-    if (p.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
+    if (p.status !== 'DRAFT') throw new BadRequestException('فقط دوره پیش‌نویس قابل حذف است');
     await this.prisma.payrollPeriod.update({
       where: { id },
       data: { deletedAt: new Date(), deletedBy: userId ?? null },
@@ -78,17 +80,128 @@ export class PayrollPeriodsService {
     return { success: true, softDeleted: true };
   }
 
+  // ---------------- helpers ----------------
+
+  private r2(n: number): number {
+    return Math.round(n * 100) / 100;
+  }
+
+  private async getAccountByCode(code: string) {
+    if (this.accountCache.has(code)) return this.accountCache.get(code);
+    const acc = await this.prisma.account.findUnique({ where: { code } });
+    if (!acc) throw new BadRequestException('حساب ' + code + ' یافت نشد');
+    if (!acc.isPostable || !acc.isActive) {
+      throw new BadRequestException('حساب ' + code + ' قابل ثبت نیست');
+    }
+    this.accountCache.set(code, acc);
+    return acc;
+  }
+
+  private async getEmployerInsurancePercent(entryDate: Date): Promise<number> {
+    const y = entryDate.getFullYear();
+    const exact = await this.prisma.payrollTaxSetting.findFirst({
+      where: { year: y, isActive: true },
+    });
+    const setting = exact ?? (await this.prisma.payrollTaxSetting.findFirst({
+      where: { isActive: true },
+      orderBy: { year: 'desc' },
+    }));
+    return setting ? Number(setting.insuranceEmployerPercent) || 23 : 23;
+  }
+
+  private async resolvePayrollAccounts(isFieldWorker: boolean) {
+    const expenseCode = isFieldWorker ? '5.1.2' : '5.2.1';
+    const employerInsExpenseCode = isFieldWorker ? '5.1.9' : '5.2.4';
+    return {
+      expense:             await this.getAccountByCode(expenseCode),
+      employerInsExpense:  await this.getAccountByCode(employerInsExpenseCode),
+      insurancePayable:    await this.getAccountByCode('2.1.2.02'),
+      taxPayable:          await this.getAccountByCode('2.1.2.03'),
+      advanceAsset:        await this.getAccountByCode('1.1.4.02'),
+      netPayable:          await this.getAccountByCode('2.1.2.01'),
+    };
+  }
+
+  private buildPayrollLines(rec: any, accounts: any, erPct: number) {
+    const empName   = rec.employee?.name ?? '';
+    const partnerId = rec.employeeId;
+    const projectId = rec.employeeProfile?.projectId || undefined;
+
+    const gross  = this.r2(Number(rec.grossSalary));
+    const empIns = this.r2(Number(rec.insuranceAmount));
+    const erIns  = this.r2((gross * erPct) / 100);
+    const tax    = this.r2(Number(rec.taxAmount));
+    const adv    = this.r2(Number(rec.advanceAmount));
+    const net    = this.r2(Number(rec.netSalary));
+
+    const lines: any[] = [
+      {
+        accountId: accounts.expense.id,
+        debit: gross,
+        description: 'حقوق و دستمزد ' + empName,
+        partnerId,
+        projectId,
+      },
+      {
+        accountId: accounts.employerInsExpense.id,
+        debit: erIns,
+        description: 'هزینه بیمه کارفرما (' + erPct + '%) - ' + empName,
+        partnerId,
+        projectId,
+      },
+      {
+        accountId: accounts.insurancePayable.id,
+        credit: this.r2(empIns + erIns),
+        description: 'بیمه تأمین اجتماعی (7% + ' + erPct + '%) - ' + empName,
+        partnerId,
+      },
+    ];
+
+    if (tax > 0) {
+      lines.push({
+        accountId: accounts.taxPayable.id,
+        credit: tax,
+        description: 'مالیات حقوق - ' + empName,
+        partnerId,
+      });
+    }
+
+    if (adv > 0) {
+      lines.push({
+        accountId: accounts.advanceAsset.id,
+        credit: adv,
+        description: 'کسر مساعده - ' + empName,
+        partnerId,
+      });
+    }
+
+    lines.push({
+      accountId: accounts.netPayable.id,
+      credit: net,
+      description: 'خالص پرداختی - ' + empName,
+      partnerId,
+    });
+
+    return { lines, gross, empIns, erIns, tax, adv, net };
+  }
+
+  // ---------------- approve ----------------
+
   async approve(id: string, userId?: string) {
     const p = await this.findOne(id);
     if (p.status !== 'CALCULATED') {
-      throw new BadRequestException('ابتدا محاسبه حقوق را انجام دهید');
+      throw new BadRequestException('ابتدا محاسبه‌ی دوره باید انجام شود');
     }
 
-    // ─── accrual JE per record (idempotent via JournalEntry lookup) ───
     const created: Array<{ recordId: string; entryId: string; code: string }> = [];
+    const erPct = await this.getEmployerInsurancePercent(p.endDate);
+
     for (const rec of p.records as any[]) {
+      const isFieldWorker = !!rec.employeeProfile?.projectId;
+      const sourceType = isFieldWorker ? 'PAYROLL_ACCRUAL_FIELD' : 'PAYROLL_ACCRUAL';
+
       const existing = await this.prisma.journalEntry.findFirst({
-        where: { sourceType: 'PAYROLL_ACCRUAL', sourceId: rec.id },
+        where: { sourceType, sourceId: rec.id, deletedAt: null },
         select: { id: true, code: true },
       });
       if (existing) {
@@ -97,19 +210,20 @@ export class PayrollPeriodsService {
       }
 
       const empName = rec.employee?.name ?? '';
-      // اگر پرسنل به پروژه اختصاص دارد → حقوق کارگاهی، وگرنه ستادی
-      const isFieldWorker = !!rec.employeeProfile?.projectId;
-      const mappingCode = isFieldWorker ? 'PAYROLL_ACCRUAL_FIELD' : 'PAYROLL_ACCRUAL';
-      const entry = await this.engine.postEvent(mappingCode, {
-        amount: Number(rec.netSalary),
-        entryDate: p.endDate,
-        description: (isFieldWorker ? 'دستمزد کارگاهی ' : 'حقوق ستادی ') + empName + ' - ' + p.code,
-        partnerId: rec.employeeId,
-        projectId: rec.employeeProfile?.projectId || undefined,
+      const accounts = await this.resolvePayrollAccounts(isFieldWorker);
+      const built = this.buildPayrollLines(rec, accounts, erPct);
+
+      const entry = await this.engine.postMultiLine(sourceType, {
+        entryDate: p.endDate.toISOString().slice(0, 10),
+        description:
+          (isFieldWorker ? 'دستمزد کارگاهی ' : 'حقوق ستادی ') + empName + ' - ' + p.code,
         sourceId: rec.id,
         reference: p.code + '/' + rec.rowNumber,
+        lines: built.lines,
         userId,
-      });
+        autoPost: false,
+      } as any);
+
       created.push({ recordId: rec.id, entryId: entry.id, code: entry.code });
     }
 
@@ -123,12 +237,10 @@ export class PayrollPeriodsService {
 
   async markPaid(id: string) {
     const p = await this.findOne(id);
-    if (p.status !== 'APPROVED') throw new BadRequestException('ابتدا تایید شود');
+    if (p.status !== 'APPROVED') throw new BadRequestException('ابتدا تأیید دوره لازم است');
     return this.prisma.payrollPeriod.update({
       where: { id },
       data: { status: 'PAID', paidAt: new Date() },
     });
   }
-
-
 }
