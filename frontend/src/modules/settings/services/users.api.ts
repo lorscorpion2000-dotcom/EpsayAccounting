@@ -7,6 +7,8 @@ export interface SystemUser {
   email?: string | null;
   mobile?: string | null;
   isActive: boolean;
+  isStaff?: boolean;
+  defaultProjectId?: string | null;
   roles: { id: string; code: string; displayName: string }[];
 }
 
@@ -15,6 +17,18 @@ export interface SystemRole {
   code: string;
   displayName: string;
   description?: string;
+}
+export interface AssignedProject {
+  id: string;
+  userId: string;
+  projectId: string;
+  createdAt: string;
+  project: {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+  };
 }
 
 export const usersApi = {
@@ -32,6 +46,19 @@ export const usersApi = {
   },
   remove: async (id: string): Promise<void> => {
     await api.delete('/users/' + id);
+  },
+  listProjects: async (userId: string): Promise<AssignedProject[]> => {
+    const { data } = await api.get<AssignedProject[]>('/users/' + userId + '/projects');
+    return data;
+  },
+  assignProject: async (userId: string, projectId: string): Promise<void> => {
+    await api.post('/users/' + userId + '/projects', { projectId });
+  },
+  unassignProject: async (userId: string, projectId: string): Promise<void> => {
+    await api.delete('/users/' + userId + '/projects/' + projectId);
+  },
+  setDefaultProject: async (userId: string, projectId: string | null): Promise<void> => {
+    await api.patch('/users/' + userId + '/default-project', { projectId });
   },
   roles: async (): Promise<SystemRole[]> => {
     const { data } = await api.get<SystemRole[]>('/roles');

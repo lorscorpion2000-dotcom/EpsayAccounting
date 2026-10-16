@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, Shield, Edit, RefreshCw, Archive } from 'lucide-react';
+import { Plus, Loader2, Shield, Edit, RefreshCw, Archive, FolderOpen } from 'lucide-react';
 import { usersApi, SystemUser } from '../services/users.api';
 import UserFormModal from '../components/UserFormModal';
+import UserProjectsModal from '../components/UserProjectsModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 
@@ -13,6 +14,7 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<SystemUser | null>(null);
   const [deleting, setDeleting] = useState<SystemUser | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [projectsFor, setProjectsFor] = useState<SystemUser | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -133,6 +135,14 @@ export default function UsersPage() {
                           onSuccess={load}
                         />
                         <button
+                          onClick={() => setProjectsFor(u)}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+                          title="تخصیص پروژه"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                        </button>
+
+                        <button
                           onClick={() => { setEditing(u); setShowModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600"
                           title="ویرایش"
@@ -162,6 +172,14 @@ export default function UsersPage() {
         onClose={() => { setShowModal(false); setEditing(null); }}
         onSaved={load}
       />
+      <UserProjectsModal
+        isOpen={!!projectsFor}
+        user={projectsFor}
+        onClose={() => setProjectsFor(null)}
+        onChanged={load}
+      />
+
+
 
       <ConfirmDialog
         isOpen={!!deleting}
