@@ -47,10 +47,12 @@ import { CommonModule } from './common/common.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { HealthController } from './common/health/health.controller';
+import { ScopeModule } from './common/scope/scope.module';
 
 @Module({
   imports: [
     ExpensesModule,
+    ScopeModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],

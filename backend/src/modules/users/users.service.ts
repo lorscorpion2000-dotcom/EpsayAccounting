@@ -17,6 +17,8 @@ export class UsersService {
     mobile: true,
     nationalCode: true,
     isActive: true,
+    isStaff: true,
+    defaultProjectId: true,
     lastLoginAt: true,
     createdAt: true,
     updatedAt: true,
@@ -71,6 +73,8 @@ export class UsersService {
         mobile: dto.mobile,
         nationalCode: dto.nationalCode,
         isActive: dto.isActive ?? true,
+        isStaff: dto.isStaff ?? false,
+        defaultProjectId: dto.defaultProjectId ?? null,
         roles: dto.roleIds?.length
           ? {
               create: dto.roleIds.map((roleId) => ({ roleId })),
@@ -121,5 +125,68 @@ export class UsersService {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
     return { success: true };
+  }
+  // ═══════════════════════════════════════════════════════
+  // Project Assignments (P1 - RBAC پروژه‌محور)
+  // ═══════════════════════════════════════════════════════
+
+  async listProjects(userId: string) {
+    await this.findOne(userId);
+    return this.prisma.userProject.findMany({
+      where: { userId },
+      include: {
+        project: {
+          select: { id: true, code: true, name: true, status: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async assignProject(userId: string, projectId: string, byUserId?: string) {
+    await this.findOne(userId);
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('پروژه یافت نشد');
+
+    return this.prisma.userProject.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      create: { userId, projectId, createdBy: byUserId },
+      update: {},
+    });
+  }
+
+  async unassignProject(userId: string, projectId: string) {
+    await this.prisma.userProject
+      .delete({
+        where: { userId_projectId: { userId, projectId } },
+      })
+      .catch(() => null);
+
+    await this.prisma.user.updateMany({
+      where: { id: userId, defaultProjectId: projectId },
+      data: { defaultProjectId: null },
+    });
+
+    return { success: true };
+  }
+
+  async setDefaultProject(userId: string, projectId: string | null) {
+    await this.findOne(userId);
+    if (projectId) {
+      const link = await this.prisma.userProject.findUnique({
+        where: { userId_projectId: { userId, projectId } },
+      });
+      if (!link) {
+        throw new BadRequestException('پروژه به این کاربر تخصیص نیافته است');
+      }
+    }
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { defaultProjectId: projectId },
+      select: { id: true, defaultProjectId: true },
+    });
   }
 }

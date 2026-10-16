@@ -58,6 +58,8 @@ model User {
   fullName               String    @map("full_name") @db.VarChar(128)
   nationalCode           String?   @map("national_code") @db.VarChar(10)
   isActive               Boolean   @default(true) @map("is_active")
+  isStaff                Boolean   @default(false) @map("is_staff")
+  defaultProjectId       String?   @map("default_project_id") @db.Uuid
   lastLoginAt            DateTime? @map("last_login_at")
   failedLoginAttempts    Int       @default(0) @map("failed_login_attempts")
   lockedUntil            DateTime? @map("locked_until")
@@ -92,6 +94,8 @@ model User {
   purchasingOfficerFor   Project[]       @relation("ProjectPurchasingOfficer")
   purchaseOrdersAssigned PurchaseOrder[] @relation("POAssignedTo")
   notifications          Notification[]
+  userProjects           UserProject[]   @relation("UserProjectAssignments")
+  defaultProject         Project?        @relation("UserDefaultProject", fields: [defaultProjectId], references: [id])
 
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
@@ -342,6 +346,8 @@ model Project {
   materialPriceDiffs      MaterialPriceDiff[]      @relation("MPDProject")
   expenses                Expense[]                @relation("ExpenseProject")
   employees               EmployeeProfile[]        @relation("EmployeeProject")
+  userProjects            UserProject[]            @relation("UserProjectAssignments")
+  defaultForUsers         User[]                   @relation("UserDefaultProject")
 
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
@@ -4408,4 +4414,20 @@ model Expense {
   @@index([categoryId])
   @@index([expenseDate])
   @@map("expenses")
+}
+
+model UserProject {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation("UserProjectAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation("UserProjectAssignments", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("user_projects")
 }

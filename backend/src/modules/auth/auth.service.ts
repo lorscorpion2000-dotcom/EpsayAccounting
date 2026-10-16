@@ -18,6 +18,14 @@ export class AuthService {
     private audit: AuditService,
     private twoFactor: TwoFactorService,
   ) {}
+  // P1 — scope پروژه‌ای کاربر
+  private async buildUserScope(userId: string) {
+    const links = await this.prisma.userProject.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    return links.map((l) => l.projectId);
+  }
   // ─── helper ها برای صدور توکن ───
   private signAccessToken(user: { id: string; username: string }): string {
     return this.jwt.sign(
@@ -205,6 +213,9 @@ export class AuthService {
         roles: user.roles.map((r) => r.role.code),
         permissions: Array.from(permissions),
         mustChangePassword: user.mustChangePassword,
+        isStaff: user.isStaff,
+        projectIds: await this.buildUserScope(user.id),
+        defaultProjectId: user.defaultProjectId,
       },
     };
   }
@@ -241,6 +252,9 @@ export class AuthService {
       permissions: Array.from(permissions),
       lastLoginAt: user.lastLoginAt,
       themePreference: user.themePreference,
+      isStaff: user.isStaff,
+      projectIds: await this.buildUserScope(user.id),
+      defaultProjectId: user.defaultProjectId,
     };
   }
 
@@ -421,6 +435,9 @@ export class AuthService {
         roles: user.roles.map((r) => r.role.code),
         permissions: Array.from(permissions),
         mustChangePassword: user.mustChangePassword,
+        isStaff: user.isStaff,
+        projectIds: await this.buildUserScope(user.id),
+        defaultProjectId: user.defaultProjectId,
       },
     };
   }

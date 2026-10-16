@@ -37,6 +37,15 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+  @ApiPropertyOptional({ default: false, description: 'کاربر ستادی (بدون محدودیت پروژه)' })
+  @IsOptional()
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @ApiPropertyOptional({ description: 'شناسه پروژه پیش‌فرض کاربر', nullable: true })
+  @IsOptional()
+  @IsString()
+  defaultProjectId?: string | null;
 
   @ApiPropertyOptional({ type: [String], description: 'آرایه شناسه نقش‌ها' })
   @IsOptional()

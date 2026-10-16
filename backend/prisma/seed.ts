@@ -503,6 +503,7 @@ type UserDef = {
   mobile?: string;
   password: string;
   roleCode: string;
+  isStaff?: boolean;
 };
 
 const USERS: UserDef[] = [
@@ -620,6 +621,7 @@ async function seedUsers(): Promise<void> {
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 
   for (const u of USERS) {
+    const isStaff = u.isStaff ?? (u.roleCode === "admin" || u.roleCode === "super_admin");
     const user = await prisma.user.upsert({
       where: { username: u.username },
       update: {
@@ -627,6 +629,7 @@ async function seedUsers(): Promise<void> {
         email: u.email,
         mobile: u.mobile ?? null,
         isActive: true,
+        isStaff,
         deletedAt: null,
       },
       create: {

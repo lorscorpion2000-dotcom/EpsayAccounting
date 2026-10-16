@@ -33,6 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             },
           },
         },
+        userProjects: { select: { projectId: true } },
       },
     });
     if (!user || !user.isActive) throw new UnauthorizedException();
@@ -49,6 +50,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roles: user.roles.map((r) => r.role.code),
       permissions: Array.from(permissions),
       mustChangePassword: user.mustChangePassword,
+      isStaff: user.isStaff,
+      projectIds: user.userProjects.map((p) => p.projectId),
+      defaultProjectId: user.defaultProjectId,
     };
   }
 }

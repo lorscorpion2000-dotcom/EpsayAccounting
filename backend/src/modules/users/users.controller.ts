@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AssignProjectDto, SetDefaultProjectDto } from './dto/assign-project.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
@@ -45,6 +46,43 @@ export class UsersController {
     return this.users.remove(id);
   }
 
+  // ═══════════════════════════════════════════════════════
+  // Project Assignments (P1)
+  // ═══════════════════════════════════════════════════════
+
+  @Get(':id/projects')
+  @RequirePermissions('settings.read')
+  listProjects(@Param('id') id: string) {
+    return this.users.listProjects(id);
+  }
+
+  @Post(':id/projects')
+  @RequirePermissions('settings.update')
+  assignProject(
+    @Param('id') id: string,
+    @Body() body: AssignProjectDto,
+    @Req() req: any,
+  ) {
+    return this.users.assignProject(id, body.projectId, req.user?.id);
+  }
+
+  @Delete(':id/projects/:projectId')
+  @RequirePermissions('settings.update')
+  unassignProject(
+    @Param('id') id: string,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.users.unassignProject(id, projectId);
+  }
+
+  @Patch(':id/default-project')
+  @RequirePermissions('settings.update')
+  setDefaultProject(
+    @Param('id') id: string,
+    @Body() body: SetDefaultProjectDto,
+  ) {
+    return this.users.setDefaultProject(id, body.projectId ?? null);
+  }
   // ═══════════════════════════════════════════════════════
   // Admin Delete / Restore
   // ═══════════════════════════════════════════════════════
