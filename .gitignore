@@ -127,3 +127,5 @@ backend/lint-*.json
 !backend/_scan-perms.mjs
 !backend/_b15-3-seed.mjs
 !backend/_ci-ensure-admin.mjs
+
+HANDOFF-*.txt
