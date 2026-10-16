@@ -78,7 +78,9 @@ jobs:
       - run: npm run test:coverage
       - name: Apply migrations to test DB
         run: npx prisma migrate deploy
-      - name: Seed test DB (permissions, roles, admin user)
-        run: npx prisma db seed
+      - name: Seed test DB (permissions, roles, accounting, mappings)
+        run: node _seed-all.mjs
+      - name: Ensure admin password (CI safety)
+        run: node _ci-ensure-admin.mjs
       - name: Run e2e tests
         run: npm run test:e2e

@@ -119,3 +119,11 @@ backend/lint-*.json
 !backend/prisma/migrations/**
 !backend/prisma/migrations/**/*.sql
 !backend/prisma/migrations/**/*.toml
+
+# IMPORTANT: seed scripts are part of CI — do not delete
+!backend/_seed-all.mjs
+!backend/_seed-extra.mjs
+!backend/_b3-0.mjs
+!backend/_scan-perms.mjs
+!backend/_b15-3-seed.mjs
+!backend/_ci-ensure-admin.mjs
