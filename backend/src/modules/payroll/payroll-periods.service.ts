@@ -132,7 +132,10 @@ export class PayrollPeriodsService {
     const erIns  = this.r2((gross * erPct) / 100);
     const tax    = this.r2(Number(rec.taxAmount));
     const adv    = this.r2(Number(rec.advanceAmount));
-    const net    = this.r2(Number(rec.netSalary));
+    const other  = this.r2(Number(rec.otherDeduction));
+
+    // net را از اجزا بازمحاسبه می‌کنیم تا تعادل ۱۰۰٪ تضمین شود
+    const net = this.r2(gross - empIns - tax - adv - other);
 
     const lines: any[] = [
       {
@@ -175,6 +178,15 @@ export class PayrollPeriodsService {
       });
     }
 
+    if (other > 0) {
+      lines.push({
+        accountId: accounts.advanceAsset.id,
+        credit: other,
+        description: 'سایر کسورات - ' + empName,
+        partnerId,
+      });
+    }
+
     lines.push({
       accountId: accounts.netPayable.id,
       credit: net,
@@ -182,7 +194,7 @@ export class PayrollPeriodsService {
       partnerId,
     });
 
-    return { lines, gross, empIns, erIns, tax, adv, net };
+    return { lines, gross, empIns, erIns, tax, adv, other, net };
   }
 
   // ---------------- approve ----------------

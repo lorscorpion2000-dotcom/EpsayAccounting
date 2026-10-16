@@ -156,12 +156,47 @@ export class PayrollCalculationService {
     // کسورات
     const insuranceAmount = (grossSalary * 7) / 100;
 
-    // مالیات (ساده - ۱۰٪ از مبلغ مشمول مالیات)
-    // مشمول مالیات: حقوق پایه + مزایا - بیمه - معافیت
-    const taxExempt = 100000000; // ۱۰ میلیون تومان معافیت
-    const taxableBase = Math.max(0, grossSalary - taxExempt);
-    const taxPercent = 10;
-    const taxAmount = (taxableBase * taxPercent) / 100;
+    // محاسبه مالیات بر اساس PayrollTaxSetting (جدول پلکانی)
+    let taxAmount = 0;
+    let taxPercent = 0;
+    let taxExempt = 0;
+    try {
+      const taxSetting = await this.prisma.payrollTaxSetting.findFirst({
+        where: { isActive: true },
+        include: { brackets: { orderBy: { order: 'asc' } } },
+        orderBy: { year: 'desc' },
+      });
+      if (taxSetting) {
+        taxExempt = Number(taxSetting.monthlyExemption) || 0;
+        // طبق استاندارد ایران: پایه مشمول = ناخالص - معافیت - بیمه سهم کارمند (7%)
+        const employeeIns = (grossSalary * 7) / 100;
+        let remaining = Math.max(0, grossSalary - taxExempt - employeeIns);
+        for (const br of taxSetting.brackets) {
+          if (remaining <= 0) break;
+          const from = Number(br.fromAmount) || 0;
+          const to   = br.toAmount != null ? Number(br.toAmount) : Infinity;
+          const width = Math.max(0, to - from);
+          const portion = Math.min(remaining, width);
+          if (portion > 0) {
+            taxAmount += portion * (Number(br.ratePercent) || 0) / 100;
+            remaining -= portion;
+          }
+        }
+        taxPercent = grossSalary > 0 ? Math.round((taxAmount / grossSalary) * 10000) / 100 : 0;
+      } else {
+        // fallback به محاسبه قدیمی
+        taxExempt = 100000000;
+        const taxableBase = Math.max(0, grossSalary - taxExempt);
+        taxPercent = 10;
+        taxAmount = (taxableBase * taxPercent) / 100;
+      }
+    } catch (e) {
+      // در صورت خطا، fallback
+      taxExempt = 100000000;
+      const taxableBase = Math.max(0, grossSalary - taxExempt);
+      taxPercent = 10;
+      taxAmount = (taxableBase * taxPercent) / 100;
+    }
 
     const advanceAmount = Number(advances._sum.amount || 0);
     const absentDeduction = 0;
@@ -370,7 +405,8 @@ export class PayrollCalculationService {
       let taxPercent = 0;
       if (taxSetting && Array.isArray(taxSetting.brackets) && taxSetting.brackets.length > 0) {
         const monthlyExempt = Number(taxSetting.monthlyExemption) || 0;
-        let remaining = Math.max(0, grossSalary - monthlyExempt);
+        const employeeIns = (grossSalary * 7) / 100;
+        let remaining = Math.max(0, grossSalary - monthlyExempt - employeeIns);
         for (const br of taxSetting.brackets) {
           if (remaining <= 0) break;
           const from = Number(br.fromAmount) || 0;
