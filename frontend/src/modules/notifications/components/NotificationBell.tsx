@@ -32,7 +32,7 @@ export default function NotificationBell() {
     try {
       const r = await notificationApi.list({ limit: 8 });
       setItems(r);
-    } catch (e: any) {
+    } catch {
       toast.error('خطا در بارگذاری اعلان‌ها');
     } finally { setLoading(false); }
   };

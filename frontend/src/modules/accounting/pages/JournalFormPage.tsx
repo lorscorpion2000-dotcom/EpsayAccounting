@@ -167,7 +167,7 @@ export default function JournalFormPage() {
         } else if (current) {
           setValue('fiscalYearId', current.id);
         }
-      } catch (e: any) {
+      } catch {
         toast.error('خطا در بارگذاری اطلاعات');
       } finally {
         setLoading(false);

@@ -153,7 +153,6 @@ export default function ApprovalsPage() {
         setTab(availableTabs[0] as Tab);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const allItems: PendingApproval[] = [

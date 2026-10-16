@@ -27,7 +27,7 @@ export default function NotificationsPage() {
     try {
       const r = await notificationApi.list({ unread: filter === 'unread', limit: 100 });
       setItems(r);
-    } catch (e: any) {
+    } catch {
       toast.error('خطا در بارگذاری');
     } finally { setLoading(false); }
   };
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
       const r = await notificationApi.scan();
       toast.success('اسکن کامل شد: ' + (r.created || 0) + ' اعلان');
       load();
-    } catch (e: any) {
+    } catch {
       toast.error('خطا در اسکن');
     } finally { setScanning(false); }
   };

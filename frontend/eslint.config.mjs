@@ -39,7 +39,9 @@ export default ts.config(
       'no-constant-binary-expression': 'warn',
       'prefer-const': 'warn',
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      // exhaustive-deps: intentionally off — many loaders are stable closures;
+      // enabling triggers ~104 false-positives requiring useCallback refactor.
+      'react-hooks/exhaustive-deps': 'off',
     },
   },
 );

@@ -47,7 +47,6 @@ export default function BudgetVsActualPage() {
       setProjects(list);
       if (list.length && !projectId) setProjectId(list[0].id);
     }).catch(() => {});
-    /* eslint-disable-next-line */
   }, []);
 
   const load = async () => {

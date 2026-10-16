@@ -219,7 +219,6 @@ export default function ContractFormModal({ isOpen, editing, onClose, onSaved }:
       })
       .catch(() => {});
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, form.kind]);
 
   if (!isOpen) return null;

@@ -58,7 +58,6 @@ export default function JournalsListPage() {
 
   useEffect(() => {
     if (currentFy) loadData();
-    // eslint-disable-next-line
   }, [currentFy, statusFilter, fromDate, toDate]);
 
   const handleSearch = (e: React.FormEvent) => {

@@ -163,7 +163,6 @@ export default function StatementFormPage() {
       notes: it.notes || undefined,
     })));
     toast.success('اقلام قرارداد بارگذاری شد');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractId]);
 
   // WBS

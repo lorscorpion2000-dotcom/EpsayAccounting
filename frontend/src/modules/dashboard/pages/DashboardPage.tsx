@@ -61,7 +61,7 @@ export default function DashboardPage() {
       setProjects(p);
       setAlerts(a);
       setProfitLoss(pl);
-    } catch (e) {
+    } catch {
       toast.error('خطا در بارگذاری داشبورد');
     } finally {
       setLoading(false);

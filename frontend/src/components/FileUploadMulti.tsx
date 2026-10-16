@@ -49,7 +49,7 @@ export default function FileUploadMulti({
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         uploaded.push(data);
-      } catch (err: any) {
+      } catch {
         toast.error(`خطا در ${file.name}`);
       }
     }

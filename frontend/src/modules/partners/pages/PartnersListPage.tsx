@@ -60,7 +60,6 @@ export default function PartnersListPage() {
   useEffect(() => {
     const t = setTimeout(() => { load(); }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, typeFilter]);
 
   const handleDelete = async (force = false) => {

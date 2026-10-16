@@ -61,7 +61,7 @@ export default function PettyCashAccountsPage() {
       'ردیف': i + 1,
       'کد': a.code,
       'نام حساب': a.name,
-      'تنخواه‌دار': a.employee?.fullName || a.holder?.fullName || '—' || '',
+      'تنخواه‌دار': a.employee?.fullName || a.holder?.fullName || '—',
       'پروژه': a.project?.name || 'عمومی',
       'سقف هر خرید': Number(a.ceilingPerTx),
       'سقف هفتگی': Number(a.weeklyLimit),
@@ -219,7 +219,7 @@ export default function PettyCashAccountsPage() {
                 <div className="space-y-2 text-xs text-slate-600 mb-3">
                   <div className="flex items-center gap-2">
                     <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{a.employee?.fullName || a.holder?.fullName || '—' || '—'}</span>
+                    <span>{a.employee?.fullName || a.holder?.fullName || '—'}</span>
                   </div>
                   {a.project && (
                     <div className="flex items-center gap-2">

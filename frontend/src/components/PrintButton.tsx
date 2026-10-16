@@ -148,7 +148,7 @@ export default function PrintButton({
     w.document.write(html);
     w.document.close();
     w.onload = () => {
-      setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* silent */ } }, 500);
+      setTimeout(() => { try { w.focus(); w.print(); } catch { /* silent */ } }, 500);
     };
   };
 
