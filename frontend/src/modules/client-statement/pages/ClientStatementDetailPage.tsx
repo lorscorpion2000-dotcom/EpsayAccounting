@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban } from 'lucide-react';
 import clsx from 'clsx';
-import { useReactToPrint } from 'react-to-print';
 import { clientStatementApi } from '../services/client-statement.api';
 import type { ClientStatement, CSItem, CSCategory } from '@/types/client-statement';
 import {
@@ -11,6 +10,7 @@ import {
 } from '@/types/client-statement';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PrintButton from '@/components/PrintButton';
 
 const CATEGORY_ICONS: Record<CSCategory, any> = {
   MATERIAL: Package,
@@ -45,12 +45,6 @@ export default function ClientStatementDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
-
-  // ─── Print handler ───
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: s ? 'صورت‌وضعیت-' + s.code : 'statement',
-  });
 
   const handleSubmit = async () => {
     if (!s) return;
@@ -349,9 +343,7 @@ export default function ClientStatementDetailPage() {
             <div className="text-sm text-slate-600">
               7 برگ صورت‌وضعیت (برگه‌های مالی + خلاصه) آماده چاپ است
             </div>
-            <button onClick={handlePrint} className="btn-primary">
-              <Printer className="w-4 h-4" /> چاپ / ذخیره PDF
-            </button>
+            <PrintButton contentRef={printRef} documentTitle={s ? 'صورت‌وضعیت-' + s.code : 'statement'} label="چاپ / ذخیره PDF" className="btn-primary" />
           </div>
 
           <div ref={printRef} className="bg-white p-6" dir="rtl">

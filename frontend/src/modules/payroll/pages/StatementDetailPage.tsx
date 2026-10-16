@@ -3,11 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Loader2, FileSpreadsheet, Printer, CheckCircle2, Send, FileText, Edit, BadgeCheck } from 'lucide-react';
 import clsx from 'clsx';
-import { useReactToPrint } from 'react-to-print';
 import { payrollApi } from '../services/payroll.api';
 import type { SubcontractorStatement } from '@/types/payroll';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PrintButton from '@/components/PrintButton';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس',
@@ -47,11 +47,6 @@ export default function StatementDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
-
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: s ? 'صورت‌وضعیت-' + (s as any).code : 'statement',
-  });
 
   const doAction = async () => {
     if (!s || !action) return;
@@ -159,9 +154,7 @@ export default function StatementDetailPage() {
                 <BadgeCheck className="w-4 h-4" /> ثبت پرداخت
               </button>
             )}
-            <button className="btn-secondary" onClick={handlePrint}>
-              <Printer className="w-4 h-4" /> چاپ / PDF
-            </button>
+            <PrintButton contentRef={printRef} documentTitle={s ? 'صورت‌وضعیت-' + (s as any).code : 'statement'} label="چاپ / PDF" />
           </div>
         </div>
 
@@ -282,9 +275,7 @@ export default function StatementDetailPage() {
             <div className="text-sm text-slate-600">
               2 برگ صورت‌وضعیت (کارکرد + خلاصه مالی) آماده چاپ است
             </div>
-            <button onClick={handlePrint} className="btn-primary">
-              <Printer className="w-4 h-4" /> چاپ / ذخیره PDF
-            </button>
+            <PrintButton contentRef={printRef} documentTitle={s ? 'صورت‌وضعیت-' + (s as any).code : 'statement'} label="چاپ / ذخیره PDF" className="btn-primary" />
           </div>
 
           <div ref={printRef} className="bg-white p-6" dir="rtl">

@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowRight, Loader2, Printer, Send, CheckCircle2, DollarSign, Edit, Users,
+  ArrowRight, Loader2, Send, CheckCircle2, DollarSign, Edit, Users,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { useReactToPrint } from 'react-to-print';
 import { payrollApi } from '../services/payroll.api';
 import { formatJalaliDate, formatNumber, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PrintButton from '@/components/PrintButton';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس',
@@ -45,11 +45,6 @@ export default function WorkerStatementDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
-
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: s ? 'صورت‌وضعیت-پرسنل-' + s.code : 'statement',
-  });
 
   const doAction = async () => {
     if (!s || !action) return;
@@ -111,9 +106,7 @@ export default function WorkerStatementDetailPage() {
               <DollarSign className="w-4 h-4" /> ثبت پرداخت
             </button>
           )}
-          <button className="btn-secondary" onClick={handlePrint}>
-            <Printer className="w-4 h-4" /> چاپ / PDF
-          </button>
+          <PrintButton contentRef={printRef} documentTitle={s ? 'صورت‌وضعیت-پرسنل-' + s.code : 'statement'} label="چاپ / PDF" />
         </div>
       </div>
 

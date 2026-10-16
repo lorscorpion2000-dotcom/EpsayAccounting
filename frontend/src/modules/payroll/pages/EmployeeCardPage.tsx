@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, User, Printer, Calendar, Download } from 'lucide-react';
+import { ArrowRight, Loader2, User, Calendar, Download } from 'lucide-react';
 import clsx from 'clsx';
 import * as XLSX from 'xlsx';
-import { useReactToPrint } from 'react-to-print';
 import { payrollApi } from '../services/payroll.api';
 import { PERSIAN_MONTHS_ADJ } from '@/types/adjustment';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import PrintButton from '@/components/PrintButton';
 
 type Tab = 'card' | 'monthly';
 
@@ -62,11 +62,6 @@ export default function EmployeeCardPage() {
   useEffect(() => {
     if (tab === 'monthly') loadMonthly();
   }, [tab, year, month]);
-
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: card?.employee?.fullName || 'employee',
-  });
 
   const handleExportExcel = () => {
     if (!monthly) return;
@@ -130,9 +125,7 @@ export default function EmployeeCardPage() {
           </div>
 
           <div className="flex items-center gap-2 no-print">
-            <button className="btn-secondary" onClick={handlePrint}>
-              <Printer className="w-4 h-4" /> چاپ کارت
-            </button>
+            <PrintButton contentRef={printRef} documentTitle={card?.employee?.fullName || 'employee'} label="چاپ کارت" />
           </div>
         </div>
 
@@ -247,9 +240,7 @@ export default function EmployeeCardPage() {
                     <Download className="w-4 h-4" /> اکسل
                   </button>
                 )}
-                <button className="btn-secondary text-sm" onClick={handlePrint}>
-                  <Printer className="w-4 h-4" /> چاپ
-                </button>
+                <PrintButton contentRef={printRef} documentTitle={card?.employee?.fullName || 'employee'} label="چاپ" />
               </div>
             </div>
 
