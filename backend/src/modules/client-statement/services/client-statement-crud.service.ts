@@ -31,6 +31,7 @@ export class ClientStatementCrudService {
       where: { projectId },
       orderBy: { statementNumber: 'desc' },
       select: { statementNumber: true },
+      ...({ __withDeleted: true } as any),
     });
     return (last?.statementNumber || 0) + 1;
   }

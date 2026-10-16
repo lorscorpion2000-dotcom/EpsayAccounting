@@ -46,7 +46,7 @@ export class ClientStatementPostService {
     const prepaymentDeduction = Number(s.prepaymentDeductionAmount);
     const contractorShare = Number(s.contractorShareAmount);
 
-    if (netPayable <= 0 && prepaymentDeduction <= 0) throw new BadRequestException('مبالغ صورت‌وضعیت صفر است');
+    //moved
 
     // ═══════════════════════════════════════════════════════
     // بستن هزینه‌های پاس‌تروگ مرتبط با این پروژه و کارفرما
@@ -83,6 +83,8 @@ export class ClientStatementPostService {
         );
       }
     }
+
+    if (netPayable <= 0 && prepaymentDeduction <= 0 && passThroughAmount <= 0) throw new BadRequestException("empty");
 
     return this.prisma.$transaction(async (tx) => {
       const fyUpdate = await tx.fiscalYear.update({

@@ -21,19 +21,7 @@ export class ClientStatementWorkflowService {
   async approve(id: string, userId: string) {
     const s = await this.crud.get(id);
     if (s.status !== 'SUBMITTED') throw new BadRequestException('فقط ارسال‌شده قابل تایید است');
-    const updated = await this.prisma.clientStatement.update({
-      where: { id },
-      data: { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
-    });
-    // F13: auto-post JE on approve (parity with subcontractor/worker)
-    try {
-      const posted = await this.postSvc.post(id, userId);
-      return posted;
-    } catch (e) {
-      console.error('[client-statement] post failed:', e && e.message, e && e.stack);
-      // status is APPROVED; JE failed. User can retry via /post endpoint.
-      return updated;
-    }
+    return this.postSvc.post(id, userId);
   }
 
   async reject(id: string, reason: string) {
