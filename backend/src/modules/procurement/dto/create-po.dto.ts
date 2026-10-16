@@ -32,6 +32,12 @@ export class POItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  taxPercent?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   notes?: string;
 }

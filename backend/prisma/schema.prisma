@@ -171,7 +171,7 @@ model AuditLog {
 }
 
 // ============================================================
-// PARTNERS (پایه - در Universal Directory کامل می‌شود)
+// PARTNERS (Ù¾Ø§ÛŒÙ‡ - Ø¯Ø± Universal Directory Ú©Ø§Ù…Ù„ Ù…ÛŒâ€ŒØ´ÙˆØ¯)
 // ============================================================
 
 enum PartnerType {
@@ -418,7 +418,7 @@ model Contract {
 // ============================================================
 
 // ============================================================
-// UNITS — واحدهای اندازهگیری قابل تعریف
+// UNITS â€” ÙˆØ§Ø­Ø¯Ù‡Ø§ÛŒ Ø§Ù†Ø¯Ø§Ø²Ù‡Ú¯ÛŒØ±ÛŒ Ù‚Ø§Ø¨Ù„ ØªØ¹Ø±ÛŒÙ
 // ============================================================
 model Unit {
   id        String   @id @default(uuid()) @db.Uuid
@@ -521,32 +521,32 @@ model ProjectBudget {
 }
 
 // ============================================================
-// ACCOUNTING CORE (دوبل)
+// ACCOUNTING CORE (Ø¯ÙˆØ¨Ù„)
 // ============================================================
 
 enum AccountLevel {
-  GROUP // گروه
-  GENERAL // کل
-  SUBSIDIARY // معین
-  DETAIL // تفصیلی
+  GROUP // Ú¯Ø±ÙˆÙ‡
+  GENERAL // Ú©Ù„
+  SUBSIDIARY // Ù…Ø¹ÛŒÙ†
+  DETAIL // ØªÙØµÛŒÙ„ÛŒ
 }
 
 enum AccountDetailType {
-  PARTNER // شخص (مشتری/تأمین‌کننده/پرسنل)
-  ITEM // کالا
-  PETTY_CASH // تنخواه‌گردان
-  BANK // بانک
-  CASH_REGISTER // صندوق
-  PROJECT // پروژه
-  EMPLOYEE // پرسنل
-  CONTRACTOR // پیمانکار
-  CUSTOMER // مشتری
-  SUPPLIER // تأمین‌کننده
+  PARTNER // Ø´Ø®Øµ (Ù…Ø´ØªØ±ÛŒ/ØªØ£Ù…ÛŒÙ†â€ŒÚ©Ù†Ù†Ø¯Ù‡/Ù¾Ø±Ø³Ù†Ù„)
+  ITEM // Ú©Ø§Ù„Ø§
+  PETTY_CASH // ØªÙ†Ø®ÙˆØ§Ù‡â€ŒÚ¯Ø±Ø¯Ø§Ù†
+  BANK // Ø¨Ø§Ù†Ú©
+  CASH_REGISTER // ØµÙ†Ø¯ÙˆÙ‚
+  PROJECT // Ù¾Ø±ÙˆÚ˜Ù‡
+  EMPLOYEE // Ù¾Ø±Ø³Ù†Ù„
+  CONTRACTOR // Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±
+  CUSTOMER // Ù…Ø´ØªØ±ÛŒ
+  SUPPLIER // ØªØ£Ù…ÛŒÙ†â€ŒÚ©Ù†Ù†Ø¯Ù‡
 }
 
 enum AccountNature {
-  DEBIT // بدهکار
-  CREDIT // بستانکار
+  DEBIT // Ø¨Ø¯Ù‡Ú©Ø§Ø±
+  CREDIT // Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±
 }
 
 model Account {
@@ -565,8 +565,8 @@ model Account {
   isPostable  Boolean @default(true) @map("is_postable")
   description String? @db.VarChar(500)
 
-  detailType AccountDetailType? // فقط برای TAFZIL
-  detailId   String?            @map("detail_id") @db.VarChar(64) // UUID شخص/کالا/تنخواه
+  detailType AccountDetailType? // ÙÙ‚Ø· Ø¨Ø±Ø§ÛŒ TAFZIL
+  detailId   String?            @map("detail_id") @db.VarChar(64) // UUID Ø´Ø®Øµ/Ú©Ø§Ù„Ø§/ØªÙ†Ø®ÙˆØ§Ù‡
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -685,21 +685,21 @@ model JournalEntry {
 }
 
 // ============================================================
-// COST CENTER (مرکز هزینه)
+// COST CENTER (Ù…Ø±Ú©Ø² Ù‡Ø²ÛŒÙ†Ù‡)
 // ============================================================
 // ============================================================
-// BANK (حساب بانکی + چک)
+// BANK (Ø­Ø³Ø§Ø¨ Ø¨Ø§Ù†Ú©ÛŒ + Ú†Ú©)
 // ============================================================
 enum ChequeDirection {
-  ISSUED // صادره (پرداختی)
-  RECEIVED // دریافتی
+  ISSUED // ØµØ§Ø¯Ø±Ù‡ (Ù¾Ø±Ø¯Ø§Ø®ØªÛŒ)
+  RECEIVED // Ø¯Ø±ÛŒØ§ÙØªÛŒ
 }
 
 enum ChequeStatus {
-  PENDING // در جریان
-  PASSED // وصول شده
-  RETURNED // برگشتی
-  CANCELLED // ابطال شده
+  PENDING // Ø¯Ø± Ø¬Ø±ÛŒØ§Ù†
+  PASSED // ÙˆØµÙˆÙ„ Ø´Ø¯Ù‡
+  RETURNED // Ø¨Ø±Ú¯Ø´ØªÛŒ
+  CANCELLED // Ø§Ø¨Ø·Ø§Ù„ Ø´Ø¯Ù‡
 }
 
 enum BankAccountType {
@@ -708,14 +708,14 @@ enum BankAccountType {
 }
 
 model BankAccount {
-  id            String           @id @default(uuid()) @db.Uuid
-  code          String           @unique @db.VarChar(32)
-  name          String           @db.VarChar(200)
-  type          BankAccountType  @default(BANK)
-  bankName      String? @map("bank_name") @db.VarChar(200)
-  branchName    String? @map("branch_name") @db.VarChar(200)
-  accountNumber String? @map("account_number") @db.VarChar(64)
-  shabaNumber   String? @map("shaba_number") @db.VarChar(64)
+  id            String          @id @default(uuid()) @db.Uuid
+  code          String          @unique @db.VarChar(32)
+  name          String          @db.VarChar(200)
+  type          BankAccountType @default(BANK)
+  bankName      String?         @map("bank_name") @db.VarChar(200)
+  branchName    String?         @map("branch_name") @db.VarChar(200)
+  accountNumber String?         @map("account_number") @db.VarChar(64)
+  shabaNumber   String?         @map("shaba_number") @db.VarChar(64)
 
   glAccountId String?  @map("gl_account_id") @db.Uuid
   glAccount   Account? @relation("BankAccountGL", fields: [glAccountId], references: [id])
@@ -859,7 +859,7 @@ model AccountMapping {
 }
 
 // ============================================================
-// PETTY CASH (تنخواه)
+// PETTY CASH (ØªÙ†Ø®ÙˆØ§Ù‡)
 // ============================================================
 
 enum PettyCashTxType {
@@ -890,7 +890,7 @@ model PettyCashAccount {
 
   holderId String? @map("holder_id") @db.Uuid
 
-  accountId String?  @map("account_id") @db.Uuid // حساب معین تنخواه در کدینگ
+  accountId String?  @map("account_id") @db.Uuid // Ø­Ø³Ø§Ø¨ Ù…Ø¹ÛŒÙ† ØªÙ†Ø®ÙˆØ§Ù‡ Ø¯Ø± Ú©Ø¯ÛŒÙ†Ú¯
   account   Account? @relation("PettyCashAccountLink", fields: [accountId], references: [id])
   holder    User?    @relation("PCHolder", fields: [holderId], references: [id])
 
@@ -955,7 +955,7 @@ model PettyCashTransaction {
 
   createdById String? @map("created_by_id") @db.Uuid
 
-  journalEntryId String?       @map("journal_entry_id") @db.Uuid // سند حسابداری مرتبط
+  journalEntryId String?       @map("journal_entry_id") @db.Uuid // Ø³Ù†Ø¯ Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±ÛŒ Ù…Ø±ØªØ¨Ø·
   journalEntry   JournalEntry? @relation("PettyCashTxJournal", fields: [journalEntryId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1001,7 +1001,7 @@ model PettyCashRequest {
 }
 
 // ============================================================
-// PROCUREMENT (خرید و تدارکات)
+// PROCUREMENT (Ø®Ø±ÛŒØ¯ Ùˆ ØªØ¯Ø§Ø±Ú©Ø§Øª)
 // ============================================================
 
 enum PRStatus {
@@ -1217,6 +1217,7 @@ model PurchaseOrderItem {
   quantity    Decimal @db.Decimal(20, 4)
   unit        String  @db.VarChar(32)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
+  taxPercent  Decimal @default(9) @map("tax_percent") @db.Decimal(5, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
   notes       String? @db.VarChar(500)
 
@@ -1448,7 +1449,7 @@ model GoodsReceiptItem {
   unitCost  Decimal      @map("unit_cost") @db.Decimal(20, 2)
   totalCost Decimal      @map("total_cost") @db.Decimal(24, 2)
 
-  // مالی
+  // Ù…Ø§Ù„ÛŒ
   discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
   discountAmount  Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
   additionAmount  Decimal @default(0) @map("addition_amount") @db.Decimal(20, 2)
@@ -1523,7 +1524,7 @@ model GoodsIssueItem {
 }
 
 // ============================================================
-// SITE OPERATIONS (عملیات کارگاه)
+// SITE OPERATIONS (Ø¹Ù…Ù„ÛŒØ§Øª Ú©Ø§Ø±Ú¯Ø§Ù‡)
 // ============================================================
 
 enum WeatherCondition {
@@ -1572,7 +1573,7 @@ model DailyReport {
   tempMin   Int?              @map("temp_min")
   tempMax   Int?              @map("temp_max")
 
-  // عملیات روزانه
+  // Ø¹Ù…Ù„ÛŒØ§Øª Ø±ÙˆØ²Ø§Ù†Ù‡
   operations String? @db.Text
   issues     String? @db.Text
   incidents  String? @db.Text
@@ -1608,7 +1609,7 @@ model DailyReport {
 }
 
 // ============================================================
-// DAILY REPORT SECTIONS — بخش‌های گزارش روزانه (تأیید بخشی)
+// DAILY REPORT SECTIONS â€” Ø¨Ø®Ø´â€ŒÙ‡Ø§ÛŒ Ú¯Ø²Ø§Ø±Ø´ Ø±ÙˆØ²Ø§Ù†Ù‡ (ØªØ£ÛŒÛŒØ¯ Ø¨Ø®Ø´ÛŒ)
 // ============================================================
 
 enum DailyReportSectionType {
@@ -1656,7 +1657,7 @@ model DailyReportSection {
 }
 
 // ============================================================
-// DAILY REPORT FORWARDING — جلوگیری از ارسال دوباره
+// DAILY REPORT FORWARDING â€” Ø¬Ù„ÙˆÚ¯ÛŒØ±ÛŒ Ø§Ø² Ø§Ø±Ø³Ø§Ù„ Ø¯ÙˆØ¨Ø§Ø±Ù‡
 // ============================================================
 
 enum ForwardingTarget {
@@ -1675,13 +1676,13 @@ model DailyReportForwarding {
   sectionId String             @map("section_id") @db.Uuid
   section   DailyReportSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
-  // کلید یکتا: reportId + sectionType + rowNumber + targetType
+  // Ú©Ù„ÛŒØ¯ ÛŒÚ©ØªØ§: reportId + sectionType + rowNumber + targetType
   reportId    String                 @map("report_id") @db.Uuid
   sectionType DailyReportSectionType @map("section_type")
   rowNumber   Int                    @map("row_number")
   targetType  ForwardingTarget       @map("target_type")
 
-  // سند ساخته‌شده
+  // Ø³Ù†Ø¯ Ø³Ø§Ø®ØªÙ‡â€ŒØ´Ø¯Ù‡
   targetId    String? @map("target_id") @db.Uuid
   targetCode  String? @map("target_code") @db.VarChar(64)
   targetModel String? @map("target_model") @db.VarChar(64)
@@ -1699,7 +1700,7 @@ model DailyReportForwarding {
 }
 
 // ============================================================
-// DAILY REPORT ATTACHMENTS — پیوست‌های گزارش روزانه
+// DAILY REPORT ATTACHMENTS â€” Ù¾ÛŒÙˆØ³Øªâ€ŒÙ‡Ø§ÛŒ Ú¯Ø²Ø§Ø±Ø´ Ø±ÙˆØ²Ø§Ù†Ù‡
 // ============================================================
 
 model DailyReportAttachment {
@@ -1732,15 +1733,15 @@ model DailyReportWorker {
   rowNumber Int    @map("row_number")
   teamName  String @map("team_name") @db.VarChar(200)
 
-  // نوع: OWN (پرسنل خودمان) | CONTRACTOR (پرسنل پیمانکار)
+  // Ù†ÙˆØ¹: OWN (Ù¾Ø±Ø³Ù†Ù„ Ø®ÙˆØ¯Ù…Ø§Ù†) | CONTRACTOR (Ù¾Ø±Ø³Ù†Ù„ Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±)
   kind String @default("OWN") @db.VarChar(20)
 
-  // اتصال به پیمانکار (برای پرسنل پیمانکار)
+  // Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø± (Ø¨Ø±Ø§ÛŒ Ù¾Ø±Ø³Ù†Ù„ Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±)
   contractorId   String?  @map("contractor_id") @db.Uuid
   contractor     Partner? @relation("WorkerContractor", fields: [contractorId], references: [id], onDelete: SetNull)
   contractorRate Decimal? @map("contractor_rate") @db.Decimal(20, 2)
 
-  // اتصال به پرسنل خودمان (برای فوروارد به حضور و غیاب)
+  // Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ù¾Ø±Ø³Ù†Ù„ Ø®ÙˆØ¯Ù…Ø§Ù† (Ø¨Ø±Ø§ÛŒ ÙÙˆØ±ÙˆØ§Ø±Ø¯ Ø¨Ù‡ Ø­Ø¶ÙˆØ± Ùˆ ØºÛŒØ§Ø¨)
   employeeId  String?          @map("employee_id") @db.Uuid
   foreman     String?          @db.VarChar(200)
   workerCount Int              @map("worker_count")
@@ -1770,11 +1771,11 @@ model DailyReportEquipment {
   hoursWorked Decimal         @default(0) @map("hours_worked") @db.Decimal(5, 2)
   status      EquipmentStatus @default(ACTIVE)
 
-  // سوخت و توقف (طبق سند بخش ۱۵-۳ بند د)
+  // Ø³ÙˆØ®Øª Ùˆ ØªÙˆÙ‚Ù (Ø·Ø¨Ù‚ Ø³Ù†Ø¯ Ø¨Ø®Ø´ Û±Ûµ-Û³ Ø¨Ù†Ø¯ Ø¯)
   fuelLiters Decimal @default(0) @map("fuel_liters") @db.Decimal(10, 2)
   stopReason String? @map("stop_reason") @db.VarChar(500)
 
-  // محل کار (WBS)
+  // Ù…Ø­Ù„ Ú©Ø§Ø± (WBS)
   wbsItemId String? @map("wbs_item_id") @db.Uuid
 
   description String? @db.VarChar(500)
@@ -1794,7 +1795,7 @@ model DailyReportMaterial {
   rowNumber Int    @map("row_number")
   itemName  String @map("item_name") @db.VarChar(300)
 
-  // اتصال به کالا و انبار (برای فوروارد خودکار)
+  // Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ú©Ø§Ù„Ø§ Ùˆ Ø§Ù†Ø¨Ø§Ø± (Ø¨Ø±Ø§ÛŒ ÙÙˆØ±ÙˆØ§Ø±Ø¯ Ø®ÙˆØ¯Ú©Ø§Ø±)
   itemId       String? @map("item_id") @db.Uuid
   warehouseId  String? @map("warehouse_id") @db.Uuid
   unit         String? @db.VarChar(32)
@@ -1824,11 +1825,11 @@ model DailyReportProgress {
   description String  @db.VarChar(500)
   progressPct Decimal @map("progress_pct") @db.Decimal(5, 2)
 
-  // مقدار انجام‌شده امروز (طبق سند بخش ۱۵-۳ بند ب)
+  // Ù…Ù‚Ø¯Ø§Ø± Ø§Ù†Ø¬Ø§Ù…â€ŒØ´Ø¯Ù‡ Ø§Ù…Ø±ÙˆØ² (Ø·Ø¨Ù‚ Ø³Ù†Ø¯ Ø¨Ø®Ø´ Û±Ûµ-Û³ Ø¨Ù†Ø¯ Ø¨)
   quantity Decimal? @db.Decimal(20, 4)
   unit     String?  @db.VarChar(32)
 
-  // محل کار دقیق (بلوک، طبقه)
+  // Ù…Ø­Ù„ Ú©Ø§Ø± Ø¯Ù‚ÛŒÙ‚ (Ø¨Ù„ÙˆÚ©ØŒ Ø·Ø¨Ù‚Ù‡)
   location String? @db.VarChar(300)
 
   notes String? @db.VarChar(500)
@@ -1840,7 +1841,7 @@ model DailyReportProgress {
 }
 
 // ============================================================
-// PAYROLL & SUBCONTRACTOR STATEMENTS (حقوق و دستمزد و صورت‌وضعیت)
+// PAYROLL & SUBCONTRACTOR STATEMENTS (Ø­Ù‚ÙˆÙ‚ Ùˆ Ø¯Ø³ØªÙ…Ø²Ø¯ Ùˆ ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØª)
 // ============================================================
 
 enum StatementStatus {
@@ -2099,14 +2100,14 @@ model PayrollRecord {
 
   rowNumber Int @map("row_number")
 
-  // کارکرد
+  // Ú©Ø§Ø±Ú©Ø±Ø¯
   workDays      Decimal @default(0) @map("work_days") @db.Decimal(5, 2)
   overtimeHours Decimal @default(0) @map("overtime_hours") @db.Decimal(7, 2)
   holidayHours  Decimal @default(0) @map("holiday_hours") @db.Decimal(7, 2)
   absentDays    Decimal @default(0) @map("absent_days") @db.Decimal(5, 2)
   leaveDays     Decimal @default(0) @map("leave_days") @db.Decimal(5, 2)
 
-  // دریافتی‌ها
+  // Ø¯Ø±ÛŒØ§ÙØªÛŒâ€ŒÙ‡Ø§
   baseSalary     Decimal @default(0) @map("base_salary") @db.Decimal(20, 2)
   housingAllow   Decimal @default(0) @map("housing_allow") @db.Decimal(20, 2)
   foodAllow      Decimal @default(0) @map("food_allow") @db.Decimal(20, 2)
@@ -2118,7 +2119,7 @@ model PayrollRecord {
 
   grossSalary Decimal @default(0) @map("gross_salary") @db.Decimal(24, 2)
 
-  // کسورات
+  // Ú©Ø³ÙˆØ±Ø§Øª
   insurancePercent Decimal @default(7) @map("insurance_percent") @db.Decimal(5, 2)
   insuranceAmount  Decimal @default(0) @map("insurance_amount") @db.Decimal(20, 2)
   taxPercent       Decimal @default(0) @map("tax_percent") @db.Decimal(5, 2)
@@ -2338,7 +2339,7 @@ model SubcontractorStatementItem {
 }
 
 // ============================================================
-// PARTNER CAPITAL (شرکا و سرمایه‌گذاران)
+// PARTNER CAPITAL (Ø´Ø±Ú©Ø§ Ùˆ Ø³Ø±Ù…Ø§ÛŒÙ‡â€ŒÚ¯Ø°Ø§Ø±Ø§Ù†)
 // ============================================================
 
 enum CapitalContributionType {
@@ -2503,7 +2504,7 @@ model PartnerCapitalWithdrawal {
 }
 
 // ============================================================
-// TIMELINE, PERMITS & DOCUMENTS (گاه‌شمار، مجوزها و کنترل مستندات)
+// TIMELINE, PERMITS & DOCUMENTS (Ú¯Ø§Ù‡â€ŒØ´Ù…Ø§Ø±ØŒ Ù…Ø¬ÙˆØ²Ù‡Ø§ Ùˆ Ú©Ù†ØªØ±Ù„ Ù…Ø³ØªÙ†Ø¯Ø§Øª)
 // ============================================================
 
 enum PermitType {
@@ -2722,9 +2723,9 @@ model PhaseChecklist {
   @@map("phase_checklists")
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  ماول قراردادها (Legal Contracts)
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  Ù…Ø§ÙˆÙ„ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯Ù‡Ø§ (Legal Contracts)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 enum LegalContractKind {
   WORKER_EMPLOYMENT
@@ -2808,7 +2809,7 @@ model LegalContract {
   salaryHourly     Decimal? @db.Decimal(18, 0)
   workHoursPerWeek Int?
 
-  // B15.6: تفکیک مزایا و کسورات حقوق (پیوست ۱ قرارداد کارگری)
+  // B15.6: ØªÙÚ©ÛŒÚ© Ù…Ø²Ø§ÛŒØ§ Ùˆ Ú©Ø³ÙˆØ±Ø§Øª Ø­Ù‚ÙˆÙ‚ (Ù¾ÛŒÙˆØ³Øª Û± Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯ Ú©Ø§Ø±Ú¯Ø±ÛŒ)
   wageBreakdown Json?
 
   startDate    DateTime?
@@ -2891,9 +2892,9 @@ model LegalContractTemplate {
   updatedAt DateTime          @updatedAt
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  ماول فروش و پیشفروش (Sales)
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  Ù…Ø§ÙˆÙ„ ÙØ±ÙˆØ´ Ùˆ Ù¾ÛŒØ´ÙØ±ÙˆØ´ (Sales)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 enum SalesUnitStatus {
   AVAILABLE
@@ -3044,9 +3045,9 @@ model SalesPayment {
   @@index([paidAt])
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  پیوست‌های عمومی (چند فایل برای هر entity)
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  Ù¾ÛŒÙˆØ³Øªâ€ŒÙ‡Ø§ÛŒ Ø¹Ù…ÙˆÙ…ÛŒ (Ú†Ù†Ø¯ ÙØ§ÛŒÙ„ Ø¨Ø±Ø§ÛŒ Ù‡Ø± entity)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 model Attachment {
   id         String @id @default(uuid()) @db.Uuid
@@ -3260,7 +3261,7 @@ model PurchaseInvoiceItem {
   wbsItemId String?  @map("wbs_item_id") @db.Uuid
   wbsItem   WbsItem? @relation("PIItemWbs", fields: [wbsItemId], references: [id])
 
-  // مالی
+  // Ù…Ø§Ù„ÛŒ
   discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
   discountAmount  Decimal @default(0) @map("discount_amount") @db.Decimal(20, 2)
   additionAmount  Decimal @default(0) @map("addition_amount") @db.Decimal(20, 2)
@@ -3271,7 +3272,7 @@ model PurchaseInvoiceItem {
   loadingCost     Decimal @default(0) @map("loading_cost") @db.Decimal(20, 2)
   lineTotal       Decimal @default(0) @map("line_total") @db.Decimal(24, 2)
 
-  // دارایی ثابت
+  // Ø¯Ø§Ø±Ø§ÛŒÛŒ Ø«Ø§Ø¨Øª
   isCapital        Boolean     @default(false) @map("is_capital")
   fixedAssetId     String?     @unique @map("fixed_asset_id") @db.Uuid
   fixedAsset       FixedAsset? @relation("PICapitalFixedAsset", fields: [fixedAssetId], references: [id], onDelete: SetNull)
@@ -3644,7 +3645,7 @@ model PriceListItem {
 }
 
 // ============================================================
-// OVERHEAD ALLOCATION — تسهیم سربار ستاد
+// OVERHEAD ALLOCATION â€” ØªØ³Ù‡ÛŒÙ… Ø³Ø±Ø¨Ø§Ø± Ø³ØªØ§Ø¯
 // ============================================================
 
 enum OverheadAllocationMethod {
@@ -3705,15 +3706,15 @@ model OverheadAllocationItem {
 }
 
 // ============================================================
-// CLIENT STATEMENT — صورت‌وضعیت کارفرما (۷ برگ)
+// CLIENT STATEMENT â€” ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØª Ú©Ø§Ø±ÙØ±Ù…Ø§ (Û· Ø¨Ø±Ú¯)
 // ============================================================
 
 enum ClientStatementCategory {
-  MATERIAL // خرید مصالح
-  LABOR // اجرت و دستمزد
-  MISC // هزینه‌های متفرقه
-  TRANSPORT // کرایه حمل
-  EQUIPMENT // ماشین آلات
+  MATERIAL // Ø®Ø±ÛŒØ¯ Ù…ØµØ§Ù„Ø­
+  LABOR // Ø§Ø¬Ø±Øª Ùˆ Ø¯Ø³ØªÙ…Ø²Ø¯
+  MISC // Ù‡Ø²ÛŒÙ†Ù‡â€ŒÙ‡Ø§ÛŒ Ù…ØªÙØ±Ù‚Ù‡
+  TRANSPORT // Ú©Ø±Ø§ÛŒÙ‡ Ø­Ù…Ù„
+  EQUIPMENT // Ù…Ø§Ø´ÛŒÙ† Ø¢Ù„Ø§Øª
 }
 
 enum ClientStatementStatus {
@@ -3735,12 +3736,12 @@ model ClientStatement {
   periodStart     DateTime @map("period_start") @db.Date
   periodEnd       DateTime @map("period_end") @db.Date
 
-  // ضرایب
+  // Ø¶Ø±Ø§ÛŒØ¨
   coefficient                Decimal @default(1.07) @db.Decimal(7, 4)
   contractorSharePercent     Decimal @default(7) @map("contractor_share_percent") @db.Decimal(5, 2)
   prepaymentDeductionPercent Decimal @default(20) @map("prepayment_deduction_percent") @db.Decimal(5, 2)
 
-  // زیرجمع ۵ دسته
+  // Ø²ÛŒØ±Ø¬Ù…Ø¹ Ûµ Ø¯Ø³ØªÙ‡
   subtotalMaterial  Decimal @default(0) @map("subtotal_material") @db.Decimal(24, 2)
   subtotalLabor     Decimal @default(0) @map("subtotal_labor") @db.Decimal(24, 2)
   subtotalMisc      Decimal @default(0) @map("subtotal_misc") @db.Decimal(24, 2)
@@ -3807,7 +3808,7 @@ model ClientStatementItem {
 }
 
 // ============================================================
-// SITE OPERATIONS v2 — sections و، ز، ح، ط
+// SITE OPERATIONS v2 â€” sections ÙˆØŒ Ø²ØŒ Ø­ØŒ Ø·
 // ============================================================
 
 model DailyReportRequest {
@@ -3818,7 +3819,7 @@ model DailyReportRequest {
   rowNumber   Int    @map("row_number")
   requestType String @map("request_type") @db.VarChar(30) // PURCHASE | PETTY_CASH | MANPOWER | TECHNICAL | REPAIR
 
-  // اتصال به تنخواه (برای درخواست وجه)
+  // Ø§ØªØµØ§Ù„ Ø¨Ù‡ ØªÙ†Ø®ÙˆØ§Ù‡ (Ø¨Ø±Ø§ÛŒ Ø¯Ø±Ø®ÙˆØ§Ø³Øª ÙˆØ¬Ù‡)
   pettyCashAccountId String?   @map("petty_cash_account_id") @db.Uuid
   title              String    @db.VarChar(300)
   description        String?   @db.VarChar(1000)
@@ -3861,7 +3862,7 @@ model DailyReportEvent {
 }
 
 // ============================================================
-// WBS PROGRESS SNAPSHOT — پیشرفت روزانه‌ی WBS
+// WBS PROGRESS SNAPSHOT â€” Ù¾ÛŒØ´Ø±ÙØª Ø±ÙˆØ²Ø§Ù†Ù‡â€ŒÛŒ WBS
 // ============================================================
 
 model WbsProgressSnapshot {
@@ -3925,17 +3926,16 @@ model InventoryCount {
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @updatedAt @map("updated_at")
 
-  items InventoryCountItem[]
-
-  @@index([warehouseId])
-  @@index([status])
-  @@map("inventory_counts")
+  items         InventoryCountItem[]
   deletedAt     DateTime?
   deletedBy     String?
   deletedReason String?
 
+  @@index([warehouseId])
+  @@index([status])
   @@index([deletedAt])
   @@index([deletedBy])
+  @@map("inventory_counts")
 }
 
 model InventoryCountItem {
@@ -3978,18 +3978,17 @@ model WarehouseTransfer {
   createdAt       DateTime                @default(now()) @map("created_at")
   updatedAt       DateTime                @updatedAt @map("updated_at")
 
-  items WarehouseTransferItem[]
-
-  @@index([fromWarehouseId])
-  @@index([toWarehouseId])
-  @@index([status])
-  @@map("warehouse_transfers")
+  items         WarehouseTransferItem[]
   deletedAt     DateTime?
   deletedBy     String?
   deletedReason String?
 
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([status])
   @@index([deletedAt])
   @@index([deletedBy])
+  @@map("warehouse_transfers")
 }
 
 model WarehouseTransferItem {
@@ -4010,7 +4009,7 @@ model WarehouseTransferItem {
 }
 
 // ============================================================
-// ADJUSTMENT & MATERIAL PRICE DIFFERENCE (تعدیل و مابه‌التفاوت)
+// ADJUSTMENT & MATERIAL PRICE DIFFERENCE (ØªØ¹Ø¯ÛŒÙ„ Ùˆ Ù…Ø§Ø¨Ù‡â€ŒØ§Ù„ØªÙØ§ÙˆØª)
 // ============================================================
 
 enum AdjustmentStatus {
@@ -4113,7 +4112,7 @@ model MaterialPriceDiff {
 }
 
 // ============================================================
-// WORKER STATEMENT — صورت‌وضعیت پرسنل (حقوق و دستمزد)
+// WORKER STATEMENT â€” ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØª Ù¾Ø±Ø³Ù†Ù„ (Ø­Ù‚ÙˆÙ‚ Ùˆ Ø¯Ø³ØªÙ…Ø²Ø¯)
 // ============================================================
 
 enum WorkerStatementStatus {
@@ -4129,7 +4128,7 @@ model WorkerStatement {
   code   String                @unique @db.VarChar(32)
   status WorkerStatementStatus @default(DRAFT)
 
-  // پرسنل و قرارداد
+  // Ù¾Ø±Ø³Ù†Ù„ Ùˆ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯
   partnerId String  @map("partner_id") @db.Uuid
   partner   Partner @relation("WorkerStatementPartner", fields: [partnerId], references: [id])
 
@@ -4139,22 +4138,22 @@ model WorkerStatement {
   projectId String?  @map("project_id") @db.Uuid
   project   Project? @relation("WorkerStatementProject", fields: [projectId], references: [id])
 
-  // دوره
+  // Ø¯ÙˆØ±Ù‡
   statementNumber Int      @map("statement_number")
   periodStart     DateTime @map("period_start") @db.Date
   periodEnd       DateTime @map("period_end") @db.Date
 
-  // مبالغ دریافتی
+  // Ù…Ø¨Ø§Ù„Øº Ø¯Ø±ÛŒØ§ÙØªÛŒ
   totalEarnings   Decimal @default(0) @map("total_earnings") @db.Decimal(24, 2)
   totalInsurance  Decimal @default(0) @map("total_insurance") @db.Decimal(24, 2)
   totalTax        Decimal @default(0) @map("total_tax") @db.Decimal(24, 2)
   totalDeductions Decimal @default(0) @map("total_deductions") @db.Decimal(24, 2)
   netPayable      Decimal @default(0) @map("net_payable") @db.Decimal(24, 2)
 
-  // ضرایب
+  // Ø¶Ø±Ø§ÛŒØ¨
   insurancePercent Decimal @default(7) @map("insurance_percent") @db.Decimal(5, 2)
 
-  // جمع کارکرد (خلاصه)
+  // Ø¬Ù…Ø¹ Ú©Ø§Ø±Ú©Ø±Ø¯ (Ø®Ù„Ø§ØµÙ‡)
   workDays      Decimal @default(0) @map("work_days") @db.Decimal(6, 2)
   overtimeHours Decimal @default(0) @map("overtime_hours") @db.Decimal(7, 2)
   holidayHours  Decimal @default(0) @map("holiday_hours") @db.Decimal(7, 2)
@@ -4196,7 +4195,7 @@ model WorkerStatementItem {
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
 
-  // برای اتصال به قرارداد
+  // Ø¨Ø±Ø§ÛŒ Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯
   contractItemId String? @map("contract_item_id")
   notes          String? @db.VarChar(500)
 
@@ -4210,7 +4209,7 @@ model WorkerStatementItem {
 }
 
 // ============================================================
-// PAYROLL TAX — جدول مالیات پله‌ای
+// PAYROLL TAX â€” Ø¬Ø¯ÙˆÙ„ Ù…Ø§Ù„ÛŒØ§Øª Ù¾Ù„Ù‡â€ŒØ§ÛŒ
 // ============================================================
 
 model PayrollTaxSetting {
@@ -4299,9 +4298,9 @@ model JournalDeletionLog {
   @@map("journal_deletion_logs")
 }
 
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // F15: Expense module
-// ═══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 enum ExpenseStatus {
   DRAFT

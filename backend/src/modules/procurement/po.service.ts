@@ -40,11 +40,24 @@ export class PurchaseOrdersService {
     throw new Error('Cannot generate unique code for PO');
   }
 
-  private computeTotals(items: any[], taxPercent: number) {
-    const subtotal = items.reduce((s, it) => s + Number(it.quantity) * Number(it.unitPrice), 0);
-    const taxAmount = (subtotal * Number(taxPercent)) / 100;
+  private computeTotals(items: any[], defaultTaxPercent: number) {
+    let subtotal = 0;
+    let taxAmount = 0;
+    const enriched = items.map((it) => {
+      const lineSubtotal = Number(it.quantity) * Number(it.unitPrice);
+      const lineTaxPercent =
+        it.taxPercent !== undefined && it.taxPercent !== null
+          ? Number(it.taxPercent)
+          : Number(defaultTaxPercent);
+      const lineTaxAmount = (lineSubtotal * lineTaxPercent) / 100;
+      subtotal += lineSubtotal;
+      taxAmount += lineTaxAmount;
+      return { ...it, taxPercent: lineTaxPercent, totalPrice: lineSubtotal };
+    });
     const totalAmount = subtotal + taxAmount;
-    return { subtotal, taxAmount, totalAmount };
+    const effectiveTaxPercent =
+      subtotal > 0 ? Math.round((taxAmount / subtotal) * 10000) / 100 : Number(defaultTaxPercent);
+    return { subtotal, taxAmount, totalAmount, effectiveTaxPercent, items: enriched };
   }
 
   async findAll(query?: { status?: string; projectId?: string; supplierId?: string; search?: string }) {
@@ -86,19 +99,19 @@ export class PurchaseOrdersService {
 
   async create(dto: CreatePODto, userId: string) {
     const code = await this.generateCode();
-    const taxPercent = dto.taxPercent ?? 10;
+    const defaultTaxPercent = dto.taxPercent ?? 9;
 
-    const itemsWithTotals = dto.items.map((it, idx) => ({
+    const rawItems = dto.items.map((it, idx) => ({
       rowNumber: idx + 1,
       description: it.description,
       quantity: it.quantity,
       unit: it.unit as any,
       unitPrice: it.unitPrice,
-      totalPrice: Number(it.quantity) * Number(it.unitPrice),
+      taxPercent: it.taxPercent,
       notes: it.notes,
     }));
 
-    const totals = this.computeTotals(itemsWithTotals, taxPercent);
+    const totals = this.computeTotals(rawItems, defaultTaxPercent);
 
     return this.prisma.$transaction(async (tx) => {
       const po = await tx.purchaseOrder.create({
@@ -110,13 +123,13 @@ export class PurchaseOrdersService {
           poDate: new Date(dto.poDate),
           deliveryDate: dto.deliveryDate ? new Date(dto.deliveryDate) : null,
           subtotal: totals.subtotal,
-          taxPercent,
+          taxPercent: totals.effectiveTaxPercent,
           taxAmount: totals.taxAmount,
           totalAmount: totals.totalAmount,
           notes: dto.notes,
           status: 'DRAFT',
           createdById: userId,
-          items: { create: itemsWithTotals },
+          items: { create: totals.items },
         },
         include: {
           project: { select: { id: true, code: true, name: true } },
@@ -140,7 +153,7 @@ export class PurchaseOrdersService {
   async update(id: string, dto: UpdatePODto) {
     const po = await this.findOne(id);
     if (po.status !== 'DRAFT') {
-      throw new BadRequestException('فقط دستورات خرید پیش‌نویس قابل ویرایش هستند');
+      throw new BadRequestException('Only DRAFT purchase orders can be edited');
     }
 
     const data: any = {};
@@ -148,29 +161,48 @@ export class PurchaseOrdersService {
     if (dto.deliveryDate !== undefined) data.deliveryDate = dto.deliveryDate ? new Date(dto.deliveryDate) : null;
     if (dto.supplierId !== undefined) data.supplierId = dto.supplierId;
     if (dto.notes !== undefined) data.notes = dto.notes;
-    if (dto.taxPercent !== undefined) data.taxPercent = dto.taxPercent;
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.items) {
-        const itemsWithTotals = dto.items.map((it, idx) => ({
+        const defaultTaxPercent = dto.taxPercent ?? Number(po.taxPercent);
+        const rawItems = dto.items.map((it, idx) => ({
           rowNumber: idx + 1,
           description: it.description,
           quantity: it.quantity,
           unit: it.unit as any,
           unitPrice: it.unitPrice,
-          totalPrice: Number(it.quantity) * Number(it.unitPrice),
+          taxPercent: it.taxPercent,
           notes: it.notes,
         }));
-
-        const taxPercent = dto.taxPercent ?? Number(po.taxPercent);
-        const totals = this.computeTotals(itemsWithTotals, taxPercent);
+        const totals = this.computeTotals(rawItems, defaultTaxPercent);
 
         data.subtotal = totals.subtotal;
+        data.taxPercent = totals.effectiveTaxPercent;
         data.taxAmount = totals.taxAmount;
         data.totalAmount = totals.totalAmount;
 
         await tx.purchaseOrderItem.deleteMany({ where: { poId: id } });
-        data.items = { create: itemsWithTotals };
+        data.items = { create: totals.items };
+      } else if (dto.taxPercent !== undefined) {
+        const newDefault = Number(dto.taxPercent);
+        const rawItems = (po as any).items.map((it: any) => ({
+          rowNumber: it.rowNumber,
+          description: it.description,
+          quantity: Number(it.quantity),
+          unit: it.unit,
+          unitPrice: Number(it.unitPrice),
+          taxPercent: newDefault,
+          notes: it.notes,
+        }));
+        const totals = this.computeTotals(rawItems, newDefault);
+
+        data.subtotal = totals.subtotal;
+        data.taxPercent = totals.effectiveTaxPercent;
+        data.taxAmount = totals.taxAmount;
+        data.totalAmount = totals.totalAmount;
+
+        await tx.purchaseOrderItem.deleteMany({ where: { poId: id } });
+        data.items = { create: totals.items };
       }
 
       return tx.purchaseOrder.update({
