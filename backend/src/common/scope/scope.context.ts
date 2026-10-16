@@ -4,6 +4,7 @@ export interface RequestScope {
   userId: string | null;
   isStaff: boolean;
   projectIds: string[];
+  activeProjectId: string | null;
   enabled: boolean;
 }
 
@@ -17,6 +18,6 @@ export const ScopeContext = {
     return storage.getStore();
   },
   isEnabled(): boolean {
-    return String(process.env.PROJECT_SCOPE_ENABLED || "").toLowerCase() === "true";
+    return String(process.env.PROJECT_SCOPE_ENABLED || '').toLowerCase() === 'true';
   },
 };

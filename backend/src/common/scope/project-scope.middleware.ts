@@ -4,20 +4,21 @@ import { ScopeContext } from './scope.context';
 
 const logger = new Logger("ProjectScope");
 
-// Models that have a `projectId` scalar field (built from DMMF at load time).
+// مدل‌هایی که فیلد projectId دارند (از DMMF Prisma در زمان راه‌اندازی ساخته می‌شود)
 const PROJECT_SCOPED_MODELS = new Set<string>();
 
 // مدل‌هایی که projectId دارند ولی نباید scope-filter شوند
 const EXCLUDED_MODELS = new Set<string>([
-  "UserProject",      // خودِ جدول assignment
+  "UserProject",      // خودِ جدول تخصیص
   "Warehouse",        // ساختاری
   "CostCenter",       // ساختاری
   "EmployeeProfile",  // پرسنل چند-پروژه
   "PettyCashAccount", // ممکن است company-wide باشد
 ]);
+
 (function init() {
   try {
-    const dmmf: any = (Prisma as any).dmmf || (Prisma as any).dmmf?.datamodel;
+    const dmmf: any = (Prisma as any).dmmf;
     const models = dmmf?.datamodel?.models || [];
     for (const m of models) {
       if (Array.isArray(m.fields) && m.fields.some((f: any) => f.name === "projectId")) {
@@ -43,48 +44,55 @@ const CREATE_ACTIONS = new Set(["create", "createMany"]);
 export const projectScopeMiddleware: Prisma.Middleware = async (params, next) => {
   const scope = ScopeContext.get();
   if (!scope || !scope.enabled) return next(params);
-  if (scope.isStaff) return next(params);
   if (!params.model || !PROJECT_SCOPED_MODELS.has(params.model)) return next(params);
   if (EXCLUDED_MODELS.has(params.model)) return next(params);
 
-  const projectIds = scope.projectIds || [];
+  // اگر کاربر پروژه‌ی فعال انتخاب کرده، فقط همان یک پروژه مجاز است.
+  // اگر انتخاب نکرده و کاربر ستادی است، هیچ فیلتری اعمال نمی‌شود.
+  const single = scope.activeProjectId;
+  if (!single && scope.isStaff) return next(params);
 
-  // ─── READ ───
+  // اگر نه activeProjectId داریم و نه کاربر ستادی، از پروژه‌های مجاز کاربر استفاده می‌کنیم
+  const projectIds = scope.projectIds || [];
+  const projectFilter = single ? single : { in: projectIds };
+
+  // ─── خواندن ───
   if (READ_ACTIONS.has(params.action)) {
     if (params.action === "findUnique") {
       (params as any).action = "findFirst";
     }
     params.args = params.args || {};
     const where = { ...(params.args.where || {}) };
-    where.projectId = { in: projectIds };
+    where.projectId = projectFilter;
     params.args.where = where;
     return next(params);
   }
 
-  // ─── FILTERED WRITES (many) ───
+  // ─── ویرایش گروهی / حذف گروهی ───
   if (FILTERED_WRITE_ACTIONS.has(params.action)) {
     params.args = params.args || {};
     const where = { ...(params.args.where || {}) };
-    where.projectId = { in: projectIds };
+    where.projectId = projectFilter;
     params.args.where = where;
     return next(params);
   }
 
-  // ─── CREATE (reject out-of-scope) ───
+  // ─── ساخت (اگر خارج از محدوده باشد، رد شود) ───
   if (CREATE_ACTIONS.has(params.action)) {
     const data = params.args?.data;
     const items: any[] = Array.isArray(data) ? data : [data];
     for (const it of items) {
       const pid = it?.projectId;
-      if (pid !== undefined && pid !== null && !projectIds.includes(pid)) {
-        throw new ForbiddenException(
-          "دسترسی به این پروژه مجاز نیست",
-        );
+      if (pid !== undefined && pid !== null) {
+        const allowed = single ? (pid === single) : projectIds.includes(pid);
+        if (!allowed) {
+          throw new ForbiddenException("دسترسی به این پروژه مجاز نیست");
+        }
       }
     }
     return next(params);
   }
 
-  // singular update/delete intentionally not filtered here (v1) — services must enforce.
+  // ویرایش/حذف تک‌رکورد در v1 فیلتر نمی‌شود — سرویس‌ها باید چک کنند.
   return next(params);
 };

@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth.store';
+import { useProjectStore } from '@/store/project.store';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -23,6 +24,10 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const activeProjectId = useProjectStore.getState().activeProjectId;
+  if (activeProjectId) {
+    config.headers['X-Active-Project'] = activeProjectId;
   }
   return config;
 });

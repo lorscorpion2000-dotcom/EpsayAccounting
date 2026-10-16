@@ -9,6 +9,9 @@ export interface AuthUser {
   mobile?: string | null;
   roles: string[];
   permissions: string[];
+  isStaff?: boolean;
+  projectIds?: string[];
+  defaultProjectId?: string | null;
   mustChangePassword?: boolean;
 }
 

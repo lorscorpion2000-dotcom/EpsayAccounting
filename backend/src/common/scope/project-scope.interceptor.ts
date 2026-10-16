@@ -8,10 +8,21 @@ export class ProjectScopeInterceptor implements NestInterceptor {
     const req: any = ctx.switchToHttp().getRequest();
     const user = req?.user || {};
 
+    const rawHeader = req?.headers?.['x-active-project'] || req?.headers?.['X-Active-Project'];
+    const requested = typeof rawHeader === 'string' && rawHeader.length > 0 ? rawHeader : null;
+
+    // اگر کاربر به این پروژه دسترسی ندارد، هدر را نادیده بگیر
+    const userProjectIds: string[] = Array.isArray(user.projectIds) ? user.projectIds : [];
+    const validActive =
+      requested && (user.isStaff || userProjectIds.includes(requested))
+        ? requested
+        : null;
+
     const scope: RequestScope = {
       userId: user.id || null,
       isStaff: !!user.isStaff,
-      projectIds: Array.isArray(user.projectIds) ? user.projectIds : [],
+      projectIds: userProjectIds,
+      activeProjectId: validActive,
       enabled: ScopeContext.isEnabled(),
     };
 

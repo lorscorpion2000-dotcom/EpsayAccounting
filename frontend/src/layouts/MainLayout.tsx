@@ -12,6 +12,7 @@ import DateDisplay from '@/components/DateDisplay';
 import HelpButton from '@/modules/help/components/HelpButton';
 import ThemeSelector from '@/components/ThemeSelector';
 import NotificationBell from '@/modules/notifications/components/NotificationBell';
+import ProjectSwitcher from '@/components/ProjectSwitcher';
 import { findActiveSection, buildFilteredMenu, MENU } from './menu-config';
 
 
@@ -299,6 +300,8 @@ export default function MainLayout() {
               />
             </div>
           </div>
+
+          <ProjectSwitcher />
 
           <DateDisplay />
           <div className="flex items-center gap-3">
