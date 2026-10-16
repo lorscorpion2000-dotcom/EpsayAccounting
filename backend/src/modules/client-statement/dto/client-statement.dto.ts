@@ -87,6 +87,14 @@ export class CreateCSDto {
   @IsOptional() @IsNumber() @Min(0)
   prepaymentDeductionPercent?: number;
 
+  @ApiPropertyOptional({ description: 'Override computed contractor share amount' })
+  @IsOptional() @IsNumber() @Min(0)
+  contractorShareAmount?: number;
+
+  @ApiPropertyOptional({ description: 'Override computed net payable' })
+  @IsOptional() @IsNumber() @Min(0)
+  netPayable?: number;
+
   @ApiPropertyOptional()
   @IsOptional() @IsString() @MaxLength(500)
   description?: string;

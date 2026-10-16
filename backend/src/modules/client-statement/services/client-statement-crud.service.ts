@@ -39,6 +39,7 @@ export class ClientStatementCrudService {
     coefficient: number,
     prepaymentAmount: number,
     prepaymentDeductionPercent: number,
+    overrides?: { contractorShareAmount?: number; netPayable?: number },
   ) {
     const subtotals: Record<Category, number> = {
       MATERIAL: 0, LABOR: 0, MISC: 0, TRANSPORT: 0, EQUIPMENT: 0,
@@ -51,9 +52,15 @@ export class ClientStatementCrudService {
       subtotals.MATERIAL + subtotals.LABOR + subtotals.MISC +
       subtotals.TRANSPORT + subtotals.EQUIPMENT;
     const totalAfterCoefficient = totalBeforeCoefficient * coefficient;
-    const contractorShareAmount = totalAfterCoefficient - totalBeforeCoefficient;
+    const computedShare = totalAfterCoefficient - totalBeforeCoefficient;
+    const contractorShareAmount = overrides?.contractorShareAmount !== undefined
+      ? Number(overrides.contractorShareAmount)
+      : computedShare;
     const prepaymentDeductionAmount = (prepaymentAmount * prepaymentDeductionPercent) / 100;
-    const netPayable = contractorShareAmount - prepaymentDeductionAmount;
+    const computedNet = contractorShareAmount - prepaymentDeductionAmount;
+    const netPayable = overrides?.netPayable !== undefined
+      ? Number(overrides.netPayable)
+      : computedNet;
     return {
       subtotals, totalBeforeCoefficient, totalAfterCoefficient,
       contractorShareAmount, prepaymentDeductionAmount, netPayable,
@@ -132,7 +139,10 @@ export class ClientStatementCrudService {
       notes: it.notes,
     }));
 
-    const totals = this.computeTotals(items, coefficient, contractData.prepaymentAmount, prepaymentDeductionPercent);
+    const totals = this.computeTotals(items, coefficient, contractData.prepaymentAmount, prepaymentDeductionPercent, {
+      contractorShareAmount: dto.contractorShareAmount,
+      netPayable: dto.netPayable,
+    });
     const code = await this.nextCode();
 
     return this.prisma.clientStatement.create({

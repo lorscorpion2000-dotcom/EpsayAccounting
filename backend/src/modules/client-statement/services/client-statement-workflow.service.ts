@@ -29,7 +29,8 @@ export class ClientStatementWorkflowService {
     try {
       const posted = await this.postSvc.post(id, userId);
       return posted;
-    } catch {
+    } catch (e) {
+      console.error('[client-statement] post failed:', e && e.message, e && e.stack);
       // status is APPROVED; JE failed. User can retry via /post endpoint.
       return updated;
     }
