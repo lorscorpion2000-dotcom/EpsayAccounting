@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ExpenseCostType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { generateCode } from '../../shared/utils/code-generator';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -10,6 +12,7 @@ export class ExpensesService {
   constructor(
     private prisma: PrismaService,
     private engine: AccountingEngineService,
+    private detailAccounts: DetailAccountsService,
   ) {}
 
   private async nextCode(): Promise<string> {
@@ -69,6 +72,10 @@ export class ExpensesService {
   async create(dto: CreateExpenseDto, userId: string) {
     const code = await this.nextCode();
     const amount = Number(dto.amount);
+    const costType = (dto.costType as any) ?? ExpenseCostType.COMPANY;
+    if (costType === ExpenseCostType.CLIENT_PASS_THROUGH && !dto.clientId) {
+      throw new BadRequestException('برای هزینه کارفرما، انتخاب کارفرما الزامی است');
+    }
     const taxAmount = Number(dto.taxAmount || 0);
     const totalAmount = amount + taxAmount;
     if (totalAmount <= 0) throw new BadRequestException('مبلغ باید بیشتر از صفر باشد');
@@ -82,6 +89,8 @@ export class ExpensesService {
         wbsItemId: dto.wbsItemId ?? null,
         costCenterId: dto.costCenterId ?? null,
         supplierId: dto.supplierId ?? null,
+        clientId: dto.clientId ?? null,
+        costType: (dto.costType as any) ?? ExpenseCostType.COMPANY,
         amount, taxAmount, totalAmount,
         description: dto.description,
         payFromType: dto.payFromType,
@@ -236,7 +245,7 @@ export class ExpensesService {
   private async createJE(expenseId: string, userId: string) {
     const e = await this.prisma.expense.findUnique({
       where: { id: expenseId },
-      include: { supplier: { select: { name: true } }, category: true },
+      include: { supplier: { select: { name: true } }, category: true, client: { select: { name: true } } },
     });
     if (!e) throw new NotFoundException('هزینه یافت نشد');
 
@@ -250,6 +259,84 @@ export class ExpensesService {
     const amount = Number(e.amount);
     const tax = Number(e.taxAmount);
     const total = Number(e.totalAmount);
+
+    // ═══════════════════════════════════════════════════════
+    // CLIENT_PASS_THROUGH: کارفرما بدهکار، تأمین‌کننده بستانکار
+    // هیچ جابجایی نقدی رخ نمی‌دهد.
+    // ═══════════════════════════════════════════════════════
+    if ((e as any).costType === 'CLIENT_PASS_THROUGH') {
+      if (!(e as any).clientId) {
+        throw new Error('برای هزینه کارفرما، انتخاب کارفرما الزامی است');
+      }
+
+      // حساب تفصیلی کارفرما (CUSTOMER)
+      const clientAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
+        detailType: 'CUSTOMER' as any,
+        entityId: (e as any).clientId,
+        entityName: (e as any).client?.name || 'کارفرما',
+      });
+      if (!clientAcc) throw new Error('حساب تفصیلی کارفرما ساخته نشد');
+
+      // حساب تفصیلی تأمین‌کننده (SUPPLIER)
+      let creditAccId: string | null = null;
+      if (e.supplierId) {
+        const supAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
+          detailType: 'SUPPLIER' as any,
+          entityId: e.supplierId,
+          entityName: e.supplier?.name || 'تأمین‌کننده',
+        });
+        if (!supAcc) throw new Error('حساب تفصیلی تأمین‌کننده ساخته نشد');
+        creditAccId = supAcc.id;
+      } else {
+        // اگر تأمین‌کننده ندارد، از حساب پرداختنی تجاری استفاده کن
+        const fallback = await this.prisma.account.findFirst({
+          where: { code: '2.1.1.01', isPostable: true, isActive: true },
+        });
+        if (!fallback) throw new Error('حساب پرداختنی تجاری (2.1.1.01) پیدا نشد');
+        creditAccId = fallback.id;
+      }
+
+      const lines: any[] = [
+        {
+          accountId: clientAcc.id,
+          debit: total,
+          credit: 0,
+          description: 'هزینه کارفرما ' + e.code + ' — ' + e.category.name,
+          projectId: e.projectId ?? undefined,
+          partnerId: (e as any).clientId,
+        },
+        {
+          accountId: creditAccId,
+          debit: 0,
+          credit: total,
+          description: 'بستانکاری ' + (e.supplier?.name || 'طرف حساب') + ' — ' + e.code,
+          projectId: e.projectId ?? undefined,
+          partnerId: e.supplierId ?? undefined,
+        },
+      ];
+
+      const je = await this.engine.postMultiLine('EXPENSE_CLIENT_PASS_THROUGH', {
+        entryDate: e.expenseDate.toISOString().slice(0, 10),
+        description: 'هزینه کارفرما ' + e.code + (e.client?.name ? ' — ' + e.client.name : ''),
+        reference: e.code,
+        sourceId: expenseId,
+        lines,
+        userId,
+      });
+
+      await this.prisma.expense.update({
+        where: { id: expenseId },
+        data: { status: 'POSTED', journalEntryId: je.id },
+      });
+      return je;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // COMPANY (پیش‌فرض): سند عادی هزینه با پرداخت نقدی
+    // ═══════════════════════════════════════════════════════
+    if (!e.payFromAccountId) {
+      throw new Error('برای هزینه شرکت، انتخاب حساب پرداخت الزامی است');
+    }
 
     // VAT account
     let vatAcc: any = null;

@@ -238,8 +238,9 @@ model Partner {
   equipmentLogsAsOperator          EquipmentDailyLog[]          @relation("EquipmentLogOperator")
   workerContractorReports          DailyReportWorker[]          @relation("WorkerContractor")
 
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        String?   @map("deleted_by")
+  expensesAsClient Expense[] @relation("ExpenseClient")
 
   @@index([type])
   @@map("partners")
@@ -4323,6 +4324,11 @@ enum ExpensePayFromType {
   PETTY_CASH
 }
 
+enum ExpenseCostType {
+  COMPANY // هزینه شرکت (پیش‌فرض)
+  CLIENT_PASS_THROUGH // هزینه کارفرما — ثبت به‌عنوان بدهی کارفرما
+}
+
 model ExpenseCategory {
   id   String @id @default(uuid()) @db.Uuid
   code String @unique @db.VarChar(32)
@@ -4377,14 +4383,17 @@ model Expense {
 
   description String @db.VarChar(500)
 
-  payFromType      ExpensePayFromType @map("pay_from_type")
-  payFromAccountId String             @map("pay_from_account_id") @db.Uuid
-  payFromAccount   Account            @relation("ExpensePayFrom", fields: [payFromAccountId], references: [id])
+  payFromType      ExpensePayFromType? @map("pay_from_type")
+  payFromAccountId String?             @map("pay_from_account_id") @db.Uuid
+  payFromAccount   Account?            @relation("ExpensePayFrom", fields: [payFromAccountId], references: [id])
 
-  expenseAccountId String  @map("expense_account_id") @db.Uuid
-  expenseAccount   Account @relation("ExpenseAccountDr", fields: [expenseAccountId], references: [id])
+  expenseAccountId String?  @map("expense_account_id") @db.Uuid
+  expenseAccount   Account? @relation("ExpenseAccountDr", fields: [expenseAccountId], references: [id])
 
-  status ExpenseStatus @default(DRAFT)
+  status   ExpenseStatus   @default(DRAFT)
+  costType ExpenseCostType @default(COMPANY) @map("cost_type")
+  clientId String?         @map("client_id") @db.Uuid
+  client   Partner?        @relation("ExpenseClient", fields: [clientId], references: [id])
 
   approvedById   String?   @map("approved_by_id") @db.Uuid
   approvedBy     User?     @relation("ExpenseApprover", fields: [approvedById], references: [id])
