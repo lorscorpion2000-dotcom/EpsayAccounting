@@ -146,6 +146,22 @@ export class FiscalYearsService {
   async generateClosingEntry(id: string, userId?: string) {
     const fy = await this.findOne(id);
 
+    if (fy.status === 'CLOSED') {
+      throw new BadRequestException('Fiscal year ' + fy.code + ' is already closed');
+    }
+
+    const existingClosing = await this.prisma.journalEntry.findFirst({
+      where: { fiscalYearId: id, sourceType: 'FISCAL_CLOSING' },
+      select: { code: true, status: true },
+    });
+    if (existingClosing) {
+      throw new BadRequestException(
+        'Closing entry already exists: ' + existingClosing.code + ' (' + existingClosing.status + ')'
+      );
+    }
+
+    await this.assertPeriodOpen(fy.endDate);
+
     // پیدا کردن حساب سود و زیان انباشته (کد شروع میشود با 3.3)
     const retainedAccount = await this.prisma.account.findFirst({
       where: { code: { startsWith: '3.3' }, isPostable: true },
@@ -171,8 +187,6 @@ export class FiscalYearsService {
     const accountById = new Map(accounts.map((a) => [a.id, a]));
 
     const closingLines: any[] = [];
-    let totalIncome = 0;   // مانده بستانکار درآمدها
-    let totalExpense = 0;  // مانده بدهکار هزینهها
 
     for (const l of lines) {
       const acc = accountById.get(l.accountId);
@@ -184,31 +198,22 @@ export class FiscalYearsService {
       const credit = Number(l._sum.credit || 0);
       const balance = debit - credit;
 
-      if (firstDigit === '4') {
-        // درآمد — مانده بستانکار (balance منفی)
-        if (balance < 0) {
-          const amount = Math.abs(balance);
-          totalIncome += amount;
-          // برای بستن درآمد بستانکار: بدهکار میشود
-          closingLines.push({
-            accountId: acc.id,
-            description: 'بستن حساب درآمد ' + acc.name,
-            debit: amount,
-            credit: 0,
-          });
-        }
+      if (Math.abs(balance) < 0.01) continue;
+
+      if (balance > 0) {
+        closingLines.push({
+          accountId: acc.id,
+          description: 'بستن حساب ' + acc.name,
+          debit: 0,
+          credit: balance,
+        });
       } else {
-        // هزینه — مانده بدهکار (balance مثبت)
-        if (balance > 0) {
-          totalExpense += balance;
-          // برای بستن هزینه: بستانکار میشود
-          closingLines.push({
-            accountId: acc.id,
-            description: 'بستن حساب هزینه ' + acc.name,
-            debit: 0,
-            credit: balance,
-          });
-        }
+        closingLines.push({
+          accountId: acc.id,
+          description: 'بستن حساب ' + acc.name,
+          debit: Math.abs(balance),
+          credit: 0,
+        });
       }
     }
 
@@ -217,7 +222,9 @@ export class FiscalYearsService {
     }
 
     // انتقال سود یا زیان به حساب انباشته
-    const netIncome = totalIncome - totalExpense;
+    const tempDebit = closingLines.reduce((s, l) => s + Number(l.debit || 0), 0);
+    const tempCredit = closingLines.reduce((s, l) => s + Number(l.credit || 0), 0);
+    const netIncome = tempDebit - tempCredit;
     if (netIncome > 0) {
       // سود → بستانکار حساب انباشته
       closingLines.push({
