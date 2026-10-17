@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users, TrendingUp , FileSignature, Building2, Printer } from 'lucide-react';
+import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users, TrendingUp , FileSignature, Building2, Printer, Edit } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import PrintButton from '@/components/PrintButton';
@@ -622,6 +622,7 @@ const WORKFLOWS: Workflow[] = [
     steps: [
       { actor: 'حسابدار', action: 'یک صورت‌وضعیت جدید برای پروژه بساز و دوره را مشخص کن', icon: User, color: 'slate', target: 'پیش‌نویس صورت‌وضعیت' },
       { actor: 'حسابدار', action: 'ردیف‌ها را در ۵ دسته وارد کن (مصالح، دستمزد، متفرقه، حمل، ماشین‌آلات)', icon: FileText, color: 'blue', target: 'ردیف‌های صورت‌وضعیت' },
+      { actor: 'حسابدار', action: 'برای اصلاح ردیف، از آیکن ✏️ ویرایش inline استفاده کن (فقط پیش‌نویس) — بعد از ذخیره، جمع دسته و جمع کل فوری به‌روز می‌شود', icon: Edit, color: 'amber', target: 'ویرایش / حذف ردیف' },
       { actor: 'سیستم', action: 'جمع‌ها، ضریب، حق‌العمل پیمانکار و کسر پیش‌پرداخت را خودکار محاسبه می‌کند', icon: ClipboardList, color: 'amber', target: 'خلاصه‌ی مالی' },
       { actor: 'حسابدار', action: 'صورت‌وضعیت را ارسال کن', icon: Send, color: 'amber', target: 'در انتظار تأیید' },
       { actor: 'مدیر مالی', action: 'تأیید کن (یا در کارتابل تأیید کن)', icon: CheckCircle2, color: 'emerald', target: 'تأییدشده + سند خودکار' },
@@ -637,9 +638,11 @@ const WORKFLOWS: Workflow[] = [
       'فیلد journalEntryId پس از تأیید پر می‌شود؛ کد سند در سربرگ صورت‌وضعیت دیده می‌شود.',
       'نکته: تأیید صورت‌وضعیت به قفل دوره‌ی مالی احترام می‌گذارد — اگر ماه قفل باشد، سند ساخته نمی‌شود.',
       'شماره‌ی صورت‌وضعیت در هر پروژه یکتاست؛ حتی اگر رکورد نرم‌حذف شده باشد، شماره‌اش را دوباره نمی‌توان استفاده کرد.',
+      'ویرایش/حذف inline ردیف‌ها فقط در پیش‌نویس (DRAFT) ممکن است. دکمه‌های ✏️ و 🗑️ کنار هر ردیف در تب دسته‌ها ظاهر می‌شوند. در وضعیت‌های SUBMITTED/APPROVED/PAID ستون «عملیات» با علامت «—» غیرفعال است.',
+      'مقدار ردیف باید بزرگ‌تر از صفر باشد و شرح ردیف اجباری است — در غیر این صورت سرور خطا می‌دهد.',
     ],
     onReject: [
-      'صورت‌وضعیت پیش‌نویس فقط توسط حسابدار قابل ویرایش یا حذف است.',
+      'صورت‌وضعیت پیش‌نویس فقط توسط حسابدار قابل ویرایش یا حذف است (هم در فرم ویرایش، هم inline در تب دسته‌ها).',
       'اگر در تأیید خطای «مبالغ صورت‌وضعیت صفر است» گرفتی، یعنی نه مبلغ قابل دریافت داری و نه هزینه‌ی کارفرمای باز.',
       'اگر تأیید به‌دلیل مشکل حساب‌یابی رد شود (مثلاً حساب ۴.۱.۱ پیدا نشود)، اول کدینگ حساب‌ها را بررسی کن.',
       'با ابطال صورت‌وضعیت تأییدشده، هزینه‌های بسته‌شده آزاد نمی‌شوند — باید سند معکوس ثبت شود.',
