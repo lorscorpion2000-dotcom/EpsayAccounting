@@ -434,6 +434,7 @@ export class PurchaseInvoicesCrudService {
           description: it.description ?? '',
           quantity: Number(it.quantity ?? 0),
           unit: String(it.unit ?? 'NUMBER'),
+          unitId: null as string | null,
           unitPrice: Number(it.unitPrice ?? 0),
           totalPrice: base,
           accountId: it.accountId ?? null,
@@ -452,6 +453,9 @@ export class PurchaseInvoicesCrudService {
           notes: it.notes ?? null,
         };
       });
+
+      const updateUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
+      for (const it of items) it.unitId = updateUnitMap.get(String(it.unit)) ?? null;
 
       const capitalItems = await this.prisma.purchaseInvoiceItem.findMany({
         where: { invoiceId: id, isCapital: true, fixedAssetId: { not: null } },
