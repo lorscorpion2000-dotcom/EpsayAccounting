@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban, AlertCircle } from 'lucide-react';
+import { ArrowRight, Loader2, FileSpreadsheet, Printer, Send, CheckCircle2, XCircle, Package, Users, Wrench, Truck, Cog, FileText, Edit, BadgeCheck, Ban, AlertCircle, Trash2, Save, X } from 'lucide-react';
 import clsx from 'clsx';
 import { clientStatementApi } from '../services/client-statement.api';
 import type { ClientStatement, CSItem, CSCategory } from '@/types/client-statement';
@@ -39,6 +39,15 @@ export default function ClientStatementDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonModal, setReasonModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    description: string;
+    unit: string;
+    unitPrice: string;
+    quantity: string;
+    itemDate: string;
+  } | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -64,6 +73,57 @@ export default function ClientStatementDetailPage() {
       } catch { /* silent */ }
     })();
   }, []);
+
+  const startEdit = (it: CSItem) => {
+    setEditingId(it.id || null);
+    setEditForm({
+      description: it.description || '',
+      unit: it.unit || '',
+      unitPrice: it.unitPrice !== undefined && it.unitPrice !== null ? String(it.unitPrice) : '',
+      quantity: it.quantity !== undefined && it.quantity !== null ? String(it.quantity) : '1',
+      itemDate: it.itemDate ? String(it.itemDate).slice(0, 10) : '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editForm) return;
+    const up = Number(editForm.unitPrice);
+    const q = Number(editForm.quantity);
+    if (!editForm.description.trim()) { toast.error('شرح ردیف الزامی است'); return; }
+    if (!Number.isFinite(up) || up < 0) { toast.error('بهای واحد نامعتبر'); return; }
+    if (!Number.isFinite(q) || q <= 0) { toast.error('مقدار باید بزرگ‌تر از صفر باشد'); return; }
+    setSavingItem(true);
+    try {
+      await clientStatementApi.updateItem(editingId, {
+        description: editForm.description.trim(),
+        unit: editForm.unit || undefined,
+        unitPrice: up,
+        quantity: q,
+        itemDate: editForm.itemDate || undefined,
+      });
+      toast.success('ردیف ذخیره شد');
+      cancelEdit();
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در ذخیره');
+    } finally { setSavingItem(false); }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!window.confirm('این ردیف حذف شود؟ (این عمل قابل بازگشت نیست)')) return;
+    try {
+      await clientStatementApi.deleteItem(itemId);
+      toast.success('ردیف حذف شد');
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'خطا در حذف');
+    }
+  };
 
   const handleSubmit = async () => {
     if (!s) return;
@@ -406,27 +466,97 @@ export default function ClientStatementDetailPage() {
                     <th className="text-center px-3 py-2 w-20 font-medium text-slate-600">مقدار</th>
                     <th className="text-left px-3 py-2 w-32 font-medium text-slate-600">جمع</th>
                     <th className="text-center px-3 py-2 w-32 font-medium text-slate-600">تاریخ</th>
+                    <th className="text-center px-3 py-2 w-20 font-medium text-slate-600">عملیات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {grouped[tab as CSCategory].map((it, idx) => (
-                    <tr key={it.id || idx} className="hover:bg-slate-50/50">
-                      <td className="px-3 py-2 text-center text-slate-400 num text-xs">{toPersianDigits(idx + 1)}</td>
-                      <td className="px-3 py-2">
-                        <span className="num text-xs font-mono" dir="ltr">{it.priceListCode || '—'}</span>
-                      </td>
-                      <td className="px-3 py-2 text-slate-800 text-xs">{it.description}</td>
-                      <td className="px-3 py-2 text-center text-xs text-slate-500">{it.unit || '—'}</td>
-                      <td className="px-3 py-2 text-left num text-xs">{toPersianDigits(Number(it.unitPrice).toLocaleString())}</td>
-                      <td className="px-3 py-2 text-center num text-xs">{toPersianDigits(Number(it.quantity))}</td>
-                      <td className="px-3 py-2 text-left num text-xs font-bold">
-                        {toPersianDigits(Math.round(Number(it.totalPrice || Number(it.unitPrice) * Number(it.quantity))).toLocaleString())}
-                      </td>
-                      <td className="px-3 py-2 text-center num text-xs">
-                        {it.itemDate ? formatJalaliDate(it.itemDate) : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {grouped[tab as CSCategory].map((it, idx) => {
+                    const isEditing = editingId === it.id && editForm !== null;
+                    if (isEditing) {
+                      return (
+                        <tr key={it.id || idx} className="bg-amber-50/60">
+                          <td className="px-3 py-2 text-center text-slate-400 num text-xs">{toPersianDigits(idx + 1)}</td>
+                          <td className="px-3 py-2">
+                            <span className="num text-xs font-mono text-slate-500" dir="ltr">{it.priceListCode || '—'}</span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <input type="text" value={editForm!.description}
+                              onChange={(e) => setEditForm({ ...editForm!, description: e.target.value })}
+                              className="input text-xs py-1 px-2 w-full" placeholder="شرح ردیف" />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input type="text" value={editForm!.unit}
+                              onChange={(e) => setEditForm({ ...editForm!, unit: e.target.value })}
+                              className="input text-xs py-1 px-2 w-20 text-center" placeholder="واحد" />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input type="number" value={editForm!.unitPrice}
+                              onChange={(e) => setEditForm({ ...editForm!, unitPrice: e.target.value })}
+                              className="input text-xs py-1 px-2 w-28 text-left num" dir="ltr" />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input type="number" step="0.01" value={editForm!.quantity}
+                              onChange={(e) => setEditForm({ ...editForm!, quantity: e.target.value })}
+                              className="input text-xs py-1 px-2 w-20 text-center num" dir="ltr" />
+                          </td>
+                          <td className="px-3 py-2 text-left num text-xs font-bold text-emerald-700">
+                            {toPersianDigits(Math.round((Number(editForm!.unitPrice) || 0) * (Number(editForm!.quantity) || 0)).toLocaleString())}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input type="date" value={editForm!.itemDate}
+                              onChange={(e) => setEditForm({ ...editForm!, itemDate: e.target.value })}
+                              className="input text-xs py-1 px-1 num" dir="ltr" />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button type="button" onClick={saveEdit} disabled={savingItem}
+                                className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50" title="ذخیره">
+                                <Save className="w-3.5 h-3.5" />
+                              </button>
+                              <button type="button" onClick={cancelEdit} disabled={savingItem}
+                                className="p-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300" title="انصراف">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
+                      <tr key={it.id || idx} className="hover:bg-slate-50/50">
+                        <td className="px-3 py-2 text-center text-slate-400 num text-xs">{toPersianDigits(idx + 1)}</td>
+                        <td className="px-3 py-2">
+                          <span className="num text-xs font-mono" dir="ltr">{it.priceListCode || '—'}</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-800 text-xs">{it.description}</td>
+                        <td className="px-3 py-2 text-center text-xs text-slate-500">{it.unit || '—'}</td>
+                        <td className="px-3 py-2 text-left num text-xs">{toPersianDigits(Number(it.unitPrice).toLocaleString())}</td>
+                        <td className="px-3 py-2 text-center num text-xs">{toPersianDigits(Number(it.quantity))}</td>
+                        <td className="px-3 py-2 text-left num text-xs font-bold">
+                          {toPersianDigits(Math.round(Number(it.totalPrice || Number(it.unitPrice) * Number(it.quantity))).toLocaleString())}
+                        </td>
+                        <td className="px-3 py-2 text-center num text-xs">
+                          {it.itemDate ? formatJalaliDate(it.itemDate) : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {s.status === 'DRAFT' ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <button type="button" onClick={() => startEdit(it)}
+                                className="p-1 rounded hover:bg-amber-100 text-amber-700" title="ویرایش ردیف">
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button type="button" onClick={() => it.id && handleDeleteItem(it.id)}
+                                className="p-1 rounded hover:bg-red-100 text-red-600" title="حذف ردیف">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-slate-50 border-t-2 border-slate-300">
                   {(() => {
@@ -436,6 +566,7 @@ export default function ClientStatementDetailPage() {
                       <tr>
                         <td colSpan={6} className="px-3 py-2 text-left font-bold text-slate-700">جمع کل {CS_CATEGORY_LABELS[tab as CSCategory]}</td>
                         <td className="px-3 py-2 text-left num font-bold text-slate-900">{toPersianDigits(Math.round(subtotal).toLocaleString())}</td>
+                        <td className="px-3 py-2"></td>
                         <td className="px-3 py-2"></td>
                       </tr>
                     );

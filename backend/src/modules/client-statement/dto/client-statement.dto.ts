@@ -57,6 +57,44 @@ export class CSItemDto {
   notes?: string;
 }
 
+export class UpdateCSItemDto {
+  @ApiPropertyOptional({ enum: CSCategoryEnum })
+  @IsOptional() @IsEnum(CSCategoryEnum)
+  category?: CSCategoryEnum;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString() @MaxLength(64)
+  priceListCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString() @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString() @MaxLength(32)
+  unit?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsNumber() @Min(0)
+  unitPrice?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsNumber() @Min(0)
+  quantity?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString()
+  itemDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString()
+  wbsItemId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString() @MaxLength(500)
+  notes?: string;
+}
+
 export class CreateCSDto {
   @ApiProperty() @IsString()
   projectId: string;

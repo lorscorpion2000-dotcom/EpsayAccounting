@@ -28,6 +28,9 @@ export const clientStatementApi = {
   importItems: (id: string, category: CSCategory, items: Partial<CSItem>[]) =>
     api.post(`/client-statements/${id}/items/import`, { category, items }).then((r) => r.data),
 
+  updateItem: (itemId: string, data: Partial<CSItem>) =>
+    api.patch(`/client-statements/items/${itemId}`, data).then((r) => r.data),
+
   deleteItem: (itemId: string) =>
     api.delete(`/client-statements/items/${itemId}`).then((r) => r.data),
 

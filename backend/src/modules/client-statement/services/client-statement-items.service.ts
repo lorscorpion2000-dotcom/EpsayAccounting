@@ -33,6 +33,35 @@ export class ClientStatementItemsService {
     return { inserted: result.count };
   }
 
+  async updateItem(itemId: string, dto: any) {
+    const it = await this.prisma.clientStatementItem.findUnique({ where: { id: itemId } });
+    if (!it) throw new NotFoundException('ردیف یافت نشد');
+    const s = await this.prisma.clientStatement.findUnique({ where: { id: it.statementId } });
+    if (!s || s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+
+    const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(it.quantity);
+    const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(it.unitPrice);
+    const totalPrice = quantity * unitPrice;
+
+    const updated = await this.prisma.clientStatementItem.update({
+      where: { id: itemId },
+      data: {
+        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.priceListCode !== undefined && { priceListCode: dto.priceListCode }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.unit !== undefined && { unit: dto.unit }),
+        ...(dto.unitPrice !== undefined && { unitPrice: dto.unitPrice }),
+        ...(dto.quantity !== undefined && { quantity: dto.quantity }),
+        ...(dto.itemDate !== undefined && { itemDate: dto.itemDate ? new Date(dto.itemDate) : null }),
+        ...(dto.wbsItemId !== undefined && { wbsItemId: dto.wbsItemId }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        totalPrice,
+      },
+    });
+    await this.crud.recompute(it.statementId);
+    return updated;
+  }
+
   async deleteItem(itemId: string) {
     const it = await this.prisma.clientStatementItem.findUnique({ where: { id: itemId } });
     if (!it) throw new NotFoundException('ردیف یافت نشد');

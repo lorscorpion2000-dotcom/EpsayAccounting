@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ClientStatementService } from './client-statement.service';
 import {
-  CreateCSDto, UpdateCSDto, ImportCSItemsDto, RejectCSDto,
+  CreateCSDto, UpdateCSDto, ImportCSItemsDto, UpdateCSItemDto, RejectCSDto,
 } from './dto/client-statement.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -84,6 +84,12 @@ export class ClientStatementController {
   @RequirePermissions('client-statement.manage')
   importItems(@Param('id') id: string, @Body() dto: ImportCSItemsDto) {
     return this.service.importItems(id, dto);
+  }
+
+  @Patch('items/:itemId')
+  @RequirePermissions('client-statement.manage')
+  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdateCSItemDto) {
+    return this.service.updateItem(itemId, dto);
   }
 
   @Delete('items/:itemId')

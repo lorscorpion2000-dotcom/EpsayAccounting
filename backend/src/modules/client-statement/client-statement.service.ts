@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
-  CreateCSDto, UpdateCSDto, ImportCSItemsDto,
+  CreateCSDto, UpdateCSDto, ImportCSItemsDto, UpdateCSItemDto,
 } from './dto/client-statement.dto';
 import { ClientStatementCrudService } from './services/client-statement-crud.service';
 import { ClientStatementItemsService } from './services/client-statement-items.service';
@@ -42,6 +42,7 @@ export class ClientStatementService {
   // ─── Items ───
   importItems(id: string, dto: ImportCSItemsDto) { return this.items.importItems(id, dto); }
   deleteItem(itemId: string) { return this.items.deleteItem(itemId); }
+  updateItem(itemId: string, dto: UpdateCSItemDto) { return this.items.updateItem(itemId, dto); }
 
   // ─── Workflow ───
   submit(id: string) { return this.workflow.submit(id); }
