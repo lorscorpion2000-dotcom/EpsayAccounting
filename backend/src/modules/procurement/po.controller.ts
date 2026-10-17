@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PurchaseOrdersService } from './po.service';
-import { CreatePODto } from './dto/create-po.dto';
+import { CreatePODto, UpdatePOItemDto } from './dto/create-po.dto';
 import { UpdatePODto } from './dto/update-po.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -46,6 +46,21 @@ export class PurchaseOrdersController {
   @Delete(':id')
   @RequirePermissions('procurement.delete')
   remove(@Param('id') id: string) { return this.service.remove(id); }
+
+  @Patch('items/:itemId')
+  @RequirePermissions('procurement.update')
+  updateItem(
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdatePOItemDto,
+  ) {
+    return this.service.updateItem(itemId, dto);
+  }
+
+  @Delete('items/:itemId')
+  @RequirePermissions('procurement.update')
+  deleteItem(@Param('itemId') itemId: string) {
+    return this.service.deleteItem(itemId);
+  }
 
   @Patch(':id/approve')
   @RequirePermissions('approvals.update')

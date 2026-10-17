@@ -96,5 +96,13 @@ export const procurementApi = {
       const { data } = await api.patch('/procurement/orders/' + id + '/send');
       return data;
     },
+    updateItem: async (itemId: string, payload: any) => {
+      const { data } = await api.patch('/procurement/orders/items/' + itemId, payload);
+      return data;
+    },
+    deleteItem: async (itemId: string) => {
+      const { data } = await api.delete('/procurement/orders/items/' + itemId);
+      return data;
+    },
   },
 };

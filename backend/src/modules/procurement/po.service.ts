@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { CreatePODto } from './dto/create-po.dto';
+import { CreatePODto, UpdatePOItemDto } from './dto/create-po.dto';
 import { UpdatePODto } from './dto/update-po.dto';
 
 @Injectable()
@@ -95,6 +95,85 @@ export class PurchaseOrdersService {
     });
     if (!po) throw new NotFoundException('دستور خرید یافت نشد');
     return po;
+  }
+
+  async recompute(id: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
+    const defaultTaxPercent = Number(po.taxPercent);
+    const rawItems = (po.items as any[]).map((it) => ({
+      rowNumber: it.rowNumber,
+      description: it.description,
+      quantity: Number(it.quantity),
+      unit: it.unit,
+      unitPrice: Number(it.unitPrice),
+      taxPercent: it.taxPercent,
+      notes: it.notes,
+    }));
+    const totals = this.computeTotals(rawItems, defaultTaxPercent);
+    return this.prisma.purchaseOrder.update({
+      where: { id },
+      data: {
+        subtotal: totals.subtotal,
+        taxPercent: totals.effectiveTaxPercent,
+        taxAmount: totals.taxAmount,
+        totalAmount: totals.totalAmount,
+      },
+    });
+  }
+
+  async updateItem(itemId: string, dto: UpdatePOItemDto) {
+    const item = await this.prisma.purchaseOrderItem.findUnique({
+      where: { id: itemId },
+    });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: item.poId },
+    });
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+
+    const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(item.quantity);
+    const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(item.unitPrice);
+    const totalPrice = quantity * unitPrice;
+
+    const unitId = dto.unit !== undefined
+      ? (dto.unit ? (await this.resolveUnitIds([dto.unit])).get(dto.unit) ?? null : null)
+      : undefined;
+
+    const updated = await this.prisma.purchaseOrderItem.update({
+      where: { id: itemId },
+      data: {
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.unit !== undefined && { unit: dto.unit }),
+        ...(unitId !== undefined && { unitId }),
+        ...(dto.unitPrice !== undefined && { unitPrice: dto.unitPrice }),
+        ...(dto.quantity !== undefined && { quantity: dto.quantity }),
+        ...(dto.taxPercent !== undefined && { taxPercent: dto.taxPercent }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        totalPrice,
+      },
+    });
+    await this.recompute(item.poId);
+    return updated;
+  }
+
+  async deleteItem(itemId: string) {
+    const item = await this.prisma.purchaseOrderItem.findUnique({
+      where: { id: itemId },
+    });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: item.poId },
+    });
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+    await this.prisma.purchaseOrderItem.delete({ where: { id: itemId } });
+    await this.recompute(item.poId);
+    return { success: true };
   }
 
 

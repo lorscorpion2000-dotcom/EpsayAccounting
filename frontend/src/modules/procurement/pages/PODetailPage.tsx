@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Printer, CheckCircle2, Send } from 'lucide-react';
+import { ArrowRight, Loader2, Printer, CheckCircle2, Send, Pencil, X, Save, Trash2 } from 'lucide-react';
 
 import { procurementApi } from '../services/procurement.api';
 import type { PurchaseOrder } from '@/types/procurement';
@@ -50,6 +50,17 @@ export default function PODetailPage() {
   const [actionItem, setActionItem] = useState<{ action: 'approve' | 'send' } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // ─── Inline Edit ───
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    description: string;
+    quantity: string;
+    unit: string;
+    unitPrice: string;
+    notes: string;
+  } | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
+
   const loadData = async () => {
     if (!id) return;
     setLoading(true);
@@ -79,6 +90,69 @@ export default function PODetailPage() {
       toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleStartEdit = (it: any) => {
+    setEditingId(it.id);
+    setEditForm({
+      description: it.description || '',
+      quantity: it.quantity != null ? String(it.quantity) : '',
+      unit: it.unit || 'NUMBER',
+      unitPrice: it.unitPrice != null ? String(it.unitPrice) : '',
+      notes: it.notes || '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm(null);
+  };
+
+  const handleSaveItem = async () => {
+    if (!editingId || !editForm) return;
+    const q = Number(editForm.quantity);
+    const up = Number(editForm.unitPrice);
+    if (!editForm.description.trim()) { toast.error('شرح ردیف الزامی است'); return; }
+    if (!Number.isFinite(q) || q <= 0) { toast.error('مقدار باید بزرگ‌تر از صفر باشد'); return; }
+    if (!Number.isFinite(up) || up < 0) { toast.error('قیمت واحد معتبر نیست'); return; }
+    if (!editForm.unit) { toast.error('واحد الزامی است'); return; }
+    setSavingItem(true);
+    try {
+      await procurementApi.po.updateItem(editingId, {
+        description: editForm.description.trim(),
+        quantity: q,
+        unit: editForm.unit,
+        unitPrice: up,
+        notes: editForm.notes || undefined,
+      });
+      toast.success('ردیف به‌روزرسانی شد');
+      setEditingId(null);
+      setEditForm(null);
+      if (po) {
+        const fresh = await procurementApi.po.get(po.id);
+        setPo(fresh);
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در ذخیره');
+    } finally {
+      setSavingItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!window.confirm('این ردیف حذف شود؟')) return;
+    try {
+      await procurementApi.po.deleteItem(itemId);
+      toast.success('ردیف حذف شد');
+      if (po) {
+        const fresh = await procurementApi.po.get(po.id);
+        setPo(fresh);
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
     }
   };
 
@@ -267,19 +341,79 @@ export default function PODetailPage() {
               <th className="border border-brand-700 px-2 py-2 text-center print-center">واحد</th>
               <th className="border border-brand-700 px-2 py-2 text-left print-left">قیمت واحد</th>
               <th className="border border-brand-700 px-2 py-2 text-left print-left">مبلغ کل</th>
+              {po.status === 'DRAFT' && (
+                <th className="border border-brand-700 px-2 py-2 text-center no-print">عملیات</th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {po.items?.map((it) => (
-              <tr key={it.id}>
-                <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.rowNumber)}</td>
-                <td className="border border-slate-300 px-2 py-2">{it.description}</td>
-                <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.quantity)}</td>
-                <td className="border border-slate-300 px-2 py-2 text-center print-center">{PR_UNIT_LABELS[it.unit]}</td>
-                <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.unitPrice))}</td>
-                <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.totalPrice))}</td>
-              </tr>
-            ))}
+            {po.items?.map((it) => {
+              const isEditing = editingId === it.id && !!editForm;
+              if (isEditing) {
+                return (
+                  <tr key={it.id} className="bg-amber-50">
+                    <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.rowNumber)}</td>
+                    <td className="border border-slate-300 px-2 py-1">
+                      <input type="text" value={editForm!.description}
+                        onChange={(e) => setEditForm({ ...editForm!, description: e.target.value })}
+                        className="input text-xs py-1 px-2 w-full" placeholder="شرح ردیف" />
+                    </td>
+                    <td className="border border-slate-300 px-2 py-1">
+                      <input type="number" step="0.01" value={editForm!.quantity}
+                        onChange={(e) => setEditForm({ ...editForm!, quantity: e.target.value })}
+                        className="input text-xs py-1 px-2 w-20 text-center num" dir="ltr" />
+                    </td>
+                    <td className="border border-slate-300 px-2 py-1">
+                      <select value={editForm!.unit}
+                        onChange={(e) => setEditForm({ ...editForm!, unit: e.target.value })}
+                        className="input text-xs py-1 px-2 w-full">
+                        {Object.entries(PR_UNIT_LABELS).map(([code, label]) => (
+                          <option key={code} value={code}>{label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="border border-slate-300 px-2 py-1">
+                      <input type="number" value={editForm!.unitPrice}
+                        onChange={(e) => setEditForm({ ...editForm!, unitPrice: e.target.value })}
+                        className="input text-xs py-1 px-2 w-28 text-left num" dir="ltr" />
+                    </td>
+                    <td className="border border-slate-300 px-2 py-2 text-left num text-xs font-bold text-emerald-700">
+                      {formatNumber(Number(editForm!.quantity || 0) * Number(editForm!.unitPrice || 0))}
+                    </td>
+                    <td className="border border-slate-300 px-2 py-1 text-center no-print whitespace-nowrap">
+                      <button onClick={handleSaveItem} disabled={savingItem}
+                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="ذخیره">
+                        <Save className="w-4 h-4" />
+                      </button>
+                      <button onClick={handleCancelEdit} disabled={savingItem}
+                        className="p-1 text-slate-500 hover:bg-slate-100 rounded" title="انصراف">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }
+              return (
+                <tr key={it.id}>
+                  <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.rowNumber)}</td>
+                  <td className="border border-slate-300 px-2 py-2">{it.description}</td>
+                  <td className="border border-slate-300 px-2 py-2 text-center num print-center">{toPersianDigits(it.quantity)}</td>
+                  <td className="border border-slate-300 px-2 py-2 text-center print-center">{PR_UNIT_LABELS[it.unit]}</td>
+                  <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.unitPrice))}</td>
+                  <td className="border border-slate-300 px-2 py-2 text-left num print-left print-num">{formatNumber(Number(it.totalPrice))}</td>
+                  {po.status === 'DRAFT' && (
+                    <td className="border border-slate-300 px-2 py-1 text-center no-print whitespace-nowrap">
+                      <button onClick={() => handleStartEdit(it)} className="p-1 text-sky-600 hover:bg-sky-50 rounded" title="ویرایش">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteItem(it.id)} className="p-1 text-rose-600 hover:bg-rose-50 rounded" title="حذف">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="bg-slate-100">

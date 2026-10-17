@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID,
@@ -82,3 +82,5 @@ export class CreatePODto {
   @Type(() => POItemDto)
   items!: POItemDto[];
 }
+
+export class UpdatePOItemDto extends PartialType(POItemDto) {}
