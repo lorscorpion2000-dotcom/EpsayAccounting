@@ -342,9 +342,31 @@ export default function ClientStatementDetailPage() {
             {Number(s.passThroughAmount || 0) > 0 && (
               <Row label="هزینه کارفرما (بستانکار)" value={Number(s.passThroughAmount)} />
             )}
-            <div className="border-t-2 pt-3 mt-3">
-              <Row label="خالص قابل دریافت" value={Number(s.netPayable)} bold highlight />
-            </div>
+            {(() => {
+              const taxPercent = Number(s.contract?.taxPercent || 0);
+              const taxable = Number(s.contractorShareAmount || 0);
+              const hasTax = taxPercent > 0 && taxable > 0;
+              const taxAmount = hasTax ? Math.round((taxable * taxPercent) / 100) : 0;
+              const netAfterTax = Math.round(Number(s.netPayable || 0) + taxAmount);
+              const totalPrev = Number(s.totalPreviousPaid || 0);
+              const finalBalance = Math.round(netAfterTax - totalPrev);
+              return (
+                <>
+                  {hasTax && (
+                    <Row label={'مالیات (' + taxPercent + '٪)'} value={taxAmount} />
+                  )}
+                  <Row label="جمع با احتساب مالیات" value={netAfterTax} bold />
+                  {totalPrev > 0 && (
+                    <div className="border-t pt-3 mt-3">
+                      <Row label="پرداخت‌های قبلی" value={totalPrev} negative />
+                    </div>
+                  )}
+                  <div className="border-t-2 pt-3 mt-3">
+                    <Row label="مانده قابل دریافت" value={finalBalance} bold highlight />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -358,6 +380,21 @@ export default function ClientStatementDetailPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              {(() => {
+                const rows = grouped[tab as CSCategory];
+                const subtotalKey = ('subtotal' + (tab as CSCategory).charAt(0) + (tab as CSCategory).slice(1).toLowerCase()) as keyof ClientStatement;
+                const subtotal = Number(s[subtotalKey] || 0);
+                return (
+                  <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between text-xs">
+                    <span className="text-slate-600">
+                      <span className="num font-bold">{toPersianDigits(rows.length)}</span> ردیف
+                    </span>
+                    <span className="text-slate-800">
+                      جمع: <span className="num font-bold">{toPersianDigits(Math.round(subtotal).toLocaleString())}</span> ریال
+                    </span>
+                  </div>
+                );
+              })()}
               <table className="w-full text-sm min-w-[1000px]">
                 <thead className="bg-slate-50 border-b">
                   <tr>
@@ -391,6 +428,19 @@ export default function ClientStatementDetailPage() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="bg-slate-50 border-t-2 border-slate-300">
+                  {(() => {
+                    const subtotalKey = ('subtotal' + (tab as CSCategory).charAt(0) + (tab as CSCategory).slice(1).toLowerCase()) as keyof ClientStatement;
+                    const subtotal = Number(s[subtotalKey] || 0);
+                    return (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-2 text-left font-bold text-slate-700">جمع کل {CS_CATEGORY_LABELS[tab as CSCategory]}</td>
+                        <td className="px-3 py-2 text-left num font-bold text-slate-900">{toPersianDigits(Math.round(subtotal).toLocaleString())}</td>
+                        <td className="px-3 py-2"></td>
+                      </tr>
+                    );
+                  })()}
+                </tfoot>
               </table>
             </div>
           )}
@@ -401,8 +451,7 @@ export default function ClientStatementDetailPage() {
       {tab === 'print' && (
         <div className="space-y-4">
           <div className="card p-4 no-print flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              7 برگ صورت‌وضعیت (برگه‌های مالی + خلاصه) آماده چاپ است
+            <div className="text-sm text-slate-600">{CS_CATEGORY_ORDER.length + 2} برگ صورت‌وضعیت (برگه‌های مالی + خلاصه) آماده چاپ است
             </div>
             <PrintButton contentRef={printRef} documentTitle={s ? 'صورت‌وضعیت-' + s.code : 'statement'} label="چاپ / ذخیره PDF" className="btn-primary" />
           </div>

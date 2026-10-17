@@ -61,6 +61,7 @@ export default function ClientStatementFormPage() {
   const isEdit = !!id;
 
   const [tab, setTab] = useState<Tab>('general');
+  const [unitsList, setUnitsList] = useState<{ id: string; code: string; name: string; symbol?: string | null }[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [, setPriceLists] = useState<any[]>([]);
@@ -123,6 +124,16 @@ export default function ClientStatementFormPage() {
       setLoadingData(false);
     }
   }, [id, isEdit]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/units');
+        const arr = Array.isArray(data) ? data : (data?.data || []);
+        setUnitsList(arr.filter((u: any) => u.isActive !== false));
+      } catch { /* silent */ }
+    })();
+  }, []);
 
   // Auto-fetch next statement number when project selected
   useEffect(() => {
@@ -429,9 +440,20 @@ export default function ClientStatementFormPage() {
                           className="input text-xs py-1.5" placeholder="شرح..." />
                       </td>
                       <td className="px-2 py-2">
-                        <input type="text" value={it.unit}
-                          onChange={(e) => updateItem(it._key, { unit: e.target.value })}
-                          className="input text-xs py-1.5 text-center" placeholder="م۳" />
+                        <select
+                            value={it.unit || ''}
+                            onChange={(e) => updateItem(it._key, { unit: e.target.value })}
+                            className="input text-xs py-1.5 text-center">
+                            <option value="">—</option>
+                            {unitsList.map(u => (
+                              <option key={u.id} value={u.symbol || u.name}>
+                                {u.name} ({u.symbol || u.code})
+                              </option>
+                            ))}
+                            {it.unit && unitsList.length > 0 && !unitsList.some(u => (u.symbol || u.name) === it.unit) && (
+                              <option value={it.unit}>{it.unit} (قبلی)</option>
+                            )}
+                          </select>
                       </td>
                       <td className="px-2 py-2">
                         <input type="number" value={it.unitPrice || ''}
