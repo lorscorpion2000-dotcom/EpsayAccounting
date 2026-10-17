@@ -4,6 +4,7 @@ import { IsString, IsOptional, IsDateString, MaxLength } from 'class-validator';
 import { PurchaseInvoicesService } from './purchase-invoices.service';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { UpdatePurchaseInvoiceDto } from './dto/update-purchase-invoice.dto';
+import { UpdatePIItemDto } from './dto/create-purchase-invoice.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
@@ -57,6 +58,18 @@ export class PurchaseInvoicesController {
   }
 
 
+
+  @Patch('items/:itemId')
+  @RequirePermissions('accounting.update')
+  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdatePIItemDto) {
+    return this.service.updateItem(itemId, dto);
+  }
+
+  @Delete('items/:itemId')
+  @RequirePermissions('accounting.update')
+  deleteItem(@Param('itemId') itemId: string) {
+    return this.service.deleteItem(itemId);
+  }
 
   @Patch(':id')
   @RequirePermissions('accounting.update')

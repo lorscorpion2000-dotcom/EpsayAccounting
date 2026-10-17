@@ -155,6 +155,14 @@ export const purchaseInvoicesApi = {
     const { data } = await api.post<PurchaseInvoice>('/purchase-invoices/' + id + '/approve');
     return data;
   },
+  updateItem: async (itemId: string, payload: Partial<PIItemInput>) => {
+    const { data } = await api.patch<PIItem>('/purchase-invoices/items/' + itemId, payload);
+    return data;
+  },
+  deleteItem: async (itemId: string) => {
+    const { data } = await api.delete('/purchase-invoices/items/' + itemId);
+    return data;
+  },
 };
 
 export const supplierPaymentsApi = {

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { CreatePurchaseInvoiceDto } from '../dto/create-purchase-invoice.dto';
 import { UpdatePurchaseInvoiceDto } from '../dto/update-purchase-invoice.dto';
+import { UpdatePIItemDto } from '../dto/create-purchase-invoice.dto';
 
 interface InvoiceItemInput {
   rowNumber?: number;
@@ -170,6 +171,118 @@ export class PurchaseInvoicesCrudService {
     });
     if (!inv) throw new NotFoundException('فاکتور خرید یافت نشد');
     return inv;
+  }
+
+  async recompute(id: string) {
+    const inv = await this.prisma.purchaseInvoice.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!inv) throw new NotFoundException('فاکتور خرید یافت نشد');
+    const totals = this.computeTotals(
+      inv.items as unknown as InvoiceItemInput[],
+      Number(inv.taxPercent),
+      Number(inv.discountAmount),
+    );
+    return this.prisma.purchaseInvoice.update({
+      where: { id },
+      data: {
+        subtotal: totals.subtotal,
+        totalDiscount: totals.totalDiscount,
+        totalAddition: totals.totalAddition,
+        totalDeduction: totals.totalDeduction,
+        taxAmount: totals.taxAmount,
+        totalShipping: totals.totalShipping,
+        totalLoading: totals.totalLoading,
+        totalAmount: totals.totalAmount,
+      },
+    });
+  }
+
+  async updateItem(itemId: string, dto: UpdatePIItemDto) {
+    const item = await this.prisma.purchaseInvoiceItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const inv = await this.prisma.purchaseInvoice.findUnique({ where: { id: item.invoiceId } });
+    if (!inv) throw new NotFoundException('فاکتور خرید یافت نشد');
+    if (inv.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+
+    const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(item.quantity);
+    const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(item.unitPrice);
+    const base = quantity * unitPrice;
+
+    // Discount: explicit amount wins; else if percent > 0 recalc; else preserve
+    const discPercent = dto.discountPercent !== undefined
+      ? Number(dto.discountPercent) : Number(item.discountPercent) || 0;
+    let discAmount: number;
+    if (dto.discountAmount !== undefined) discAmount = Number(dto.discountAmount);
+    else if (discPercent > 0) discAmount = (base * discPercent) / 100;
+    else discAmount = Number(item.discountAmount) || 0;
+    const afterDisc = base - discAmount;
+
+    // Tax: same logic
+    const txPercent = dto.taxPercent !== undefined
+      ? Number(dto.taxPercent) : Number(item.taxPercent) || 0;
+    let txAmount: number;
+    if (dto.taxAmount !== undefined) txAmount = Number(dto.taxAmount);
+    else if (txPercent > 0) txAmount = (afterDisc * txPercent) / 100;
+    else txAmount = Number(item.taxAmount) || 0;
+
+    const add = dto.additionAmount !== undefined ? Number(dto.additionAmount) : Number(item.additionAmount) || 0;
+    const ded = dto.deductionAmount !== undefined ? Number(dto.deductionAmount) : Number(item.deductionAmount) || 0;
+    const ship = dto.shippingCost !== undefined ? Number(dto.shippingCost) : Number(item.shippingCost) || 0;
+    const load = dto.loadingCost !== undefined ? Number(dto.loadingCost) : Number(item.loadingCost) || 0;
+
+    const lineTotal = afterDisc + add - ded + txAmount + ship + load;
+
+    // unitId resolution if unit changes
+    let unitId: string | null | undefined = undefined;
+    if (dto.unit !== undefined) {
+      if (dto.unit) {
+        const map = await this.resolveUnitIds([dto.unit]);
+        unitId = map.get(dto.unit) ?? null;
+      } else {
+        unitId = null;
+      }
+    }
+
+    const updated = await this.prisma.purchaseInvoiceItem.update({
+      where: { id: itemId },
+      data: {
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.quantity !== undefined && { quantity }),
+        ...(dto.unit !== undefined && { unit: dto.unit }),
+        ...(unitId !== undefined && { unitId }),
+        ...(dto.unitPrice !== undefined && { unitPrice }),
+        totalPrice: base,
+        ...(dto.discountPercent !== undefined && { discountPercent: discPercent }),
+        discountAmount: discAmount,
+        ...(dto.additionAmount !== undefined && { additionAmount: add }),
+        ...(dto.deductionAmount !== undefined && { deductionAmount: ded }),
+        ...(dto.taxPercent !== undefined && { taxPercent: txPercent }),
+        taxAmount: txAmount,
+        ...(dto.shippingCost !== undefined && { shippingCost: ship }),
+        ...(dto.loadingCost !== undefined && { loadingCost: load }),
+        ...(dto.accountId !== undefined && { accountId: dto.accountId }),
+        ...(dto.wbsItemId !== undefined && { wbsItemId: dto.wbsItemId }),
+        ...(dto.isCapital !== undefined && { isCapital: dto.isCapital }),
+        ...(dto.usefulLifeMonths !== undefined && { usefulLifeMonths: dto.usefulLifeMonths }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+        lineTotal,
+      },
+    });
+    await this.recompute(item.invoiceId);
+    return updated;
+  }
+
+  async deleteItem(itemId: string) {
+    const item = await this.prisma.purchaseInvoiceItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const inv = await this.prisma.purchaseInvoice.findUnique({ where: { id: item.invoiceId } });
+    if (!inv) throw new NotFoundException('فاکتور خرید یافت نشد');
+    if (inv.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+    await this.prisma.purchaseInvoiceItem.delete({ where: { id: itemId } });
+    await this.recompute(item.invoiceId);
+    return { success: true };
   }
 
   private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {

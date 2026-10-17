@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsNumber, IsUUID, IsDateString, MaxLength, Min, IsArray, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 
 class CreatePIItemDto {
   @IsOptional() @IsNumber() rowNumber?: number;
@@ -42,3 +43,5 @@ export class CreatePurchaseInvoiceDto {
 }
 
 export { CreatePIItemDto };
+
+export class UpdatePIItemDto extends PartialType(CreatePIItemDto) {}

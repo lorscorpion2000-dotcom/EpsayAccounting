@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { UpdatePurchaseInvoiceDto } from './dto/update-purchase-invoice.dto';
+import { UpdatePIItemDto } from './dto/create-purchase-invoice.dto';
 import { PurchaseInvoicesCrudService } from './services/purchase-invoices-crud.service';
 import { PurchaseInvoicesApproveService } from './services/purchase-invoices-approve.service';
 import { PurchaseInvoicesSoftDeleteService } from './services/purchase-invoices-soft-delete.service';
@@ -33,6 +34,8 @@ export class PurchaseInvoicesService {
   }
   update(id: string, dto: UpdatePurchaseInvoiceDto) { return this.crud.update(id, dto); }
   remove(id: string) { return this.crud.remove(id); }
+  updateItem(itemId: string, dto: UpdatePIItemDto) { return this.crud.updateItem(itemId, dto); }
+  deleteItem(itemId: string) { return this.crud.deleteItem(itemId); }
 
   // ─── Approve ───
   approve(id: string, userId?: string) { return this.approveSvc.approve(id, userId); }
