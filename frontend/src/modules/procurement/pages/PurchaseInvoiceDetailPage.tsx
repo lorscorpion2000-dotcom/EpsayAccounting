@@ -9,6 +9,7 @@ import {
   purchaseInvoicesApi, supplierPaymentsApi,
   type PurchaseInvoice, type PIStatus, type PayMethod, type BankRef,
 } from '../services/purchase-invoices.api';
+import SignatureBlock from '@/components/SignatureBlock';
 
 const fmt = (n: number | string | undefined) =>
   new Intl.NumberFormat('fa-IR').format(Number(n ?? 0));
@@ -261,6 +262,12 @@ export default function PurchaseInvoiceDetailPage() {
           </div>
         </div>
       )}
+
+      <SignatureBlock slots={[
+        { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+        { title: 'تأمین‌کننده', type: 'empty', caption: 'نام و امضا' },
+        { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+      ]} />
 
       {showPay && (
         <PayModal

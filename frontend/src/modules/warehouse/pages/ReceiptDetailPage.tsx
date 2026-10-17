@@ -6,6 +6,7 @@ import { warehouseApi } from '../services/warehouse.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import PrintButton from '@/components/PrintButton';
 import PrintHeader from '@/components/PrintHeader';
+import SignatureBlock from '@/components/SignatureBlock';
 
 export default function ReceiptDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -160,6 +161,12 @@ export default function ReceiptDetailPage() {
             </div>
           </div>
         </div>
+
+        <SignatureBlock slots={[
+          { title: 'انباردار', type: 'current-user', caption: 'نام و امضا' },
+          { title: 'تحویل‌گیرنده', type: 'empty', caption: 'نام و امضا' },
+          { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+        ]} />
       </div>
     </div>
   );

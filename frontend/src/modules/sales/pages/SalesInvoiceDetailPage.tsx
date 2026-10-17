@@ -9,6 +9,7 @@ import {
   salesInvoicesApi, salesReceiptsApi,
   type SalesInvoice, type SIStatus, type SRMethod, type BankRef,
 } from '../services/sales-invoices.api';
+import SignatureBlock from '@/components/SignatureBlock';
 
 const fmt = (n: number | string | undefined) => new Intl.NumberFormat('fa-IR').format(Number(n ?? 0));
 const fromISO = (iso?: string | null) => {
@@ -225,6 +226,12 @@ export default function SalesInvoiceDetailPage() {
           </Link>
         </div>
       )}
+
+      <SignatureBlock slots={[
+        { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+        { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+        { title: 'مشتری', type: 'empty', caption: 'نام و امضا' },
+      ]} />
 
       {showPay && (
         <PayModal invoice={inv} banks={banks} remaining={remaining} busy={busy}

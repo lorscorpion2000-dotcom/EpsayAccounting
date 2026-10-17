@@ -10,6 +10,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 import { printHtml, standardHeader, standardSignatures, escapeHtml, getTodayJalali } from '@/utils/print-document'; // STANDALONE_PRINT_V3
+import SignatureBlock from '@/components/SignatureBlock';
 
 const PRINT_CSS = `
 @media print {
@@ -307,21 +308,11 @@ export default function PODetailPage() {
           </div>
         )}
 
-        {/* Signatures */}
-        <div className="grid grid-cols-3 gap-4 mt-12 pt-6 border-t border-slate-200 text-xs">
-          <div className="text-center">
-            <div className="text-slate-500 mb-8">تهیه‌کننده</div>
-            <div className="border-t border-slate-300 pt-1">امضاء</div>
-          </div>
-          <div className="text-center">
-            <div className="text-slate-500 mb-8">مدیر فنی</div>
-            <div className="border-t border-slate-300 pt-1">امضاء</div>
-          </div>
-          <div className="text-center">
-            <div className="text-slate-500 mb-8">مدیر پروژه</div>
-            <div className="border-t border-slate-300 pt-1">امضاء</div>
-          </div>
-        </div>
+        <SignatureBlock slots={[
+          { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+          { title: 'مدیر فنی', type: 'empty', caption: 'نام و امضا' },
+          { title: 'مدیر پروژه', type: 'empty', caption: 'نام و امضا' },
+        ]} />
 
         {/* Status bar */}
         <div className="mt-8 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">

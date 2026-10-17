@@ -15,6 +15,7 @@ import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
+import SignatureBlock from '@/components/SignatureBlock';
 
 export default function PRDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -240,6 +241,11 @@ export default function PRDetailPage() {
           </div>
         </div>
       )}
+
+      <SignatureBlock slots={[
+        { title: 'درخواست‌کننده', type: 'current-user', caption: 'نام و امضا' },
+        { title: 'تأییدکننده', type: 'empty', caption: 'نام و امضا' },
+      ]} />
 
       {/* Confirm Modals */}
       <ConfirmDialog

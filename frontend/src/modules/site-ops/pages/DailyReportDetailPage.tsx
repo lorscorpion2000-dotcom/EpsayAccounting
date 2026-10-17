@@ -18,6 +18,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintHeader from '@/components/PrintHeader';
 import PrintButton from '@/components/PrintButton';
 import { api } from '@/services/api';
+import SignatureBlock from '@/components/SignatureBlock';
 
 const WEATHER_ICONS: Record<WeatherCondition, any> = {
   SUNNY: Sun, CLOUDY: Cloud, RAINY: CloudRain, SNOWY: Snowflake, WINDY: Wind, STORM: CloudRain,
@@ -675,6 +676,12 @@ export default function DailyReportDetailPage() {
           )}
         </div>
       )}
+
+      <SignatureBlock slots={[
+        { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+        { title: 'ناظر', type: 'empty', caption: 'نام و امضا' },
+        { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+      ]} />
 
       <ConfirmDialog
         isOpen={!!actionItem && actionItem.action !== 'reject'}
