@@ -10,6 +10,16 @@ export class ClientStatementItemsService {
     private crud: ClientStatementCrudService,
   ) {}
 
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { code: { in: unique } },
+      select: { id: true, code: true },
+    });
+    return new Map(units.map((u) => [u.code, u.id]));
+  }
+
   async importItems(id: string, dto: ImportCSItemsDto) {
     const s = await this.crud.get(id);
     if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
@@ -21,6 +31,7 @@ export class ClientStatementItemsService {
       priceListCode: it.priceListCode,
       description: it.description,
       unit: it.unit,
+      unitId: null as string | null,
       unitPrice: it.unitPrice,
       quantity: it.quantity ?? 1,
       totalPrice: Number(it.unitPrice) * Number(it.quantity ?? 1),
@@ -28,6 +39,8 @@ export class ClientStatementItemsService {
       wbsItemId: it.wbsItemId,
       notes: it.notes,
     }));
+    const unitMap = await this.resolveUnitIds(items.map((x) => x.unit));
+    for (const it of items) it.unitId = it.unit ? (unitMap.get(it.unit) ?? null) : null;
     const result = await this.prisma.clientStatementItem.createMany({ data: items });
     await this.crud.recompute(id);
     return { inserted: result.count };
@@ -42,6 +55,9 @@ export class ClientStatementItemsService {
     const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(it.quantity);
     const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(it.unitPrice);
     const totalPrice = quantity * unitPrice;
+    const unitId = dto.unit !== undefined
+      ? (dto.unit ? (await this.resolveUnitIds([dto.unit])).get(dto.unit) ?? null : null)
+      : undefined;
 
     const updated = await this.prisma.clientStatementItem.update({
       where: { id: itemId },
@@ -50,6 +66,7 @@ export class ClientStatementItemsService {
         ...(dto.priceListCode !== undefined && { priceListCode: dto.priceListCode }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.unit !== undefined && { unit: dto.unit }),
+        ...(unitId !== undefined && { unitId }),
         ...(dto.unitPrice !== undefined && { unitPrice: dto.unitPrice }),
         ...(dto.quantity !== undefined && { quantity: dto.quantity }),
         ...(dto.itemDate !== undefined && { itemDate: dto.itemDate ? new Date(dto.itemDate) : null }),

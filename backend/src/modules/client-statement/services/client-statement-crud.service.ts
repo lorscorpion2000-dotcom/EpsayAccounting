@@ -26,6 +26,16 @@ export class ClientStatementCrudService {
     return prefix + String(n).padStart(4, '0');
   }
 
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { code: { in: unique } },
+      select: { id: true, code: true },
+    });
+    return new Map(units.map((u) => [u.code, u.id]));
+  }
+
   async nextStatementNumber(projectId: string): Promise<number> {
     const last = await this.prisma.clientStatement.findFirst({
       where: { projectId },
@@ -221,6 +231,7 @@ export class ClientStatementCrudService {
       priceListCode: it.priceListCode,
       description: it.description,
       unit: it.unit,
+      unitId: null as string | null,
       unitPrice: it.unitPrice,
       quantity: it.quantity ?? 1,
       totalPrice: Number(it.unitPrice) * Number(it.quantity ?? 1),
@@ -228,6 +239,8 @@ export class ClientStatementCrudService {
       wbsItemId: it.wbsItemId,
       notes: it.notes,
     }));
+    const csCreateUnitMap = await this.resolveUnitIds(items.map((x) => x.unit));
+    for (const it of items) it.unitId = it.unit ? (csCreateUnitMap.get(it.unit) ?? null) : null;
 
     const totals = this.computeTotals(items, coefficient, contractData.prepaymentAmount, prepaymentDeductionPercent, {
       contractorShareAmount: dto.contractorShareAmount,
@@ -313,6 +326,7 @@ export class ClientStatementCrudService {
         priceListCode: it.priceListCode,
         description: it.description,
         unit: it.unit,
+        unitId: null as string | null,
         unitPrice: it.unitPrice,
         quantity: it.quantity ?? 1,
         totalPrice: Number(it.unitPrice) * Number(it.quantity ?? 1),
@@ -320,6 +334,8 @@ export class ClientStatementCrudService {
         wbsItemId: it.wbsItemId,
         notes: it.notes,
       }));
+      const csUpdateUnitMap = await this.resolveUnitIds(items.map((x) => x.unit));
+      for (const it of items) it.unitId = it.unit ? (csUpdateUnitMap.get(it.unit) ?? null) : null;
       await this.prisma.clientStatementItem.createMany({ data: items });
     }
     await this.recompute(id);
