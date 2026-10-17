@@ -13,6 +13,12 @@ export class ItemsService {
     return 'ITM-' + year + '-' + String(count + 1).padStart(4, '0');
   }
 
+  private async resolveUnitId(code?: string | null): Promise<string | null> {
+    if (!code) return null;
+    const u = await this.prisma.unit.findUnique({ where: { code }, select: { id: true } });
+    return u?.id ?? null;
+  }
+
   async findAll(query?: { type?: string; categoryId?: string; search?: string; active?: boolean }) {
     const where: any = {};
     where.deletedAt = null;
@@ -30,6 +36,7 @@ export class ItemsService {
       where,
       include: {
         category: { select: { id: true, name: true } },
+        unitObj: { select: { id: true, code: true, name: true, symbol: true } },
         _count: { select: { stocks: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -57,6 +64,7 @@ export class ItemsService {
       where: { id, deletedAt: null },
       include: {
         category: true,
+        unitObj: { select: { id: true, code: true, name: true, symbol: true } },
         stocks: { include: { warehouse: true } },
       },
     });
@@ -66,12 +74,14 @@ export class ItemsService {
 
   async create(dto: CreateItemDto) {
     const code = await this.generateCode();
+    const unitId = await this.resolveUnitId(dto.unit as any);
     return this.prisma.item.create({
       data: {
         code,
         name: dto.name,
         type: dto.type as any,
         unit: dto.unit as any,
+        unitId,
         categoryId: dto.categoryId,
         minStock: dto.minStock,
         maxStock: dto.maxStock,
@@ -85,12 +95,14 @@ export class ItemsService {
 
   async update(id: string, dto: UpdateItemDto) {
     await this.findOne(id);
+    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit as any) : undefined;
     return this.prisma.item.update({
       where: { id },
       data: {
         name: dto.name,
         type: dto.type as any,
         unit: dto.unit as any,
+        ...(unitId !== undefined && { unitId }),
         categoryId: dto.categoryId,
         minStock: dto.minStock,
         maxStock: dto.maxStock,
