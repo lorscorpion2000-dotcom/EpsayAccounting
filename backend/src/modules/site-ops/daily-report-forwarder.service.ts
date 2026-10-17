@@ -279,6 +279,12 @@ export class DailyReportForwarderService {
 
         // ═══ پیشرفت WBS ═══
         case 'PROGRESS_RECORD': {
+          const progressUnitId = row.unit
+            ? ((await this.prisma.unit.findFirst({
+                where: { OR: [{ code: row.unit }, { name: row.unit }, { symbol: row.unit }] },
+                select: { id: true },
+              }))?.id ?? null)
+            : null;
           const snap = await this.prisma.wbsProgressSnapshot.upsert({
             where: {
               reportId_wbsItemId: { reportId: report.id, wbsItemId: row.wbsItemId! },
@@ -286,6 +292,7 @@ export class DailyReportForwarderService {
             update: {
               quantity: Number(row.quantity) || 0,
               unit: row.unit || null,
+              unitId: progressUnitId,
               progressPct: row.progressPct ? Number(row.progressPct) : null,
               description: row.description,
               location: row.location,
@@ -297,6 +304,7 @@ export class DailyReportForwarderService {
               snapshotDate: report.reportDate,
               quantity: Number(row.quantity) || 0,
               unit: row.unit || null,
+              unitId: progressUnitId,
               progressPct: row.progressPct ? Number(row.progressPct) : null,
               description: row.description,
               location: row.location,

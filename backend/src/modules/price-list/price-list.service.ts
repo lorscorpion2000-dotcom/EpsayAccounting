@@ -11,6 +11,16 @@ import {
 export class PriceListService {
   constructor(private prisma: PrismaService) {}
 
+  private async resolveUnitId(code?: string | null): Promise<string | null> {
+    if (!code) return null;
+    const u = await this.prisma.unit.findFirst({
+      where: { OR: [{ code }, { name: code }, { symbol: code }] },
+      select: { id: true },
+    });
+    return u?.id ?? null;
+  }
+
+
   private async nextCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = 'PL-' + year + '-';
@@ -122,12 +132,14 @@ export class PriceListService {
 
   async createItem(priceListId: string, dto: CreatePriceListItemDto) {
     await this.get(priceListId);
+    const unitId = await this.resolveUnitId(dto.unit as any);
     return this.prisma.priceListItem.create({
       data: {
         priceListId,
         code: dto.code,
         description: dto.description,
         unit: dto.unit as any,
+        unitId,
         basePrice: dto.basePrice,
         category: dto.category,
         chapter: dto.chapter,
@@ -140,6 +152,9 @@ export class PriceListService {
   async updateItem(id: string, dto: UpdatePriceListItemDto) {
     await this.getItem(id);
     const data: any = { ...dto };
+    if (dto.unit !== undefined) {
+      data.unitId = await this.resolveUnitId(dto.unit as any);
+    }
     return this.prisma.priceListItem.update({ where: { id }, data });
   }
 

@@ -5,6 +5,16 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 export class DataIoService {
   constructor(private prisma: PrismaService) {}
 
+  private async resolveUnitId(code?: string | null): Promise<string | null> {
+    if (!code) return null;
+    const u = await this.prisma.unit.findFirst({
+      where: { OR: [{ code }, { name: code }, { symbol: code }] },
+      select: { id: true },
+    });
+    return u?.id ?? null;
+  }
+
+
   // ═══ Export ═══
   async exportPartners() {
     return this.prisma.partner.findMany({
@@ -169,6 +179,7 @@ export class DataIoService {
           if (parent) parentId = parent.id;
         }
 
+        const unitId = await this.resolveUnitId(r.unit || null);
         const data: any = {
           projectId: project.id,
           code: String(r.code).trim(),
@@ -176,6 +187,7 @@ export class DataIoService {
           level: r.level || 'ACTIVITY',
           parentId,
           unit: r.unit || null,
+          unitId,
           quantity: r.quantity ?? null,
           unitPrice: r.unitPrice ?? null,
           totalPrice: (r.quantity != null && r.unitPrice != null) ? Number(r.quantity) * Number(r.unitPrice) : null,

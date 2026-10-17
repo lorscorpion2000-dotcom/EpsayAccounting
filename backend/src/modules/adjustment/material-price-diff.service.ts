@@ -10,6 +10,16 @@ export class MaterialPriceDiffService {
     private fiscalYears: FiscalYearsService,
   ) {}
 
+  private async resolveUnitId(code?: string | null): Promise<string | null> {
+    if (!code) return null;
+    const u = await this.prisma.unit.findFirst({
+      where: { OR: [{ code }, { name: code }, { symbol: code }] },
+      select: { id: true },
+    });
+    return u?.id ?? null;
+  }
+
+
   private async nextCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = 'MPD-' + year + '-';
@@ -54,6 +64,7 @@ export class MaterialPriceDiffService {
     const diffAmount = diffPerUnit * Number(dto.quantity);
 
     const code = await this.nextCode();
+    const unitId = await this.resolveUnitId(dto.unit);
     return this.prisma.materialPriceDiff.create({
       data: {
         code,
@@ -62,6 +73,7 @@ export class MaterialPriceDiffService {
         statementId: dto.statementId,
         materialType: dto.materialType,
         unit: dto.unit,
+        unitId,
         quantity: dto.quantity,
         basePrice: dto.basePrice,
         actualPrice: dto.actualPrice,

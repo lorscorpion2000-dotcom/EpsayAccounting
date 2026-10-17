@@ -7,6 +7,16 @@ import { UpdateWbsDto } from './dto/update-wbs.dto';
 export class WbsService {
   constructor(private prisma: PrismaService) {}
 
+  private async resolveUnitId(code?: string | null): Promise<string | null> {
+    if (!code) return null;
+    const u = await this.prisma.unit.findFirst({
+      where: { OR: [{ code }, { name: code }, { symbol: code }] },
+      select: { id: true },
+    });
+    return u?.id ?? null;
+  }
+
+
   private async generateCode(projectId: string, parentId?: string): Promise<string> {
     if (!parentId) {
       const count = await this.prisma.wbsItem.count({
@@ -59,6 +69,7 @@ export class WbsService {
         ? Number(dto.quantity) * Number(dto.unitPrice)
         : null;
 
+    const unitId = await this.resolveUnitId(dto.unit as any);
     return this.prisma.wbsItem.create({
       data: {
         projectId: dto.projectId,
@@ -67,6 +78,7 @@ export class WbsService {
         title: dto.title,
         level: dto.level,
         unit: dto.unit,
+        unitId,
         quantity: dto.quantity,
         unitPrice: dto.unitPrice,
         totalPrice,
@@ -86,12 +98,14 @@ export class WbsService {
       const p = dto.unitPrice ?? Number(existing.unitPrice ?? 0);
       totalPrice = q * p;
     }
+    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit as any) : undefined;
     return this.prisma.wbsItem.update({
       where: { id },
       data: {
         title: dto.title,
         level: dto.level,
         unit: dto.unit,
+        ...(unitId !== undefined && { unitId }),
         quantity: dto.quantity,
         unitPrice: dto.unitPrice,
         totalPrice,
