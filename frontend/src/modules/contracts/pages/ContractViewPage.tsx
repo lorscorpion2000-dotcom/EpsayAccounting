@@ -7,6 +7,7 @@ import { contractsApi, LegalContract, LegalContractKind, LegalContractStatus } f
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import { numberToWords as formatNumberToWords } from '@/utils/number-to-words';
 import PrintButton from '@/components/PrintButton';
+import SignatureBlock from '@/components/SignatureBlock';
 import { exportHtmlToWord } from '@/utils/word-export';
 import { renderContractTemplate } from '@/utils/contract-template';
 import CancelDialog from '../components/CancelDialog';
@@ -31,6 +32,9 @@ const STATUS_LABELS: Record<LegalContractStatus, string> = {
 const PRINT_STYLES = `
 @media print {
   @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
+
+  /* امضاهای داخل محتوا در چاپ مرورگر (Ctrl+P) مخفی می‌شوند — portal footer جاش رو می‌گیره */
+  .sig-inline { display: none !important; }
 
   html, body {
     height: auto !important;
@@ -539,6 +543,14 @@ export default function ContractViewPage() {
               )}
             </div>
           )}
+
+          {/* امضاهای چاپی — داخل printRef تا PrintButton کپی کند */}
+          <div className='sig-inline mt-12 pt-8 border-t'>
+            <SignatureBlock slots={[
+              { title: 'امضای کارفرما', type: 'company-stamp', caption: data.companySignerName || 'مهر و امضا' },
+              { title: 'امضای پیمانکار', type: 'empty', caption: data.workerSignerName || data.party?.fullName || 'نام و امضا' },
+            ]} />
+          </div>
         </div>
 
         <CancelDialog

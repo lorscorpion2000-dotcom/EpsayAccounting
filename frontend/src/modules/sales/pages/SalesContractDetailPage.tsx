@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { salesApi, SalesContract } from '../services/sales.api';
 import { formatJalaliDate, formatNumber } from '@/utils/format';
 import PrintButton from '@/components/PrintButton';
+import SignatureBlock from '@/components/SignatureBlock';
 import PrintHeader from '@/components/PrintHeader';
 import PaymentFormModal from '../components/PaymentFormModal';
 import CancelDialog from '@/modules/contracts/components/CancelDialog';
@@ -180,16 +181,10 @@ export default function SalesContractDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t">
-          <div className="text-center">
-            <div className="text-sm text-slate-500 mb-8">امضای شرکت</div>
-            <div className="border-t border-slate-400 pt-2"></div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-slate-500 mb-8">امضای مشتری</div>
-            <div className="border-t border-slate-400 pt-2">{data.customer?.fullName}</div>
-          </div>
-        </div>
+        <SignatureBlock slots={[
+          { title: 'امضای شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+          { title: 'امضای مشتری', type: 'empty', caption: data.customer?.fullName || 'نام و امضا' },
+        ]} />
 
         {data.status === 'CANCELLED' && (
           <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">

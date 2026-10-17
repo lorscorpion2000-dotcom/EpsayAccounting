@@ -8,6 +8,7 @@ import type { SubcontractorStatement } from '@/types/payroll';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintButton from '@/components/PrintButton';
+import SignatureBlock from '@/components/SignatureBlock';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس',
@@ -460,20 +461,12 @@ function PrintHeader({ s, sheetTitle, sheetNumber }: any) {
 // Signatures
 // ═══════════════════════════════════════════════════════════
 function Signatures() {
-  return (
-    <div className="mt-6 grid grid-cols-3 gap-4 text-xs" style={{ marginTop: '40px' }}>
-      <div className="text-center">
-        <div className="font-bold mb-8">پیمانکار جزء</div>
-        <div>امضاء:</div>
-      </div>
-      <div className="text-center">
-        <div className="font-bold mb-8">ناظر / مهندس کارگاه</div>
-        <div>امضاء:</div>
-      </div>
-      <div className="text-center">
-        <div className="font-bold mb-8">مدیر پروژه</div>
-        <div>امضاء:</div>
-      </div>
-    </div>
-  );
-}
+    return (
+      <SignatureBlock slots={[
+        { title: 'پیمانکار جزء', type: 'empty', caption: 'امضاء:' },
+        { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر پیمانکار' },
+        { title: 'ناظر / مهندس کارگاه', type: 'empty', caption: 'امضاء:' },
+        { title: 'مدیر پروژه', type: 'current-user', caption: 'امضاء:' },
+      ]} />
+    );
+  }

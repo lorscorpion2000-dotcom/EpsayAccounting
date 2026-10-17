@@ -9,6 +9,7 @@ import { payrollApi } from '../services/payroll.api';
 import { formatJalaliDate, formatNumber, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintButton from '@/components/PrintButton';
+import SignatureBlock from '@/components/SignatureBlock';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'پیش‌نویس',
@@ -183,20 +184,12 @@ export default function WorkerStatementDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-4 mt-12 pt-8 border-t text-xs text-center">
-          <div>
-            <div className="font-bold mb-8">پرسنل</div>
-            <div>امضاء:</div>
-          </div>
-          <div>
-            <div className="font-bold mb-8">مدیر منابع انسانی</div>
-            <div>امضاء:</div>
-          </div>
-          <div>
-            <div className="font-bold mb-8">مدیر مالی</div>
-            <div>امضاء:</div>
-          </div>
-        </div>
+        <SignatureBlock slots={[
+          { title: 'پرسنل', type: 'empty', caption: 'امضاء:' },
+          { title: 'مدیر منابع انسانی', type: 'empty', caption: 'امضاء:' },
+          { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر پیمانکار' },
+          { title: 'مدیر مالی', type: 'current-user', caption: 'امضاء:' },
+        ]} />
       </div>
 
       <ConfirmDialog
