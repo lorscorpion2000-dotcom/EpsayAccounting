@@ -9,6 +9,7 @@ import {
   OVERHEAD_METHOD_LABELS, OVERHEAD_STATUS_LABELS, OVERHEAD_STATUS_COLORS,
 } from '@/types/overhead';
 import { toPersianDigits } from '@/utils/format';
+import SignatureBlock from '@/components/SignatureBlock';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function OverheadDetailPage() {
@@ -153,6 +154,14 @@ export default function OverheadDetailPage() {
               </tr>
             </tfoot>
           </table>
+
+        <div className="card p-6 mt-6">
+          <SignatureBlock slots={[
+            { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+            { title: 'تأییدکننده', type: 'empty', caption: 'نام و امضا' },
+            { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+          ]} />
+        </div>
         </div>
       </div>
     </div>

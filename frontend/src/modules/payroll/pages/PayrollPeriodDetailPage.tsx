@@ -10,6 +10,7 @@ import { formatNumber, formatJalaliDate, toPersianDigits } from '@/utils/format'
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import { exportToExcel } from '@/utils/export-excel';
+import SignatureBlock from '@/components/SignatureBlock';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 export default function PayrollPeriodDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -202,6 +203,14 @@ export default function PayrollPeriodDetailPage() {
         onConfirm={handleAction}
         onCancel={() => setActionItem(null)}
       />
+
+      <div className="card p-6 mt-6">
+        <SignatureBlock slots={[
+          { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+          { title: 'مدیر مالی', type: 'empty', caption: 'نام و امضا' },
+          { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+        ]} />
+      </div>
     </div>
   );
 }

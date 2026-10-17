@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { expensesApi } from '../services/expenses.api';
 import type { Expense } from '@/types/expense';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
+import SignatureBlock from '@/components/SignatureBlock';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -117,6 +118,14 @@ export default function ExpenseDetailPage() {
             <div className="text-xs text-red-500 mb-1">دلیل رد</div>
             <div className="text-red-700">{e.rejectedReason}</div>
           </div>}
+
+        <div className="card p-6 mt-6">
+          <SignatureBlock slots={[
+            { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+            { title: 'تأییدکننده', type: 'empty', caption: 'نام و امضا' },
+            { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+          ]} />
+        </div>
         </div>
       </div>
     </div>

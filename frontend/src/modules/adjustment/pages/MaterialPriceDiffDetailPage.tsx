@@ -8,6 +8,7 @@ import { adjustmentApi } from '../services/adjustment.api';
 import type { MaterialPriceDiff } from '@/types/adjustment';
 import { ADJ_STATUS_LABELS, ADJ_STATUS_COLORS } from '@/types/adjustment';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import SignatureBlock from '@/components/SignatureBlock';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function MaterialPriceDiffDetailPage() {
@@ -134,6 +135,14 @@ export default function MaterialPriceDiffDetailPage() {
             <span className="font-bold">توضیحات: </span>{data.notes}
           </div>
         )}
+
+        <div className="card p-6 mt-6">
+          <SignatureBlock slots={[
+            { title: 'تهیه‌کننده', type: 'current-user', caption: 'نام و امضا' },
+            { title: 'تأییدکننده', type: 'empty', caption: 'نام و امضا' },
+            { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+          ]} />
+        </div>
       </div>
     </div>
   );

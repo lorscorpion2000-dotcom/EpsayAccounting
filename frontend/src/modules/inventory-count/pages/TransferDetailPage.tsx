@@ -10,6 +10,7 @@ import {
   TRANSFER_STATUS_LABELS, TRANSFER_STATUS_COLORS,
 } from '@/types/inventory-count';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
+import SignatureBlock from '@/components/SignatureBlock';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
 
 export default function TransferDetailPage() {
@@ -216,6 +217,14 @@ export default function TransferDetailPage() {
           </div>
         </div>
       )}
+
+        <div className="card p-6 mt-6">
+          <SignatureBlock slots={[
+            { title: 'انباردار مبدأ', type: 'current-user', caption: 'نام و امضا' },
+            { title: 'انباردار مقصد', type: 'empty', caption: 'نام و امضا' },
+            { title: 'مهر شرکت', type: 'company-stamp', caption: 'مهر و امضا' },
+          ]} />
+        </div>
     </div>
   );
 }
