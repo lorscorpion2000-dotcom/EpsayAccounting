@@ -106,26 +106,31 @@ export class SiteOpsService {
       description: e.description,
     }));
   }
-  private buildMaterials(items: any[]) {
+  private buildMaterials(items: any[], unitMap?: Map<string, string>) {
     return items.map((m, i) => ({
-      rowNumber: i + 1, itemName: m.itemName, unit: m.unit, quantity: m.quantity,
+      rowNumber: i + 1, itemName: m.itemName, unit: m.unit,
+      unitId: m.unit && unitMap ? (unitMap.get(m.unit) ?? null) : null,
+      quantity: m.quantity,
       itemId: this.optUuid(m.itemId), warehouseId: this.optUuid(m.warehouseId),
       supplier: m.supplier, vehiclePlate: m.vehiclePlate, billNumber: m.billNumber,
       movementType: m.movementType, qcResult: m.qcResult,
       exitType: m.exitType, exitDest: m.exitDest, description: m.description,
     }));
   }
-  private buildProgresses(items: any[]) {
+  private buildProgresses(items: any[], unitMap?: Map<string, string>) {
     return items.map((p, i) => ({
       rowNumber: i + 1, wbsItemId: this.optUuid(p.wbsItemId), description: p.description,
       progressPct: p.progressPct, quantity: p.quantity, unit: p.unit,
+      unitId: p.unit && unitMap ? (unitMap.get(p.unit) ?? null) : null,
       location: p.location, notes: p.notes,
     }));
   }
-  private buildRequests(items: any[]) {
+  private buildRequests(items: any[], unitMap?: Map<string, string>) {
     return items.map((r, i) => ({
       rowNumber: i + 1, requestType: r.requestType, title: r.title, description: r.description,
-      quantity: r.quantity, unit: r.unit, priority: r.priority,
+      quantity: r.quantity, unit: r.unit,
+      unitId: r.unit && unitMap ? (unitMap.get(r.unit) ?? null) : null,
+      priority: r.priority,
       requiredDate: r.requiredDate ? new Date(r.requiredDate) : null,
       wbsItemId: this.optUuid(r.wbsItemId), amount: r.amount, status: 'PENDING',
       pettyCashAccountId: this.optUuid(r.pettyCashAccountId),
@@ -137,6 +142,23 @@ export class SiteOpsService {
       startTime: this.optTime(e.startTime), endTime: this.optTime(e.endTime), durationHrs: e.durationHrs,
       severity: e.severity, actorName: e.actorName,
     }));
+  }
+
+
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
   }
 
   private isValidUuid(s: string | null | undefined): boolean {
@@ -178,11 +200,16 @@ export class SiteOpsService {
       createdById: userId,
     };
 
+    const createUnitMap = await this.resolveUnitIds([
+      ...(dto.materials || []).map((m: any) => m.unit),
+      ...(dto.progresses || []).map((p: any) => p.unit),
+      ...(dto.requests || []).map((r: any) => r.unit),
+    ]);
     if (dto.workers?.length) baseData.workers = { create: this.buildWorkers(dto.workers) };
     if (dto.equipments?.length) baseData.equipments = { create: this.buildEquipments(dto.equipments) };
-    if (dto.materials?.length) baseData.materials = { create: this.buildMaterials(dto.materials) };
-    if (dto.progresses?.length) baseData.progresses = { create: this.buildProgresses(dto.progresses) };
-    if (dto.requests?.length) baseData.requests = { create: this.buildRequests(dto.requests) };
+    if (dto.materials?.length) baseData.materials = { create: this.buildMaterials(dto.materials, createUnitMap) };
+    if (dto.progresses?.length) baseData.progresses = { create: this.buildProgresses(dto.progresses, createUnitMap) };
+    if (dto.requests?.length) baseData.requests = { create: this.buildRequests(dto.requests, createUnitMap) };
     if (dto.events?.length) baseData.events = { create: this.buildEvents(dto.events) };
 
     // B-race-fix: اگر بین generateCode و create، کاربر دیگری همان کد را بگیرد،
@@ -221,6 +248,12 @@ export class SiteOpsService {
     if (dto.issues !== undefined) data.issues = dto.issues;
     if (dto.incidents !== undefined) data.incidents = dto.incidents;
 
+    const updateUnitMap = await this.resolveUnitIds([
+      ...(dto.materials || []).map((m: any) => m.unit),
+      ...(dto.progresses || []).map((p: any) => p.unit),
+      ...(dto.requests || []).map((r: any) => r.unit),
+    ]);
+
     return this.prisma.$transaction(async (tx) => {
       if (dto.workers) {
         await tx.dailyReportWorker.deleteMany({ where: { reportId: id } });
@@ -232,15 +265,15 @@ export class SiteOpsService {
       }
       if (dto.materials) {
         await tx.dailyReportMaterial.deleteMany({ where: { reportId: id } });
-        data.materials = { create: this.buildMaterials(dto.materials) };
+        data.materials = { create: this.buildMaterials(dto.materials, updateUnitMap) };
       }
       if (dto.progresses) {
         await tx.dailyReportProgress.deleteMany({ where: { reportId: id } });
-        data.progresses = { create: this.buildProgresses(dto.progresses) };
+        data.progresses = { create: this.buildProgresses(dto.progresses, updateUnitMap) };
       }
       if (dto.requests) {
         await tx.dailyReportRequest.deleteMany({ where: { reportId: id } });
-        data.requests = { create: this.buildRequests(dto.requests) };
+        data.requests = { create: this.buildRequests(dto.requests, updateUnitMap) };
       }
       if (dto.events) {
         await tx.dailyReportEvent.deleteMany({ where: { reportId: id } });

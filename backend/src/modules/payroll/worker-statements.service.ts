@@ -194,6 +194,23 @@ export class WorkerStatementsService {
     }
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreateWorkerStatementDto, userId: string) {
     const code = await this.generateCode();
 
@@ -232,6 +249,7 @@ export class WorkerStatementsService {
       holidayHours += Number(w.holidayHours);
     });
 
+    const wsCreateUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit));
     return this.prisma.workerStatement.create({
       data: {
         code,
@@ -259,6 +277,7 @@ export class WorkerStatementsService {
             rowNumber: idx + 1,
             description: it.description,
             unit: it.unit,
+            unitId: it.unit ? (wsCreateUnitMap.get(it.unit) ?? null) : null,
             quantity: it.quantity,
             unitPrice: it.unitPrice,
             totalPrice: Number(it.quantity) * Number(it.unitPrice),
@@ -287,6 +306,7 @@ export class WorkerStatementsService {
       if (dto.items) {
         await tx.workerStatementItem.deleteMany({ where: { statementId: id } });
 
+        const wsUpdateUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit));
         const totalEarnings = dto.items.reduce(
           (s2, it) => s2 + Number(it.quantity) * Number(it.unitPrice),
           0,
@@ -309,6 +329,7 @@ export class WorkerStatementsService {
             rowNumber: idx + 1,
             description: it.description,
             unit: it.unit,
+            unitId: it.unit ? (wsUpdateUnitMap.get(it.unit) ?? null) : null,
             quantity: it.quantity,
             unitPrice: it.unitPrice,
             totalPrice: Number(it.quantity) * Number(it.unitPrice),

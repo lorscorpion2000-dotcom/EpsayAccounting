@@ -92,9 +92,27 @@ export class SubcontractorStatementsService {
     };
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreateSubcontractorStatementDto, userId: string) {
     const code = await this.generateCode(dto.projectId);
     const totals = this.computeTotals(dto);
+    const scCreateUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit));
 
     return this.prisma.subcontractorStatement.create({
       data: {
@@ -126,6 +144,7 @@ export class SubcontractorStatementsService {
             wbsItemId: item.wbsItemId,
             description: item.description,
             unit: item.unit,
+            unitId: item.unit ? (scCreateUnitMap.get(item.unit) ?? null) : null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: Number(item.quantity) * Number(item.unitPrice),
@@ -158,6 +177,7 @@ export class SubcontractorStatementsService {
 
         const fullDto = { ...s, ...dto, items: dto.items } as any;
         const totals = this.computeTotals(fullDto);
+        const scUpdateUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit));
 
         data.totalAmount = totals.totalAmount;
         data.insuranceAmount = totals.insuranceAmount;
@@ -172,6 +192,7 @@ export class SubcontractorStatementsService {
             wbsItemId: item.wbsItemId,
             description: item.description,
             unit: item.unit,
+            unitId: item.unit ? (scUpdateUnitMap.get(item.unit) ?? null) : null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: Number(item.quantity) * Number(item.unitPrice),
