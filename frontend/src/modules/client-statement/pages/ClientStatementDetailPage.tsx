@@ -48,6 +48,7 @@ export default function ClientStatementDetailPage() {
     itemDate: string;
   } | null>(null);
   const [savingItem, setSavingItem] = useState(false);
+  const [unitsList, setUnitsList] = useState<{ id: string; code: string; name: string; symbol?: string | null }[]>([]);
 
   const load = async () => {
     if (!id) return;
@@ -70,6 +71,16 @@ export default function ClientStatementDetailPage() {
       try {
         const { data } = await api.get('/company-profile');
         setCompanyStamp(data.stampUrl || null);
+      } catch { /* silent */ }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/units');
+        const arr = Array.isArray(data) ? data : (data?.data || []);
+        setUnitsList(arr.filter((u: any) => u.isActive !== false));
       } catch { /* silent */ }
     })();
   }, []);
@@ -485,9 +496,19 @@ export default function ClientStatementDetailPage() {
                               className="input text-xs py-1 px-2 w-full" placeholder="شرح ردیف" />
                           </td>
                           <td className="px-3 py-2">
-                            <input type="text" value={editForm!.unit}
+                            <select value={editForm!.unit || ''}
                               onChange={(e) => setEditForm({ ...editForm!, unit: e.target.value })}
-                              className="input text-xs py-1 px-2 w-20 text-center" placeholder="واحد" />
+                              className="input text-xs py-1 px-2 w-24 text-center">
+                              <option value="">—</option>
+                              {unitsList.map(u => (
+                                <option key={u.id} value={u.symbol || u.name}>
+                                  {u.name} ({u.symbol || u.code})
+                                </option>
+                              ))}
+                              {editForm!.unit && unitsList.length > 0 && !unitsList.some(u => (u.symbol || u.name) === editForm!.unit) && (
+                                <option value={editForm!.unit}>{editForm!.unit} (قبلی)</option>
+                              )}
+                            </select>
                           </td>
                           <td className="px-3 py-2">
                             <input type="number" value={editForm!.unitPrice}
