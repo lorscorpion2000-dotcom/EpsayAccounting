@@ -97,6 +97,23 @@ export class PurchaseOrdersService {
     return po;
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await client.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreatePODto, userId: string) {
     const code = await this.generateCode();
     const defaultTaxPercent = dto.taxPercent ?? 9;
@@ -112,6 +129,10 @@ export class PurchaseOrdersService {
     }));
 
     const totals = this.computeTotals(rawItems, defaultTaxPercent);
+    const poUnitMap = await this.resolveUnitIds(rawItems.map((it) => it.unit));
+    for (const it of totals.items as any[]) {
+      it.unitId = it.unit ? (poUnitMap.get(it.unit) ?? null) : null;
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const po = await tx.purchaseOrder.create({

@@ -115,6 +115,23 @@ export class ContractService {
     return q * p;
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await client.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreateLegalContractDto) {
     const code = await this.nextCode();
 
@@ -157,12 +174,14 @@ export class ContractService {
       });
 
       if (items.length > 0) {
+        const lcUnitMap = await this.resolveUnitIds(items.map((it) => it.unit), tx);
         await tx.legalContractItem.createMany({
           data: items.map((it, idx) => ({
             contractId: contract.id,
             rowNumber: it.rowNumber ?? idx + 1,
             description: it.description,
             unit: it.unit,
+            unitId: it.unit ? (lcUnitMap.get(it.unit) ?? null) : null,
             quantity: Number(it.quantity) || 0,
             unitPrice: Number(it.unitPrice) || 0,
             totalPrice: this.calcItemTotal(it),
@@ -189,12 +208,14 @@ export class ContractService {
 
         const items = dto.items || [];
         if (items.length > 0) {
+          const lcUpdateUnitMap = await this.resolveUnitIds(items.map((it) => it.unit), tx);
           await tx.legalContractItem.createMany({
             data: items.map((it, idx) => ({
               contractId: id,
               rowNumber: it.rowNumber ?? idx + 1,
               description: it.description,
               unit: it.unit,
+              unitId: it.unit ? (lcUpdateUnitMap.get(it.unit) ?? null) : null,
               quantity: Number(it.quantity) || 0,
               unitPrice: Number(it.unitPrice) || 0,
               totalPrice: this.calcItemTotal(it),

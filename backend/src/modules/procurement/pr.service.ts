@@ -77,8 +77,26 @@ export class PurchaseRequestsService {
     return pr;
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await client.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreatePRDto, userId: string) {
     const code = await this.generateCode();
+    const prUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit as any));
     return this.prisma.purchaseRequest.create({
       data: {
         code,
@@ -98,6 +116,7 @@ export class PurchaseRequestsService {
             description: it.description,
             quantity: it.quantity,
             unit: it.unit as any,
+            unitId: it.unit ? (prUnitMap.get(it.unit) ?? null) : null,
             priority: (it.priority as any) || 'NORMAL',
             notes: it.notes,
           })),
@@ -124,6 +143,7 @@ export class PurchaseRequestsService {
     if (dto.deliveryLocation !== undefined) data.deliveryLocation = dto.deliveryLocation;
     if (dto.reason !== undefined) data.reason = dto.reason;
 
+    const prUpdateUnitMap = dto.items ? await this.resolveUnitIds(dto.items.map((it) => it.unit as any)) : new Map<string, string>();
     return this.prisma.$transaction(async (tx) => {
       if (dto.items) {
         await tx.purchaseRequestItem.deleteMany({ where: { prId: id } });
@@ -133,6 +153,7 @@ export class PurchaseRequestsService {
             description: it.description,
             quantity: it.quantity,
             unit: it.unit as any,
+            unitId: it.unit ? (prUpdateUnitMap.get(it.unit) ?? null) : null,
             priority: (it.priority as any) || 'NORMAL',
             notes: it.notes,
           })),

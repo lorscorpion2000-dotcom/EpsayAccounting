@@ -67,6 +67,23 @@ export class SalesInvoicesService {
     return inv;
   }
 
+
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
+    const units = await client.unit.findMany({
+      where: { OR: [{ code: { in: unique } }, { name: { in: unique } }, { symbol: { in: unique } }] },
+      select: { id: true, code: true, name: true, symbol: true },
+    });
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
+  }
+
   async create(dto: CreateSalesInvoiceDto, userId?: string) {
     const code = await this.generateCode();
     const items = (dto.items ?? []).map((it, i) => ({
@@ -74,12 +91,15 @@ export class SalesInvoicesService {
       description: it.description,
       quantity: it.quantity,
       unit: it.unit ?? null,
+      unitId: null as string | null,
       unitPrice: it.unitPrice,
       totalPrice: it.totalPrice != null ? it.totalPrice : it.quantity * it.unitPrice,
       accountId: it.accountId ?? null,
       notes: it.notes ?? null,
     }));
     if (!items.length) throw new BadRequestException('حداقل یک ردیف لازم است');
+    const siUnitMap = await this.resolveUnitIds(items.map((it) => it.unit));
+    for (const it of items) it.unitId = it.unit ? (siUnitMap.get(it.unit) ?? null) : null;
 
     const { subtotal, taxAmount, totalAmount } =
       this.computeTotals(items, dto.taxPercent ?? 10, dto.discountAmount ?? 0);
