@@ -274,6 +274,7 @@ const MENU: MenuSection[] = [
     icon: Shield,
     items: [
       { to: '/settings/profile', label: 'پروفایل من', icon: UserIcon },
+      { to: '/settings/company', label: 'تنظیمات شرکت', icon: Building2 },
       { to: '/audit', label: 'لاگ تغییرات', icon: Shield },
       { to: '/recycle-bin', label: 'سوابق حذف', icon: Trash2 },
       { to: '/settings/users', label: 'کاربران', icon: UsersIcon },

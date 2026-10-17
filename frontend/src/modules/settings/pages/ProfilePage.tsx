@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, User as UserIcon, Save, KeyRound, Mail, Phone, Shield } from 'lucide-react';
+import { Loader2, User as UserIcon, Save, KeyRound, Mail, Phone, Shield, Upload, Trash2, FileSignature } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth.store';
 import { profileApi } from '@/modules/auth/services/auth.api';
 import TwoFactorSection from '../components/TwoFactorSection';
+import { api } from '@/services/api';
 
 export default function ProfilePage() {
   const { user, setAuth, token } = useAuthStore();
@@ -14,6 +15,8 @@ export default function ProfilePage() {
   const forceChange = searchParams.get('force') === '1';
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>((user as any)?.signatureUrl || null);
+  const [uploadingSig, setUploadingSig] = useState(false);
 
   const profileForm = useForm<any>({
     defaultValues: { fullName: '', email: '', mobile: '' },
@@ -22,6 +25,12 @@ export default function ProfilePage() {
   const passwordForm = useForm<any>({
     defaultValues: { oldPassword: '', newPassword: '', confirmPassword: '' },
   });
+
+  useEffect(() => {
+    if (user) {
+      setSignatureUrl((user as any)?.signatureUrl || null);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -75,8 +84,40 @@ export default function ProfilePage() {
       toast.error(Array.isArray(m) ? m[0] : m || 'خطا');
     } finally { setChangingPassword(false); }
   };
+  const uploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploadingSig(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const { data } = await api.post('/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const { data: res } = await api.patch('/auth/signature', { signatureUrl: data.url });
+      setSignatureUrl(res.signatureUrl);
+      toast.success('امضای شما ذخیره شد');
+    } catch {
+      toast.error('خطا در آپلود امضا');
+    } finally {
+      setUploadingSig(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeSignature = async () => {
+    if (!confirm('امضای شما حذف شود؟')) return;
+    try {
+      await api.patch('/auth/signature', { signatureUrl: null });
+      setSignatureUrl(null);
+      toast.success('امضا حذف شد');
+    } catch {
+      toast.error('خطا در حذف');
+    }
+  };
 
   if (!user) return null;
+
 
   return (
     <div className="space-y-6 animate-fade-in max-w-3xl">
@@ -171,6 +212,39 @@ export default function ProfilePage() {
 
       {/* 2FA */}
       <TwoFactorSection />
+
+      {/* امضای من */}
+      <div className="card p-6 space-y-4">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <FileSignature className="w-5 h-5 text-emerald-600" />
+          امضای من
+        </h2>
+        <p className="text-sm text-slate-500">
+          این امضا به‌صورت خودکار در پایین اسناد چاپی (صورت‌وضعیت، فاکتور و ...) زیر نام شما درج می‌شود.
+        </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          {signatureUrl ? (
+            <img src={signatureUrl} alt="امضای من" className="border rounded bg-white p-2" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
+          ) : (
+            <div className="border-2 border-dashed rounded flex items-center justify-center text-slate-400 text-xs" style={{ width: 200, height: 80 }}>
+              امضا ثبت نشده
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            <label className="btn-primary flex items-center gap-1 cursor-pointer">
+              {uploadingSig ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {signatureUrl ? 'تغییر امضا' : 'آپلود امضا'}
+              <input type="file" accept="image/*" className="hidden" onChange={uploadSignature} disabled={uploadingSig} />
+            </label>
+            {signatureUrl && (
+              <button type="button" onClick={removeSignature} className="btn-secondary text-red-600 flex items-center gap-1">
+                <Trash2 className="w-4 h-4" /> حذف امضا
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* فرم تغییر رمز */}
       <div className="card p-6">
         <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">

@@ -86,6 +86,8 @@ model User {
   journalEntriesDeleted       JournalEntry[]           @relation("EntryDeleter")
   auditLogs                   AuditLog[]               @relation("UserAuditLogs")
   themePreference             String?                  @map("theme_preference") @db.VarChar(64)
+  signatureUrl                String?                  @map("signature_url") @db.VarChar(500)
+  signatureUpdatedAt          DateTime?                @map("signature_updated_at")
 
   attachmentsUploaded Attachment[] @relation("AttachmentUploader")
   expensesCreated     Expense[]    @relation("ExpenseCreator")
@@ -4444,4 +4446,15 @@ model UserProject {
   @@index([userId])
   @@index([projectId])
   @@map("user_projects")
+}
+
+// ─── Company Profile — تکی (singleton) — مهر و لوگوی شرکت ───
+model CompanyProfile {
+  id        String   @id @default("00000000-0000-0000-0000-000000000001") @db.Uuid
+  name      String   @default("استودیو معماری اپسای") @db.VarChar(200)
+  stampUrl  String?  @map("stamp_url") @db.VarChar(500)
+  logoUrl   String?  @map("logo_url") @db.VarChar(500)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("company_profile")
 }

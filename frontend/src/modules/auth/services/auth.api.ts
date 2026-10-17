@@ -70,4 +70,8 @@ export const profileApi = {
     const { data } = await api.patch('/auth/profile', payload);
     return data;
   },
+  setSignature: async (signatureUrl: string | null) => {
+    const { data } = await api.patch('/auth/signature', { signatureUrl });
+    return data;
+  },
 };

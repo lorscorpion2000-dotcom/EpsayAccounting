@@ -246,6 +246,8 @@ export class AuthService {
       id: user.id,
       username: user.username,
       fullName: user.fullName,
+        signatureUrl: user.signatureUrl,
+        signatureUpdatedAt: user.signatureUpdatedAt,
       email: user.email,
       mobile: user.mobile,
       roles: user.roles.map((r) => r.role.code),
@@ -539,4 +541,24 @@ export class AuthService {
       enabledAt: user?.twoFactorEnabledAt || null,
     };
   }
+
+  // ─── امضای کاربر ───
+  async setSignature(userId: string, signatureUrl: string | null) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        signatureUrl: signatureUrl,
+        signatureUpdatedAt: new Date(),
+      },
+      select: { id: true, signatureUrl: true, signatureUpdatedAt: true },
+    });
+    await this.audit.log({
+      userId,
+      action: signatureUrl ? 'SIGNATURE_SET' : 'SIGNATURE_CLEARED',
+      entity: 'User',
+      entityId: userId,
+    }).catch(() => {});
+    return user;
+  }
+
 }

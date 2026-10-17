@@ -174,6 +174,7 @@ const TaxReportsPage = lazy(() => import('@/modules/tax-reports/pages/TaxReports
 
 // Operational Reports
 const OperationalReportsPage = lazy(() => import('@/modules/operational-reports/pages/OperationalReportsPage'));
+const CompanySettingsPage = lazy(() => import('@/modules/company-profile/pages/CompanySettingsPage'));
 const ContractingRevenuePage = lazy(() => import('@/modules/contracting-revenue/pages/ContractingRevenuePage'));
 
 // Data I/O
@@ -356,6 +357,7 @@ export default function AppRouter() {
         <Route path="/settings/profile" element={<ProfilePage />} />
         <Route path="/settings/fiscal-years" element={<FiscalYearsPage />} />
         <Route path="/settings/period-lock" element={<PeriodLockPage />} />
+        <Route path="/settings/company" element={<CompanySettingsPage />} />
 
         {/* Overhead Allocation */}
         <Route path="/overhead-allocations" element={<OverheadListPage />} />

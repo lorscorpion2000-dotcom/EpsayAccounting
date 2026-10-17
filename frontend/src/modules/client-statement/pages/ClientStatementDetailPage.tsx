@@ -12,6 +12,7 @@ import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PrintButton from '@/components/PrintButton';
 import { COMPANY } from '@/config/company';
+import { api } from '@/services/api';
 
 const CATEGORY_ICONS: Record<CSCategory, any> = {
   MATERIAL: Package,
@@ -27,6 +28,9 @@ export default function ClientStatementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
+  const [userSignature, setUserSignature] = useState<string | null>(null);
+  const [userFullName, setUserFullName] = useState<string>('');
+  const [companyStamp, setCompanyStamp] = useState<string | null>(null);
 
   const [s, setS] = useState<ClientStatement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +50,20 @@ export default function ClientStatementDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/auth/me');
+        setUserSignature(data.signatureUrl || null);
+        setUserFullName(data.fullName || '');
+      } catch { /* silent */ }
+      try {
+        const { data } = await api.get('/company-profile');
+        setCompanyStamp(data.stampUrl || null);
+      } catch { /* silent */ }
+    })();
+  }, []);
 
   const handleSubmit = async () => {
     if (!s) return;
@@ -390,7 +408,7 @@ export default function ClientStatementDetailPage() {
           </div>
 
           <div ref={printRef} className="bg-white p-6" dir="rtl">
-            <PrintSheets statement={s} grouped={grouped} />
+            <PrintSheets statement={s} grouped={grouped} userSignature={userSignature} userFullName={userFullName} companyStamp={companyStamp} />
           </div>
         </div>
       )}
@@ -470,7 +488,7 @@ function Row({ label, value, bold, negative, highlight }: any) {
 // ═══════════════════════════════════════════════════════════
 // چاپ صورت‌وضعیت
 // ═══════════════════════════════════════════════════════════
-function PrintSheets({ statement, grouped }: { statement: ClientStatement; grouped: Record<CSCategory, CSItem[]> }) {
+function PrintSheets({ statement, grouped, userSignature, userFullName, companyStamp }: { statement: ClientStatement; grouped: Record<CSCategory, CSItem[]>; userSignature: string | null; userFullName: string; companyStamp: string | null }) {
   const s = statement;
   const sheets: { cat: CSCategory; title: string }[] = CS_CATEGORY_ORDER.map((cat) => ({
     cat,
@@ -540,7 +558,7 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
                 </tr>
               </tbody>
             </table>
-            <Signatures />
+            <Signatures userSignature={userSignature} userFullName={userFullName} companyStamp={companyStamp} />
           </div>
         );
       })}
@@ -574,7 +592,7 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
             </tr>
           </tbody>
         </table>
-        <Signatures />
+        <Signatures userSignature={userSignature} userFullName={userFullName} companyStamp={companyStamp} />
       </div>
 
       {/* برگه‌ی خلاصه مالی کل */}
@@ -649,7 +667,7 @@ function PrintSheets({ statement, grouped }: { statement: ClientStatement; group
           </div>
         ) : null}
 
-        <Signatures />
+        <Signatures userSignature={userSignature} userFullName={userFullName} companyStamp={companyStamp} />
       </div>
     </div>
   );
@@ -712,19 +730,48 @@ function PrintHeader({ s, sheetTitle, sheetNumber, totalSheets }: any) {
 // ═══════════════════════════════════════════════════════════
 // Signature block
 // ═══════════════════════════════════════════════════════════
-function Signatures() {
+function Signatures({ userSignature, userFullName, companyStamp }: {
+  userSignature: string | null;
+  userFullName: string;
+  companyStamp: string | null;
+}) {
   return (
-    <div className="mt-6 grid grid-cols-3 gap-4 text-xs" style={{ marginTop: "40px" }}>
+    <div className="mt-6 grid grid-cols-4 gap-3 text-xs" style={{ marginTop: "40px" }}>
+      {/* 1: تهیه‌کننده با امضای دیجیتال */}
       <div className="text-center">
-        <div className="font-bold mb-8">حسابداری پیمانکار</div>
+        <div className="font-bold mb-2">تهیه‌کننده / حسابدار</div>
+        <div style={{ height: "50px", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          {userSignature ? (
+            <img src={userSignature} alt="امضای تهیه‌کننده" style={{ maxHeight: "50px", maxWidth: "100%", objectFit: "contain" }} />
+          ) : null}
+        </div>
+        <div className="border-t border-slate-400 pt-1">
+          {userFullName || "نام و امضا"}
+        </div>
+      </div>
+
+      {/* 2: مهر شرکت */}
+      <div className="text-center">
+        <div className="font-bold mb-2">مهر شرکت</div>
+        <div style={{ height: "50px", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          {companyStamp ? (
+            <img src={companyStamp} alt="مهر شرکت" style={{ maxHeight: "50px", maxWidth: "100%", objectFit: "contain" }} />
+          ) : null}
+        </div>
+        <div className="border-t border-slate-400 pt-1">مهر پیمانکار</div>
+      </div>
+
+      {/* 3: نماینده اجرایی */}
+      <div className="text-center">
+        <div className="font-bold mb-2">نماینده اجرایی کارفرما</div>
+        <div style={{ height: "50px" }} />
         <div className="border-t border-slate-400 pt-1">نام و امضا</div>
       </div>
+
+      {/* 4: ناظر کارفرما */}
       <div className="text-center">
-        <div className="font-bold mb-8">نماینده اجرایی کارفرما</div>
-        <div className="border-t border-slate-400 pt-1">نام و امضا</div>
-      </div>
-      <div className="text-center">
-        <div className="font-bold mb-8">نماینده / ناظر کارفرما</div>
+        <div className="font-bold mb-2">نماینده / ناظر کارفرما</div>
+        <div style={{ height: "50px" }} />
         <div className="border-t border-slate-400 pt-1">نام و امضا</div>
       </div>
     </div>

@@ -107,4 +107,15 @@ export class AuthController {
   ) {
     return this.auth.updateProfile(userId, body);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('signature')
+  setSignature(
+    @CurrentUser('id') userId: string,
+    @Body() body: { signatureUrl: string | null },
+  ) {
+    return this.auth.setSignature(userId, body.signatureUrl);
+  }
+
 }

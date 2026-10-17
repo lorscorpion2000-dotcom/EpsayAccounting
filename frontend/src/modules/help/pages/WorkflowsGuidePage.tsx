@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users, TrendingUp } from 'lucide-react';
+import { ArrowLeft, FileText, ShoppingCart, ShoppingBag, Wallet, ClipboardList, PackagePlus, FileCheck2, Calendar, ArrowDown, CheckCircle2, XCircle, User, Send, Ban, GitBranch, Info, Package, FileWarning, Lock, Trash2, Ruler, Inbox, FileSpreadsheet, Users, TrendingUp , FileSignature, Building2, Printer } from 'lucide-react';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import PrintButton from '@/components/PrintButton';
@@ -704,6 +704,28 @@ const WORKFLOWS: Workflow[] = [
       'اگر عدد هزینه صفر است، یعنی هنوز هزینه‌ی COMPANY با وضعیت POSTED روی پروژه ثبت نشده.',
       'اگر پروژه‌ای در گزارش نیست، یعنی هیچ صورت‌وضعیت تأییدشده یا هزینه‌ی POSTED ندارد.',
       'بازه‌ی تاریخ روی periodEnd صورت‌وضعیت اعمال می‌شود، نه periodStart.',
+    ],
+  },
+  {
+    key: 'signature-stamp',
+    title: 'امضا و مهر سیستمی',
+    description: 'ثبت امضای دیجیتال برای هر کاربر و مهر شرکت — برای درج خودکار در اسناد چاپی.',
+    icon: FileSignature,
+    color: 'purple',
+    steps: [
+      { actor: 'هر کاربر', action: 'از «پروفایل من → امضای من» عکس امضای خود را آپلود می‌کند', icon: FileSignature, color: 'slate', target: 'ثبت امضا در پروفایل' },
+      { actor: 'مدیر', action: 'از «ابزارها و تنظیمات → تنظیمات شرکت» مهر و لوگوی شرکت را آپلود می‌کند', icon: Building2, color: 'orange', target: 'ثبت مهر در CompanyProfile' },
+      { actor: 'سیستم', action: 'هنگام چاپ صورت‌وضعیت، امضای تهیه‌کننده و مهر شرکت را درج می‌کند', icon: Printer, color: 'green', target: 'چاپ با امضا و مهر' },
+    ],
+    onApprove: [
+      'امضای هر کاربر فقط به خودش مربوط است — هر کس فقط امضای خودش را آپلود یا حذف می‌کند.',
+      'مهر شرکت فقط توسط مدیران با دسترسی «settings.update» قابل تغییر است.',
+      'در چاپ صورت‌وضعیت چهار جا در پایین هر برگه وجود دارد: تهیه‌کننده/حسابدار (با امضای دیجیتال)، مهر شرکت، نماینده اجرایی کارفرما، نماینده/ناظر کارفرما.',
+      'اگر امضا یا مهر ثبت نشده باشد، جای آن خالی می‌ماند — می‌توانید دستی امضا کنید.',
+    ],
+    onReject: [
+      'عکس امضا یا مهر بهتر است PNG با پس‌زمینه شفاف باشد تا در چاپ تمیز دیده شود.',
+      'حجم فایل حداکثر 20MB طبق تنظیمات آپلود سیستم.',
     ],
   },
 ];

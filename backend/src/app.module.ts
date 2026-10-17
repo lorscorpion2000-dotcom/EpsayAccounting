@@ -43,6 +43,7 @@ import { AdjustmentModule } from './modules/adjustment/adjustment.module';
 import { TaxReportsModule } from './modules/tax-reports/tax-reports.module';
 import { OperationalReportsModule } from './modules/operational-reports/operational-reports.module';
 import { ContractingRevenueModule } from './modules/contracting-revenue/contracting-revenue.module';
+import { CompanyProfileModule } from './modules/company-profile/company-profile.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CommonModule } from './common/common.module';
 import { BackupModule } from './modules/backup/backup.module';
@@ -103,6 +104,7 @@ import { ScopeModule } from './common/scope/scope.module';
     TaxReportsModule,
     OperationalReportsModule,
     ContractingRevenueModule,
+    CompanyProfileModule,
   ],
   controllers: [HealthController],
   providers: [
