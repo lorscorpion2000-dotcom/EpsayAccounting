@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowRight, CheckCircle2, RefreshCw, Wallet, FileText, CreditCard, Banknote, Building2, Receipt,
+  Pencil, Save, X, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/services/api';
 import {
   salesInvoicesApi, salesReceiptsApi,
-  type SalesInvoice, type SIStatus, type SRMethod, type BankRef,
+  type SalesInvoice, type SIStatus, type SRMethod, type BankRef, type SIItem,
 } from '../services/sales-invoices.api';
 import SignatureBlock from '@/components/SignatureBlock';
 
@@ -36,6 +37,16 @@ export default function SalesInvoiceDetailPage() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showPay, setShowPay] = useState(false);
+
+  // ─── Inline Edit ───
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    description: string;
+    quantity: string;
+    unit: string;
+    unitPrice: string;
+  } | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -85,6 +96,50 @@ export default function SalesInvoiceDetailPage() {
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? 'خطا');
     } finally { setBusy(false); }
+  };
+
+  const handleStartEdit = (it: SIItem) => {
+    setEditingId(it.id);
+    setEditForm({
+      description: it.description || '',
+      quantity: String(it.quantity ?? ''),
+      unit: it.unit ?? '',
+      unitPrice: String(it.unitPrice ?? ''),
+    });
+  };
+  const handleCancelEdit = () => { setEditingId(null); setEditForm(null); };
+  const handleSaveItem = async () => {
+    if (!editingId || !editForm) return;
+    const q = Number(editForm.quantity);
+    const up = Number(editForm.unitPrice);
+    if (!editForm.description.trim()) { toast.error('شرح الزامی است'); return; }
+    if (!Number.isFinite(q) || q <= 0) { toast.error('مقدار باید بزرگ‌تر از صفر باشد'); return; }
+    if (!Number.isFinite(up) || up < 0) { toast.error('قیمت واحد معتبر نیست'); return; }
+    setSavingItem(true);
+    try {
+      await salesInvoicesApi.updateItem(editingId, {
+        description: editForm.description.trim(),
+        quantity: q,
+        unit: editForm.unit.trim() || null,
+        unitPrice: up,
+        totalPrice: q * up,
+      });
+      toast.success('ردیف به‌روزرسانی شد');
+      setEditingId(null); setEditForm(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'خطا در ذخیره');
+    } finally { setSavingItem(false); }
+  };
+  const handleDeleteItem = async (itemId: string) => {
+    if (!window.confirm('این ردیف حذف شود؟')) return;
+    try {
+      await salesInvoicesApi.deleteItem(itemId);
+      toast.success('ردیف حذف شد');
+      await load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'خطا در حذف');
+    }
   };
 
   if (!id) return <div className="p-6">شناسه نامعتبر</div>;
@@ -166,19 +221,76 @@ export default function SalesInvoiceDetailPage() {
               <th className="text-right px-2 py-2 font-medium w-20">واحد</th>
               <th className="text-right px-2 py-2 font-medium w-32">قیمت واحد</th>
               <th className="text-right px-2 py-2 font-medium w-32">جمع</th>
+              {inv.status === 'DRAFT' && (
+                <th className="text-center px-2 py-2 font-medium w-24">عملیات</th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {(inv.items ?? []).map((it) => (
-              <tr key={it.id} className="border-t border-slate-100">
-                <td className="text-center text-xs text-slate-500 px-2 py-2">{it.rowNumber}</td>
-                <td className="px-3 py-2 text-slate-800">{it.description}</td>
-                <td className="px-2 py-2 text-right font-mono text-xs">{Number(it.quantity)}</td>
-                <td className="px-2 py-2 text-right text-xs text-slate-600" dir="ltr">{it.unit ?? '—'}</td>
-                <td className="px-2 py-2 text-right font-mono text-xs">{fmt(it.unitPrice)}</td>
-                <td className="px-2 py-2 text-right font-mono text-xs font-bold">{fmt(it.totalPrice)}</td>
-              </tr>
-            ))}
+            {(inv.items ?? []).map((it) => {
+              const isEditing = editingId === it.id && !!editForm;
+              if (isEditing) {
+                return (
+                  <tr key={it.id} className="border-t border-slate-100 bg-amber-50">
+                    <td className="text-center text-xs text-slate-500 px-2 py-2">{it.rowNumber}</td>
+                    <td className="px-3 py-1">
+                      <input type="text" value={editForm!.description}
+                        onChange={(e) => setEditForm({ ...editForm!, description: e.target.value })}
+                        className="input text-xs py-1 px-2 w-full" placeholder="شرح ردیف" />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input type="number" step="0.01" value={editForm!.quantity}
+                        onChange={(e) => setEditForm({ ...editForm!, quantity: e.target.value })}
+                        className="input text-xs py-1 px-2 w-20 text-center num" dir="ltr" />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input type="text" value={editForm!.unit}
+                        onChange={(e) => setEditForm({ ...editForm!, unit: e.target.value })}
+                        maxLength={32} dir="ltr"
+                        className="input text-xs py-1 px-2 w-full" placeholder="مثلاً متر" />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input type="number" value={editForm!.unitPrice}
+                        onChange={(e) => setEditForm({ ...editForm!, unitPrice: e.target.value })}
+                        className="input text-xs py-1 px-2 w-28 text-left num" dir="ltr" />
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono text-xs font-bold text-emerald-700">
+                      {fmt(Number(editForm!.quantity || 0) * Number(editForm!.unitPrice || 0))}
+                    </td>
+                    <td className="px-2 py-1 text-center whitespace-nowrap">
+                      <button onClick={handleSaveItem} disabled={savingItem}
+                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="ذخیره">
+                        <Save className="w-4 h-4" />
+                      </button>
+                      <button onClick={handleCancelEdit} disabled={savingItem}
+                        className="p-1 text-slate-500 hover:bg-slate-100 rounded" title="انصراف">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }
+              return (
+                <tr key={it.id} className="border-t border-slate-100">
+                  <td className="text-center text-xs text-slate-500 px-2 py-2">{it.rowNumber}</td>
+                  <td className="px-3 py-2 text-slate-800">{it.description}</td>
+                  <td className="px-2 py-2 text-right font-mono text-xs">{Number(it.quantity)}</td>
+                  <td className="px-2 py-2 text-right text-xs text-slate-600" dir="ltr">{it.unit ?? '—'}</td>
+                  <td className="px-2 py-2 text-right font-mono text-xs">{fmt(it.unitPrice)}</td>
+                  <td className="px-2 py-2 text-right font-mono text-xs font-bold">{fmt(it.totalPrice)}</td>
+                  {inv.status === 'DRAFT' && (
+                    <td className="px-2 py-1 text-center whitespace-nowrap">
+                      <button onClick={() => handleStartEdit(it)} className="p-1 text-sky-600 hover:bg-sky-50 rounded" title="ویرایش">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteItem(it.id)} className="p-1 text-rose-600 hover:bg-rose-50 rounded" title="حذف">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

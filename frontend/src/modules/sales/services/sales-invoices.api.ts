@@ -117,6 +117,14 @@ export const salesInvoicesApi = {
     const { data } = await api.post<SalesInvoice>('/sales-invoices/' + id + '/approve');
     return data;
   },
+  updateItem: async (itemId: string, payload: Partial<SIItemInput>) => {
+    const { data } = await api.patch<SIItem>('/sales-invoices/items/' + itemId, payload);
+    return data;
+  },
+  deleteItem: async (itemId: string) => {
+    const { data } = await api.delete('/sales-invoices/items/' + itemId);
+    return data;
+  },
   customers: async (): Promise<SalesCustomerRef[]> => {
     const { data } = await api.get<SalesCustomerRef[]>('/sales/customers');
     return data;

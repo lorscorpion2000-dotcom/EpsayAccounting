@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsNumber, IsUUID, IsDateString, MaxLength, Min, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 
 class CreateSIItemDto {
   @IsOptional() @IsNumber() rowNumber?: number;
@@ -31,3 +32,5 @@ export class CreateSalesInvoiceDto {
 }
 
 export { CreateSIItemDto };
+
+export class UpdateSIItemDto extends PartialType(CreateSIItemDto) {}

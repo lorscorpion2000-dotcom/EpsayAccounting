@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SalesInvoicesService } from './sales-invoices.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
+import { UpdateSIItemDto } from './dto/create-sales-invoice.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
@@ -33,6 +34,18 @@ export class SalesInvoicesController {
   @RequirePermissions('accounting.create')
   create(@Body() dto: CreateSalesInvoiceDto, @CurrentUser('id') userId: string) {
     return this.service.create(dto, userId);
+  }
+
+  @Patch('items/:itemId')
+  @RequirePermissions('accounting.update')
+  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdateSIItemDto) {
+    return this.service.updateItem(itemId, dto);
+  }
+
+  @Delete('items/:itemId')
+  @RequirePermissions('accounting.update')
+  deleteItem(@Param('itemId') itemId: string) {
+    return this.service.deleteItem(itemId);
   }
 
   @Patch(':id')

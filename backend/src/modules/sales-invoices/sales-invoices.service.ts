@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
+import { UpdateSIItemDto } from './dto/create-sales-invoice.dto';
 import { FiscalYearsService } from '../accounting/fiscal-years.service';
 import { generateCode } from '../../shared/utils/code-generator';
 
@@ -65,6 +66,80 @@ export class SalesInvoicesService {
     });
     if (!inv) throw new NotFoundException('فاکتور فروش یافت نشد');
     return inv;
+  }
+
+  async recompute(id: string) {
+    const inv = await this.prisma.salesInvoice.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!inv) throw new NotFoundException('فاکتور فروش یافت نشد');
+    const totals = this.computeTotals(
+      inv.items as any[],
+      Number(inv.taxPercent),
+      Number(inv.discountAmount),
+    );
+    return this.prisma.salesInvoice.update({
+      where: { id },
+      data: {
+        subtotal: totals.subtotal,
+        taxAmount: totals.taxAmount,
+        totalAmount: totals.totalAmount,
+      },
+    });
+  }
+
+  async updateItem(itemId: string, dto: UpdateSIItemDto) {
+    const item = await this.prisma.salesInvoiceItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const inv = await this.prisma.salesInvoice.findUnique({ where: { id: item.invoiceId } });
+    if (!inv) throw new NotFoundException('فاکتور فروش یافت نشد');
+    if (inv.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+
+    const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(item.quantity);
+    const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(item.unitPrice);
+    const totalPrice = dto.totalPrice !== undefined
+      ? Number(dto.totalPrice)
+      : quantity * unitPrice;
+
+    // unitId resolution (unit is optional free-text)
+    let unitId: string | null | undefined = undefined;
+    if (dto.unit !== undefined) {
+      const u = (dto.unit ?? '').toString().trim();
+      if (u) {
+        const map = await this.resolveUnitIds([u]);
+        unitId = map.get(u) ?? null;
+      } else {
+        unitId = null;
+      }
+    }
+
+    const updated = await this.prisma.salesInvoiceItem.update({
+      where: { id: itemId },
+      data: {
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.quantity !== undefined && { quantity }),
+        ...(dto.unit !== undefined && { unit: (dto.unit ?? '').toString().trim() || null }),
+        ...(unitId !== undefined && { unitId }),
+        ...(dto.unitPrice !== undefined && { unitPrice }),
+        totalPrice,
+        ...(dto.accountId !== undefined && { accountId: dto.accountId }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+      },
+    });
+    await this.recompute(item.invoiceId);
+    return updated;
+  }
+
+  async deleteItem(itemId: string) {
+    const item = await this.prisma.salesInvoiceItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
+    const inv = await this.prisma.salesInvoice.findUnique({ where: { id: item.invoiceId } });
+    if (!inv) throw new NotFoundException('فاکتور فروش یافت نشد');
+    if (inv.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
+    await this.prisma.salesInvoiceItem.delete({ where: { id: itemId } });
+    await this.recompute(item.invoiceId);
+    return { success: true };
   }
 
 
