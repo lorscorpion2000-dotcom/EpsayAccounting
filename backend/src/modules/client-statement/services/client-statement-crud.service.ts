@@ -131,7 +131,10 @@ export class ClientStatementCrudService {
         },
         journalEntry: { select: { id: true, code: true, status: true } },
         items: {
-          include: { wbsItem: { select: { id: true, code: true, title: true } } },
+          include: {
+            wbsItem: { select: { id: true, code: true, title: true } },
+            unitObj: { select: { id: true, code: true, name: true, symbol: true } },
+          },
           orderBy: [{ category: 'asc' }, { rowNumber: 'asc' }],
         },
       },
