@@ -173,15 +173,25 @@ export class PurchaseInvoicesCrudService {
   }
 
   private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
-    const uniqueCodes = Array.from(
-      new Set(codes.filter((c): c is string => !!c && typeof c === 'string')),
-    );
-    if (uniqueCodes.length === 0) return new Map();
+    const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
+    if (unique.length === 0) return new Map();
     const units = await this.prisma.unit.findMany({
-      where: { code: { in: uniqueCodes } },
-      select: { id: true, code: true },
+      where: {
+        OR: [
+          { code: { in: unique } },
+          { name: { in: unique } },
+          { symbol: { in: unique } },
+        ],
+      },
+      select: { id: true, code: true, name: true, symbol: true },
     });
-    return new Map(units.map((u) => [u.code, u.id]));
+    const map = new Map<string, string>();
+    for (const u of units) {
+      if (u.code && unique.includes(u.code)) map.set(u.code, u.id);
+      if (u.name && unique.includes(u.name)) map.set(u.name, u.id);
+      if (u.symbol && unique.includes(u.symbol)) map.set(u.symbol, u.id);
+    }
+    return map;
   }
 
   async create(dto: CreatePurchaseInvoiceDto, userId?: string) {

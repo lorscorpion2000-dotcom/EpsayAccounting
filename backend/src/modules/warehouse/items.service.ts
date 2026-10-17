@@ -15,7 +15,16 @@ export class ItemsService {
 
   private async resolveUnitId(code?: string | null): Promise<string | null> {
     if (!code) return null;
-    const u = await this.prisma.unit.findUnique({ where: { code }, select: { id: true } });
+    const u = await this.prisma.unit.findFirst({
+      where: {
+        OR: [
+          { code },
+          { name: code },
+          { symbol: code },
+        ],
+      },
+      select: { id: true },
+    });
     return u?.id ?? null;
   }
 
