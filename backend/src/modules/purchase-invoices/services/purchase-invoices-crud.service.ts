@@ -9,6 +9,7 @@ interface InvoiceItemInput {
   description?: string;
   quantity?: unknown;
   unit?: string;
+  unitId?: string | null;
   unitPrice?: unknown;
   totalPrice?: unknown;
   accountId?: string | null;
@@ -171,6 +172,18 @@ export class PurchaseInvoicesCrudService {
     return inv;
   }
 
+  private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const uniqueCodes = Array.from(
+      new Set(codes.filter((c): c is string => !!c && typeof c === 'string')),
+    );
+    if (uniqueCodes.length === 0) return new Map();
+    const units = await this.prisma.unit.findMany({
+      where: { code: { in: uniqueCodes } },
+      select: { id: true, code: true },
+    });
+    return new Map(units.map((u) => [u.code, u.id]));
+  }
+
   async create(dto: CreatePurchaseInvoiceDto, userId?: string) {
     const code = await this.generateCode();
     const items = (dto.items ?? []).map((it: InvoiceItemInput, i: number) => {
@@ -191,6 +204,7 @@ export class PurchaseInvoicesCrudService {
         description: it.description ?? '',
         quantity: Number(it.quantity ?? 0),
         unit: String(it.unit ?? 'NUMBER'),
+        unitId: null as string | null,
         unitPrice: Number(it.unitPrice ?? 0),
         totalPrice: base,
         accountId: it.accountId ?? null,
@@ -210,6 +224,9 @@ export class PurchaseInvoicesCrudService {
       };
     });
     if (!items.length) throw new BadRequestException('حداقل یک ردیف لازم است');
+
+    const createUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
+    for (const it of items) it.unitId = createUnitMap.get(String(it.unit)) ?? null;
 
     const totals = this.computeTotals(items, dto.taxPercent ?? 10, dto.discountAmount ?? 0);
 
@@ -267,12 +284,15 @@ export class PurchaseInvoicesCrudService {
       description: it.description ?? '',
       quantity: Number(it.quantity),
       unit: String(it.unit ?? 'NUMBER'),
+      unitId: null as string | null,
       unitPrice: Number(it.unitPrice),
       totalPrice: Number(it.totalPrice),
       accountId: null,
       wbsItemId: null,
       notes: it.notes ?? null,
     }));
+    const poUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
+    for (const it of items) it.unitId = poUnitMap.get(String(it.unit)) ?? null;
 
     const taxPercent = Number(po.taxPercent ?? 10);
     const { subtotal, taxAmount, totalAmount } = this.computeTotals(items, taxPercent, 0);
@@ -320,6 +340,7 @@ export class PurchaseInvoicesCrudService {
       description: it.item?.name ?? ('ردیف ' + it.rowNumber),
       quantity: Number(it.quantity),
       unit: String(it.item?.unit ?? 'NUMBER'),
+      unitId: null as string | null,
       unitPrice: Number(it.unitCost),
       totalPrice: Number(it.totalCost),
       accountId: null,
@@ -334,6 +355,8 @@ export class PurchaseInvoicesCrudService {
       loadingCost: Number(it.loadingCost) || 0,
       notes: it.notes ?? null,
     }));
+    const grUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
+    for (const it of items) it.unitId = grUnitMap.get(String(it.unit)) ?? null;
 
     const taxPercent = items[0]?.taxPercent ?? 9;
     const totals = this.computeTotals(items, taxPercent, 0);
