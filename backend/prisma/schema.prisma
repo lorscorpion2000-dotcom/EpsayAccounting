@@ -443,6 +443,24 @@ model Unit {
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
 
+  // unit relations (migration 10.0)
+  wbsItemUnits                    WbsItem[]                    @relation("WbsItemUnit")
+  purchaseRequestItemUnits        PurchaseRequestItem[]        @relation("PurchaseRequestItemUnit")
+  purchaseOrderItemUnits          PurchaseOrderItem[]          @relation("PurchaseOrderItemUnit")
+  itemUnits                       Item[]                       @relation("ItemUnit")
+  dailyReportMaterialUnits        DailyReportMaterial[]        @relation("DailyReportMaterialUnit")
+  dailyReportProgressUnits        DailyReportProgress[]        @relation("DailyReportProgressUnit")
+  subcontractorStatementItemUnits SubcontractorStatementItem[] @relation("SubcontractorStatementItemUnit")
+  legalContractItemUnits          LegalContractItem[]          @relation("LegalContractItemUnit")
+  purchaseInvoiceItemUnits        PurchaseInvoiceItem[]        @relation("PurchaseInvoiceItemUnit")
+  salesInvoiceItemUnits           SalesInvoiceItem[]           @relation("SalesInvoiceItemUnit")
+  priceListItemUnits              PriceListItem[]              @relation("PriceListItemUnit")
+  clientStatementItemUnits        ClientStatementItem[]        @relation("ClientStatementItemUnit")
+  dailyReportRequestUnits         DailyReportRequest[]         @relation("DailyReportRequestUnit")
+  wbsProgressSnapshotUnits        WbsProgressSnapshot[]        @relation("WbsProgressSnapshotUnit")
+  materialPriceDiffUnits          MaterialPriceDiff[]          @relation("MaterialPriceDiffUnit")
+  workerStatementItemUnits        WorkerStatementItem[]        @relation("WorkerStatementItemUnit")
+
   @@index([isActive])
   @@map("units")
 }
@@ -468,6 +486,8 @@ model WbsItem {
   level WbsLevel
 
   unit       String?  @db.VarChar(32)
+  unitId     String?  @map("unit_id") @db.Uuid
+  unitObj    Unit?    @relation("WbsItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity   Decimal? @db.Decimal(20, 4)
   unitPrice  Decimal? @map("unit_price") @db.Decimal(20, 2)
   totalPrice Decimal? @map("total_price") @db.Decimal(24, 2)
@@ -1094,6 +1114,8 @@ model PurchaseRequestItem {
   description String     @db.VarChar(500)
   quantity    Decimal    @db.Decimal(20, 4)
   unit        String     @db.VarChar(32)
+  unitId      String?    @map("unit_id") @db.Uuid
+  unitObj     Unit?      @relation("PurchaseRequestItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   priority    PRPriority @default(NORMAL)
   notes       String?    @db.VarChar(500)
 
@@ -1226,6 +1248,8 @@ model PurchaseOrderItem {
   description String  @db.VarChar(500)
   quantity    Decimal @db.Decimal(20, 4)
   unit        String  @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("PurchaseOrderItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   taxPercent  Decimal @default(9) @map("tax_percent") @db.Decimal(5, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
@@ -1332,6 +1356,8 @@ model Item {
   name         String        @db.VarChar(300)
   type         ItemType      @default(MATERIAL)
   unit         String        @default("NUMBER") @db.VarChar(32)
+  unitId       String?       @map("unit_id") @db.Uuid
+  unitObj      Unit?         @relation("ItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   categoryId   String?       @map("category_id") @db.Uuid
   category     ItemCategory? @relation(fields: [categoryId], references: [id])
   minStock     Decimal?      @map("min_stock") @db.Decimal(20, 4)
@@ -1809,6 +1835,8 @@ model DailyReportMaterial {
   itemId       String? @map("item_id") @db.Uuid
   warehouseId  String? @map("warehouse_id") @db.Uuid
   unit         String? @db.VarChar(32)
+  unitId       String? @map("unit_id") @db.Uuid
+  unitObj      Unit?   @relation("DailyReportMaterialUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity     Decimal @db.Decimal(20, 4)
   supplier     String? @db.VarChar(200)
   vehiclePlate String? @map("vehicle_plate") @db.VarChar(32)
@@ -1838,6 +1866,8 @@ model DailyReportProgress {
   // Ù…Ù‚Ø¯Ø§Ø± Ø§Ù†Ø¬Ø§Ù…â€ŒØ´Ø¯Ù‡ Ø§Ù…Ø±ÙˆØ² (Ø·Ø¨Ù‚ Ø³Ù†Ø¯ Ø¨Ø®Ø´ Û±Ûµ-Û³ Ø¨Ù†Ø¯ Ø¨)
   quantity Decimal? @db.Decimal(20, 4)
   unit     String?  @db.VarChar(32)
+  unitId   String?  @map("unit_id") @db.Uuid
+  unitObj  Unit?    @relation("DailyReportProgressUnit", fields: [unitId], references: [id], onDelete: SetNull)
 
   // Ù…Ø­Ù„ Ú©Ø§Ø± Ø¯Ù‚ÛŒÙ‚ (Ø¨Ù„ÙˆÚ©ØŒ Ø·Ø¨Ù‚Ù‡)
   location String? @db.VarChar(300)
@@ -2336,6 +2366,8 @@ model SubcontractorStatementItem {
 
   description String  @db.VarChar(500)
   unit        String? @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("SubcontractorStatementItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity    Decimal @db.Decimal(20, 4)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
@@ -2882,6 +2914,8 @@ model LegalContractItem {
   rowNumber   Int
   description String
   unit        String?
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("LegalContractItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity    Decimal @db.Decimal(20, 4)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
@@ -3262,6 +3296,8 @@ model PurchaseInvoiceItem {
   description String  @db.VarChar(500)
   quantity    Decimal @db.Decimal(20, 4)
   unit        String  @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("PurchaseInvoiceItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
 
@@ -3393,6 +3429,8 @@ model SalesInvoiceItem {
   description String  @db.VarChar(500)
   quantity    Decimal @db.Decimal(20, 4)
   unit        String? @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("SalesInvoiceItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(20, 2)
 
@@ -3638,6 +3676,8 @@ model PriceListItem {
   code        String  @db.VarChar(64)
   description String  @db.VarChar(500)
   unit        String? @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("PriceListItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   basePrice   Decimal @map("base_price") @db.Decimal(20, 2)
   category    String? @db.VarChar(200)
   chapter     String? @db.VarChar(200)
@@ -3803,6 +3843,8 @@ model ClientStatementItem {
   priceListCode String?                 @map("price_list_code") @db.VarChar(64)
   description   String                  @db.VarChar(500)
   unit          String?                 @db.VarChar(32)
+  unitId        String?                 @map("unit_id") @db.Uuid
+  unitObj       Unit?                   @relation("ClientStatementItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   unitPrice     Decimal                 @map("unit_price") @db.Decimal(20, 2)
   quantity      Decimal                 @default(1) @db.Decimal(20, 4)
   totalPrice    Decimal                 @map("total_price") @db.Decimal(24, 2)
@@ -3837,6 +3879,8 @@ model DailyReportRequest {
   description        String?   @db.VarChar(1000)
   quantity           Decimal?  @db.Decimal(20, 4)
   unit               String?   @db.VarChar(32)
+  unitId             String?   @map("unit_id") @db.Uuid
+  unitObj            Unit?     @relation("DailyReportRequestUnit", fields: [unitId], references: [id], onDelete: SetNull)
   priority           String?   @db.VarChar(20) // LOW | NORMAL | HIGH | URGENT
   requiredDate       DateTime? @map("required_date") @db.Date
   wbsItemId          String?   @map("wbs_item_id") @db.Uuid
@@ -3890,6 +3934,8 @@ model WbsProgressSnapshot {
   snapshotDate DateTime @map("snapshot_date") @db.Date
   quantity     Decimal  @default(0) @db.Decimal(20, 4)
   unit         String?  @db.VarChar(32)
+  unitId       String?  @map("unit_id") @db.Uuid
+  unitObj      Unit?    @relation("WbsProgressSnapshotUnit", fields: [unitId], references: [id], onDelete: SetNull)
   progressPct  Decimal? @map("progress_pct") @db.Decimal(5, 2)
 
   description String? @db.VarChar(500)
@@ -4097,6 +4143,8 @@ model MaterialPriceDiff {
 
   materialType String  @map("material_type") @db.VarChar(100)
   unit         String? @db.VarChar(32)
+  unitId       String? @map("unit_id") @db.Uuid
+  unitObj      Unit?   @relation("MaterialPriceDiffUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity     Decimal @db.Decimal(20, 4)
   basePrice    Decimal @map("base_price") @db.Decimal(20, 2)
   actualPrice  Decimal @map("actual_price") @db.Decimal(20, 2)
@@ -4203,6 +4251,8 @@ model WorkerStatementItem {
   rowNumber   Int
   description String  @db.VarChar(500)
   unit        String? @db.VarChar(32)
+  unitId      String? @map("unit_id") @db.Uuid
+  unitObj     Unit?   @relation("WorkerStatementItemUnit", fields: [unitId], references: [id], onDelete: SetNull)
   quantity    Decimal @db.Decimal(20, 4)
   unitPrice   Decimal @map("unit_price") @db.Decimal(20, 2)
   totalPrice  Decimal @map("total_price") @db.Decimal(24, 2)
