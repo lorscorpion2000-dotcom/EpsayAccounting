@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Public } from '../../common/decorators/public.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -6,116 +7,72 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { TwoFactorCodeDto, TwoFactorDisableDto, TwoFactorVerifyLoginDto } from './dto/two-factor.dto';
-import { Public } from '../../common/decorators/public.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { Throttle } from '@nestjs/throttler';
+import { TwoFactorCodeDto, TwoFactorDisableDto, TwoFactorSetupDto } from './dto/two-factor.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-@ApiTags('Auth - احراز هویت')
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private auth: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
   @Post('login')
-  login(@Body() dto: LoginDto, @Req() req: any) {
-    const ip =
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.ip ||
-      req.socket?.remoteAddress;
-    const ua = req.headers['user-agent'];
-    return this.auth.login(dto, { ip, ua });
+  async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
   }
 
   @Public()
   @Post('refresh')
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.auth.refresh(dto.refreshToken);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
-  @Post('2fa/verify')
-  verify2FA(@Body() dto: TwoFactorVerifyLoginDto, @Req() req: any) {
-    const ip =
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.ip ||
-      req.socket?.remoteAddress;
-    const ua = req.headers['user-agent'];
-    return this.auth.verify2FALogin(dto.totpToken, dto.code, { ip, ua });
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshToken(dto);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('2fa/status')
-  status2FA(@CurrentUser('id') userId: string) {
-    return this.auth.status2FA(userId);
+  @Get('profile')
+  async getProfile(@Req() req: any) {
+    return this.authService.getProfile(req.user.id);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post('2fa/setup')
-  setup2FA(@CurrentUser('id') userId: string) {
-    return this.auth.setup2FA(userId);
+  @Patch('profile')
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, dto);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Post('2fa/enable')
-  enable2FA(@CurrentUser('id') userId: string, @Body() dto: TwoFactorCodeDto) {
-    return this.auth.enable2FA(userId, dto.code);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Post('2fa/disable')
-  disable2FA(@CurrentUser('id') userId: string, @Body() dto: TwoFactorDisableDto) {
-    return this.auth.disable2FA(userId, dto.password);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Get('me')
-  me(@CurrentUser('id') userId: string) {
-    return this.auth.me(userId);
+  @Patch('change-password')
+  async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('preferences')
-  updatePreferences(
-    @Body() dto: UpdatePreferencesDto,
-    @CurrentUser('id') userId: string,
-  ) {
-    return this.auth.updatePreferences(userId, dto.themePreference);
-  }
-
-  @Patch('change-password')
-  changePassword(
-    @CurrentUser('id') userId: string,
-    @Body() body: ChangePasswordDto,
-  ) {
-    return this.auth.changePassword(userId, body.oldPassword, body.newPassword);
-  }
-
-  @Patch('profile')
-  updateProfile(
-    @CurrentUser('id') userId: string,
-    @Body() body: UpdateProfileDto,
-  ) {
-    return this.auth.updateProfile(userId, body);
+  async updatePreferences(@Req() req: any, @Body() dto: UpdatePreferencesDto) {
+    return this.authService.updatePreferences(req.user.id, dto);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Patch('signature')
-  setSignature(
-    @CurrentUser('id') userId: string,
-    @Body() body: { signatureUrl: string | null },
-  ) {
-    return this.auth.setSignature(userId, body.signatureUrl);
+  @Post('2fa/setup')
+  async setup2fa(@Req() req: any) {
+    return this.authService.setup2fa(req.user.id);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/verify')
+  async verify2fa(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
+    return this.authService.verify2fa(req.user.id, dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/disable')
+  async disable2fa(@Req() req: any, @Body() dto: TwoFactorDisableDto) {
+    return this.authService.disable2fa(req.user.id, dto);
+  }
 }

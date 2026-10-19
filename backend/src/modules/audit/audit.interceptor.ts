@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+﻿import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor, Optional } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from './audit.service';
@@ -8,7 +8,9 @@ const EXCLUDED = ['/api/auth/login', '/api/auth/me', '/api/auth/preferences', '/
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-  constructor(private audit: AuditService) {}
+  private readonly logger = new Logger(AuditInterceptor.name);
+
+  constructor(@Optional() private readonly audit?: AuditService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -22,10 +24,22 @@ export class AuditInterceptor implements NestInterceptor {
     const entity = this.extractEntity(url);
     const entityId = req.params ? req.params.id : null;
 
+    const safeLog = (entry: any) => {
+      try {
+        if (this.audit && typeof this.audit.log === 'function') {
+          Promise.resolve(this.audit.log(entry)).catch((err) => {
+            this.logger.debug?.(`Audit log failed: ${err?.message}`);
+          });
+        }
+      } catch (err: any) {
+        this.logger.debug?.(`Audit log caught error: ${err?.message}`);
+      }
+    };
+
     return next.handle().pipe(
       tap({
         next: (response) => {
-          this.audit.log({
+          safeLog({
             userId,
             action: method,
             entity,
@@ -36,7 +50,7 @@ export class AuditInterceptor implements NestInterceptor {
           });
         },
         error: (err) => {
-          this.audit.log({
+          safeLog({
             userId,
             action: method + '_FAILED',
             entity,
@@ -58,8 +72,7 @@ export class AuditInterceptor implements NestInterceptor {
       return m[1] + '/' + seg2;
     }
     const re2 = new RegExp('^/api/([^?]+)');
-    const s = url.match(re2);
-    return s ? s[1] : 'unknown';
+    const m2 = url.match(re2);
+    return m2 ? m2[1] : 'unknown';
   }
-
 }

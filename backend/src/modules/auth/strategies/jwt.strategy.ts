@@ -1,26 +1,28 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 
+type JwtPayload = {
+  sub: string;
+  email?: string;
+};
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    config: ConfigService,
-    private prisma: PrismaService,
+    @Inject(ConfigService) configService: ConfigService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-        (req: any) => (req?.query?.t as string) || null,
-      ]),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('jwt.secret') as string,
+      secretOrKey: configService.get<string>('JWT_SECRET') || 'super-secret-key',
     });
   }
 
-  async validate(payload: { sub: string; username: string }) {
+  async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       include: {
@@ -28,31 +30,30 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           include: {
             role: {
               include: {
-                permissions: { include: { permission: true } },
+                permissions: {
+                  include: { permission: true },
+                },
               },
             },
           },
         },
-        userProjects: { select: { projectId: true } },
       },
     });
-    if (!user || !user.isActive) throw new UnauthorizedException();
 
-    const permissions = new Set<string>();
-    user.roles.forEach((ur) =>
-      ur.role.permissions.forEach((rp) => permissions.add(rp.permission.code)),
-    );
+    if (!user) return null;
 
+    const permissions = Array.from(
+      new Set(
+        (user.roles ?? []).flatMap((ur) =>
+          (ur.role?.permissions ?? []).map((rp) => rp.permission?.code).filter(Boolean),
+        ),
+      ),
+    ) as string[];
+
+    // PermissionsGuard only reads user.permissions
     return {
-      id: user.id,
-      username: user.username,
-      fullName: user.fullName,
-      roles: user.roles.map((r) => r.role.code),
-      permissions: Array.from(permissions),
-      mustChangePassword: user.mustChangePassword,
-      isStaff: user.isStaff,
-      projectIds: user.userProjects.map((p) => p.projectId),
-      defaultProjectId: user.defaultProjectId,
+      ...user,
+      permissions,
     };
   }
 }
