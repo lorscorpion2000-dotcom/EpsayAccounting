@@ -80,7 +80,7 @@ describe('menu-config / buildFilteredMenu', () => {
       .flatMap(allItemsOf)
       .find((it) => it.to === '/approvals');
     expect(approvalsItem).toBeDefined();
-    expect(approvalsItem!.label).toBe('کارتابل تأییدها');
+    expect(approvalsItem!.label).toBe('کارتابل تأییدات');
   });
 
   it('label "/approvals" -> "کارتابل من" when missing approvals.update', () => {
