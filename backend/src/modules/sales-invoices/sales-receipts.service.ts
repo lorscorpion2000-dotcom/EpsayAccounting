@@ -1,3 +1,4 @@
+import { JournalsService } from '../accounting/journals.service';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
@@ -9,6 +10,7 @@ export class SalesReceiptsService {
   constructor(
     private prisma: PrismaService,
     private fiscalYears: FiscalYearsService,
+    private journals: JournalsService,
   ) {}
 
   private async generateCode(): Promise<string> {
@@ -153,13 +155,27 @@ export class SalesReceiptsService {
     );
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string) {
     const r = await this.prisma.salesReceipt.findUnique({ where: { id } });
     if (!r) throw new NotFoundException('دریافت یافت نشد');
+    if (r.deletedAt) throw new BadRequestException('این دریافت قبلاً حذف شده است');
+
+    // 1. Reversal of accounting journal entry instead of hard delete
     if (r.journalEntryId) {
-      await this.prisma.journalLine.deleteMany({ where: { journalEntryId: r.journalEntryId } });
-      await this.prisma.journalEntry.delete({ where: { id: r.journalEntryId } }).catch(() => {});
+      try {
+        await this.journals.reverse(
+          r.journalEntryId,
+          'ابطال دریافت فروش شماره ' + r.code,
+          new Date(),
+          userId || 'system',
+        );
+      } catch (err: any) {
+        // Log reversal failure or continue if already reversed
+        console.warn('SalesReceipt reversal notice:', err?.message || err);
+      }
     }
+
+    // 2. Adjust invoice remaining received amount
     if (r.invoiceId) {
       const inv = await this.prisma.salesInvoice.findUnique({ where: { id: r.invoiceId } });
       if (inv) {
@@ -172,8 +188,17 @@ export class SalesReceiptsService {
         });
       }
     }
-    await this.prisma.salesReceipt.delete({ where: { id } });
-    return { success: true };
+
+    // 3. Soft delete receipt record
+    await this.prisma.salesReceipt.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: userId || null,
+      },
+    });
+
+    return { success: true, softDeleted: true, id };
   }
 
   // ═══════════════════════════════════════════════════════════

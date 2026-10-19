@@ -51,7 +51,7 @@ export class InventoryCountService {
         warehouse: true,
         items: {
           include: {
-            item: { select: { id: true, code: true, name: true, unit: true } },
+            item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } },
           },
           orderBy: { rowNumber: 'asc' },
         },
@@ -74,7 +74,7 @@ export class InventoryCountService {
     // Stock فعلی انبار
     const stocks = await this.prisma.stock.findMany({
       where: { warehouseId: dto.warehouseId },
-      include: { item: { select: { id: true, code: true, name: true, unit: true } } },
+      include: { item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } } },
     });
 
     const provided = dto.items || [];
@@ -130,7 +130,7 @@ export class InventoryCountService {
       include: {
         warehouse: { select: { id: true, code: true, name: true } },
         items: {
-          include: { item: { select: { id: true, code: true, name: true, unit: true } } },
+          include: { item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } } },
           orderBy: { rowNumber: 'asc' },
         },
       },

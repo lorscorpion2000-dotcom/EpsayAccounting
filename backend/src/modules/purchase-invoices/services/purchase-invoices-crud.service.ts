@@ -250,7 +250,6 @@ export class PurchaseInvoicesCrudService {
       data: {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.quantity !== undefined && { quantity }),
-        ...(dto.unit !== undefined && { unit: dto.unit }),
         ...(unitId !== undefined && { unitId }),
         ...(dto.unitPrice !== undefined && { unitPrice }),
         totalPrice: base,
@@ -326,7 +325,6 @@ export class PurchaseInvoicesCrudService {
         rowNumber: it.rowNumber ?? i + 1,
         description: it.description ?? '',
         quantity: Number(it.quantity ?? 0),
-        unit: String(it.unit ?? 'NUMBER'),
         unitId: null as string | null,
         unitPrice: Number(it.unitPrice ?? 0),
         totalPrice: base,
@@ -348,8 +346,9 @@ export class PurchaseInvoicesCrudService {
     });
     if (!items.length) throw new BadRequestException('حداقل یک ردیف لازم است');
 
-    const createUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
-    for (const it of items) it.unitId = createUnitMap.get(String(it.unit)) ?? null;
+    // Phase C: legacy text unit removed; unitId should already be set
+    // Phase C: unitId is expected to be provided; no mapping from removed it.unit
+    for (const it of items) it.unitId = it.unitId ?? null;
 
     const totals = this.computeTotals(items, dto.taxPercent ?? 10, dto.discountAmount ?? 0);
 
@@ -406,7 +405,6 @@ export class PurchaseInvoicesCrudService {
       rowNumber: it.rowNumber,
       description: it.description ?? '',
       quantity: Number(it.quantity),
-      unit: String(it.unit ?? 'NUMBER'),
       unitId: null as string | null,
       unitPrice: Number(it.unitPrice),
       totalPrice: Number(it.totalPrice),
@@ -414,8 +412,9 @@ export class PurchaseInvoicesCrudService {
       wbsItemId: null,
       notes: it.notes ?? null,
     }));
-    const poUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
-    for (const it of items) it.unitId = poUnitMap.get(String(it.unit)) ?? null;
+    // Phase C: legacy text unit removed; unitId should already be set
+    // Phase C: unitId is expected to be provided; no mapping from removed it.unit
+    for (const it of items) it.unitId = it.unitId ?? null;
 
     const taxPercent = Number(po.taxPercent ?? 10);
     const { subtotal, taxAmount, totalAmount } = this.computeTotals(items, taxPercent, 0);
@@ -444,7 +443,7 @@ export class PurchaseInvoicesCrudService {
       where: { id: grId },
       include: {
         items: {
-          include: { item: { select: { id: true, code: true, name: true, unit: true } } },
+          include: { item: { select: { id: true, code: true, name: true, unitId: true } } },
           orderBy: { rowNumber: 'asc' },
         },
       },
@@ -462,8 +461,7 @@ export class PurchaseInvoicesCrudService {
       rowNumber: it.rowNumber,
       description: it.item?.name ?? ('ردیف ' + it.rowNumber),
       quantity: Number(it.quantity),
-      unit: String(it.item?.unit ?? 'NUMBER'),
-      unitId: null as string | null,
+      unitId: it.item?.unitId ?? null,
       unitPrice: Number(it.unitCost),
       totalPrice: Number(it.totalCost),
       accountId: null,
@@ -478,8 +476,9 @@ export class PurchaseInvoicesCrudService {
       loadingCost: Number(it.loadingCost) || 0,
       notes: it.notes ?? null,
     }));
-    const grUnitMap = await this.resolveUnitIds(items.map((x) => String(x.unit)));
-    for (const it of items) it.unitId = grUnitMap.get(String(it.unit)) ?? null;
+    // Phase C: legacy text unit removed; unitId should already be set
+    // Phase C: unitId is expected to be provided; no mapping from removed it.unit
+    for (const it of items) it.unitId = it.unitId ?? null;
 
     const taxPercent = items[0]?.taxPercent ?? 9;
     const totals = this.computeTotals(items, taxPercent, 0);

@@ -12,7 +12,7 @@ export async function warehouseSummary(prisma: PrismaService, projectId: string,
     }),
     prisma.stockMovement.findMany({
       where: { projectId, movementDate: { gte: from, lte: to } },
-      include: { item: { select: { code: true, name: true, unit: true } } },
+      include: { item: { select: { code: true, name: true, unitObj: { select: { name: true } } } } },
     }),
   ]);
 
@@ -25,7 +25,7 @@ export async function warehouseSummary(prisma: PrismaService, projectId: string,
     const key = m.itemId;
     if (!consumption[key]) {
       consumption[key] = {
-        itemCode: m.item.code, itemName: m.item.name, unit: m.item.unit,
+        itemCode: m.item.code, itemName: m.item.name, unit: m.item.unitObj?.name || '',
         quantity: 0, value: 0,
       };
     }

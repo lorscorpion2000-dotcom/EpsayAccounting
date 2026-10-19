@@ -70,15 +70,15 @@ export class UnitsService {
   }
 
   async usageCount(id: string) {
-    const unit = await this.findOne(id);
-    const code = unit.code;
+    await this.findOne(id);
+    // const code = unit.code;
     const [items, prItems, poItems, piItems, wbs, priceList] = await Promise.all([
-      this.prisma.item.count({ where: { unit: code } }),
-      this.prisma.purchaseRequestItem.count({ where: { unit: code } }),
-      this.prisma.purchaseOrderItem.count({ where: { unit: code } }),
-      this.prisma.purchaseInvoiceItem.count({ where: { unit: code } }),
-      this.prisma.wbsItem.count({ where: { unit: code } }),
-      this.prisma.priceListItem.count({ where: { unit: code } }),
+      this.prisma.item.count({ where: { unitId: id } }),
+      this.prisma.purchaseRequestItem.count({ where: { unitId: id } }),
+      this.prisma.purchaseOrderItem.count({ where: { unitId: id } }),
+      this.prisma.purchaseInvoiceItem.count({ where: { unitId: id } }),
+      this.prisma.wbsItem.count({ where: { unitId: id } }),
+      this.prisma.priceListItem.count({ where: { unitId: id } }),
     ]);
     return {
       items, purchaseRequestItems: prItems, purchaseOrderItems: poItems,

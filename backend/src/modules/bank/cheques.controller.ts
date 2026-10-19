@@ -63,7 +63,7 @@ export class ChequesController {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
-    return this.service.remove(id, { force: wantForce && isAdmin });
+    return this.service.remove(id, { force: wantForce && isAdmin, userId: user?.id });
   }
 
   @Patch(':id/pass')

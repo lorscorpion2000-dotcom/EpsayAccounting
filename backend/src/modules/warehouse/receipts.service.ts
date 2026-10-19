@@ -123,7 +123,7 @@ export class ReceiptsService {
         supplier: true,
         createdBy: { select: { id: true, fullName: true } },
         items: {
-          include: { item: { include: { category: true } } },
+          include: { item: { include: { category: true, unitObj: true } } },
           orderBy: { rowNumber: 'asc' },
         },
       },

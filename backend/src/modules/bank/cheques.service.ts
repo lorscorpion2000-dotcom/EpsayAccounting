@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
+import { JournalsService } from '../accounting/journals.service';
 import { CreateChequeDto } from './dto/create-cheque.dto';
 import { UpdateChequeDto } from './dto/update-cheque.dto';
 import { generateCode } from '../../shared/utils/code-generator';
@@ -10,7 +11,8 @@ export class ChequesService {
   constructor(
     private prisma: PrismaService,
     private engine: AccountingEngineService,
-  ) {}
+  
+    private journals: JournalsService,) {}
 
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
@@ -137,32 +139,57 @@ export class ChequesService {
     return this.prisma.cheque.update({ where: { id }, data });
   }
 
-  async remove(id: string, options?: { force?: boolean }) {
+  async remove(id: string, options?: { force?: boolean; userId?: string }) {
     const existing = await this.findOne(id);
     const force = options?.force === true;
 
-    if (!force) {
-      if (existing.status !== 'PENDING') {
-        throw new BadRequestException('\u0641\u0642\u0637 \u0686\u06a9\u200c\u0647\u0627\u06cc \u062f\u0631 \u062c\u0631\u06cc\u0627\u0646 \u0642\u0627\u0628\u0644 \u062d\u0630\u0641 \u0647\u0633\u062a\u0646\u062f');
-      }
-      if (existing.issuedJournalEntryId) {
-        await this.prisma.journalLine.deleteMany({ where: { journalEntryId: existing.issuedJournalEntryId } });
-        await this.prisma.journalEntry.delete({ where: { id: existing.issuedJournalEntryId } }).catch(() => {});
-      }
-      await this.prisma.cheque.delete({ where: { id } });
-      return { success: true, hardDeleted: true };
+    if (!force && existing.status !== 'PENDING') {
+      throw new BadRequestException(
+        'فقط چک‌های در جریان قابل حذف هستند',
+      );
     }
 
-    // force (admin) — حذف کامل حتی با JE های settled
-    const jeIds = [existing.issuedJournalEntryId, existing.settledJournalEntryId].filter(Boolean) as string[];
-    await this.prisma.$transaction(async (tx) => {
-      for (const jeId of jeIds) {
-        await tx.journalLine.deleteMany({ where: { journalEntryId: jeId } });
-        await tx.journalEntry.delete({ where: { id: jeId } }).catch(() => {});
+    const reason = force
+      ? 'Force delete cheque - reversal'
+      : 'Delete cheque - reversal';
+
+    const reversalDate = new Date();
+    const reversedJournalIds: string[] = [];
+
+    const journalIds = Array.from(
+      new Set(
+        [
+          existing.issuedJournalEntryId,
+          existing.settledJournalEntryId,
+        ].filter(Boolean) as string[],
+      ),
+    );
+
+    for (const journalId of journalIds) {
+      const reversal = await this.journals.reverse(
+        journalId,
+        reason,
+        reversalDate,
+        '',
+      );
+
+      if (reversal?.id) {
+        reversedJournalIds.push(reversal.id);
       }
-      await tx.cheque.delete({ where: { id } });
+    }
+
+    // حذف خود چک مانند رفتار فعلی باقی می‌ماند.
+    // حذف فیزیکی اسناد حسابداری کاملاً ممنوع است.
+    await this.prisma.cheque.delete({
+      where: { id },
     });
-    return { success: true, hardDeleted: true, removedJEs: jeIds.length };
+
+    return {
+      success: true,
+      hardDeleted: true,
+      forced: force,
+      reversedJournalIds,
+    };
   }
 
   /** وصول چک (PASSED برای صادره، COLLECTED منطقاً ولی status=PASSED) */

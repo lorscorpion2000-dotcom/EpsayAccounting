@@ -77,7 +77,6 @@ export class WbsService {
         code,
         title: dto.title,
         level: dto.level,
-        unit: dto.unit,
         unitId,
         quantity: dto.quantity,
         unitPrice: dto.unitPrice,
@@ -104,7 +103,6 @@ export class WbsService {
       data: {
         title: dto.title,
         level: dto.level,
-        unit: dto.unit,
         ...(unitId !== undefined && { unitId }),
         quantity: dto.quantity,
         unitPrice: dto.unitPrice,

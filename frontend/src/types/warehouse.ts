@@ -98,6 +98,14 @@ export interface Warehouse {
   _count?: { stocks: number; receipts: number; issues: number };
 }
 
+export interface UnitRef {
+  id: string;
+  name: string;
+  symbol?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 export interface ItemCategory {
   id: string;
   code: string;
@@ -115,7 +123,9 @@ export interface Item {
   code: string;
   name: string;
   type: ItemType;
-  unit: ItemUnit;
+  unit?: ItemUnit;
+  unitId?: string | null;
+  unitObj?: UnitRef | null;
   categoryId?: string | null;
   category?: { id: string; name: string } | null;
   minStock?: string | null;
@@ -147,7 +157,14 @@ export interface StockMovement {
   warehouseId: string;
   warehouse?: { id: string; code: string; name: string };
   itemId: string;
-  item?: { id: string; code: string; name: string; unit: ItemUnit };
+  item?: {
+    id: string;
+    code: string;
+    name: string;
+    unit?: ItemUnit;
+    unitId?: string | null;
+    unitObj?: UnitRef | null;
+  };
   type: MovementType;
   quantity: string;
   unitCost: string;

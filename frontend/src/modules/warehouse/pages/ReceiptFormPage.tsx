@@ -85,6 +85,9 @@ function computeLine(it: ItemForm) {
   return { base, discountAmount, taxAmount, lineTotal };
 }
 
+const getItemUnitLabel = (it: Item) =>
+  it.unitObj?.symbol || it.unitObj?.name || (it.unit ? ITEM_UNIT_LABELS[it.unit] : '') || '—';
+
 export default function ReceiptFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -311,7 +314,7 @@ export default function ReceiptFormPage() {
                           <option value="">— انتخاب کالا —</option>
                           {items.map((it) => (
                             <option key={it.id} value={it.id}>
-                              {it.code} — {it.name} ({ITEM_UNIT_LABELS[it.unit]})
+                              {it.code} — {it.name} ({getItemUnitLabel(it)})
                             </option>
                           ))}
                         </select>

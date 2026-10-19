@@ -12,6 +12,9 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { exportToExcel } from '@/utils/export-excel';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
 import { todayLocalISO } from '@/utils/local-date';
+const getItemUnitLabel = (it: Item) =>
+  it.unitObj?.symbol || it.unitObj?.name || (it.unit ? ITEM_UNIT_LABELS[it.unit] : '') || '—';
+
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +71,7 @@ export default function ItemsPage() {
       'کد': it.code,
       'نام کالا': it.name,
       'نوع': ITEM_TYPE_LABELS[it.type],
-      'واحد': ITEM_UNIT_LABELS[it.unit],
+      'واحد': getItemUnitLabel(it),
       'دسته': it.category?.name || '',
       'موجودی کل': it.totalStock || 0,
       'ارزش موجودی': it.totalValue || 0,
@@ -162,7 +165,7 @@ export default function ItemsPage() {
                         {ITEM_TYPE_LABELS[it.type]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-xs text-slate-600">{ITEM_UNIT_LABELS[it.unit]}</td>
+                    <td className="px-4 py-3 text-center text-xs text-slate-600">{getItemUnitLabel(it)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={clsx(
                         'num font-medium',

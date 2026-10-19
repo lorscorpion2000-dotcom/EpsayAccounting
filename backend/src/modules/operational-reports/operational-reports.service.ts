@@ -240,7 +240,7 @@ export class OperationalReportsService {
         warehouse: { select: { id: true, code: true, name: true } },
         items: {
           include: {
-            item: { select: { id: true, code: true, name: true, unit: true } },
+            item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } },
           },
         },
       },
@@ -263,7 +263,7 @@ export class OperationalReportsService {
           itemId: it.item?.id,
           itemCode: it.item?.code,
           itemName: it.item?.name,
-          unit: it.item?.unit,
+          unit: it.item?.unitObj?.name || it.item?.unitObj?.symbol || '',
           systemQty: Number(it.systemQty),
           physicalQty: Number(it.physicalQty),
           difference: Number(it.difference),

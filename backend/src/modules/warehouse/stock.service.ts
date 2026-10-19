@@ -45,7 +45,7 @@ export class StockService {
       where,
       include: {
         warehouse: { select: { id: true, code: true, name: true } },
-        item: { select: { id: true, code: true, name: true, unit: true } },
+        item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } },
       },
       orderBy: [{ movementDate: 'desc' }, { createdAt: 'desc' }],
       take: 500,

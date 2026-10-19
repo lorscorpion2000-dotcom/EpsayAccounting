@@ -25,6 +25,9 @@ interface FormData {
   items: ItemForm[];
 }
 
+const getItemUnitLabel = (it: Item) =>
+  it.unitObj?.symbol || it.unitObj?.name || (it.unit ? ITEM_UNIT_LABELS[it.unit] : '') || '—';
+
 export default function IssueFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -243,7 +246,7 @@ export default function IssueFormPage() {
                             const s = getStock(it.id);
                             return (
                               <option key={it.id} value={it.id}>
-                                {it.code} — {it.name} ({ITEM_UNIT_LABELS[it.unit]}) - موجودی: {s.toFixed(2)}
+                                {it.code} — {it.name} ({getItemUnitLabel(it)}) - موجودی: {s.toFixed(2)}
                               </option>
                             );
                           })}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { Loader2, BarChart3, FileSpreadsheet, RefreshCw, Search } from 'lucide-react';
 
@@ -31,7 +31,7 @@ export default function DetailedTrialBalancePage() {
 
   const load = async (fyId?: string) => {
     const id = fyId || fiscalYearId;
-    if (!id) { toast.error('Ø³Ø§Ù„ Ù…Ø§Ù„ÛŒ Ø±Ø§ Ø§Ù†ØªØ®Ø§Ø¨ Ú©Ù†ÛŒØ¯'); return; }
+    if (!id) { toast.error('سال مالی را انتخاب کنید'); return; }
     setLoading(true);
     try {
       setData(await accountingApi.reports.detailedTrialBalance({
@@ -39,22 +39,22 @@ export default function DetailedTrialBalancePage() {
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
       }));
-    } catch { toast.error('Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ'); }
+    } catch { toast.error('خطا در بارگذاری'); }
     finally { setLoading(false); }
   };
 
   const exportExcel = () => {
-    if (!data?.rows?.length) { toast.info('Ø¯Ø§Ø¯Ù‡â€ŒØ§ÛŒ Ù†ÛŒØ³Øª'); return; }
+    if (!data?.rows?.length) { toast.info('داده‌ای نیست'); return; }
     const rows = data.rows.map((r: any, i: number) => ({
-      'Ø±Ø¯ÛŒÙ': i + 1,
-      'Ú©Ø¯': r.accountCode,
-      'Ù†Ø§Ù…': r.accountName,
-      'Ù…Ø§Ù†Ø¯Ù‡ Ø§Ø¨ØªØ¯Ø§ - Ø¨Ø¯Ù‡Ú©Ø§Ø±': r.openingDebit,
-      'Ù…Ø§Ù†Ø¯Ù‡ Ø§Ø¨ØªØ¯Ø§ - Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±': r.openingCredit,
-      'Ú¯Ø±Ø¯Ø´ - Ø¨Ø¯Ù‡Ú©Ø§Ø±': r.periodDebit,
-      'Ú¯Ø±Ø¯Ø´ - Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±': r.periodCredit,
-      'Ù…Ø§Ù†Ø¯Ù‡ Ø§Ù†ØªÙ‡Ø§ - Ø¨Ø¯Ù‡Ú©Ø§Ø±': r.closingDebit,
-      'Ù…Ø§Ù†Ø¯Ù‡ Ø§Ù†ØªÙ‡Ø§ - Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±': r.closingCredit,
+      'ردیف': i + 1,
+      'کد': r.accountCode,
+      'نام': r.accountName,
+      'مانده ابتدا - بدهکار': r.openingDebit,
+      'مانده ابتدا - بستانکار': r.openingCredit,
+      'گردش - بدهکار': r.periodDebit,
+      'گردش - بستانکار': r.periodCredit,
+      'مانده انتها - بدهکار': r.closingDebit,
+      'مانده انتها - بستانکار': r.closingCredit,
     }));
     void exportToExcel({
       filename: 'DetailedTB.xlsx',
@@ -63,7 +63,7 @@ export default function DetailedTrialBalancePage() {
         rows,
       }],
     });
-    toast.success('Excel Ø¯Ø§Ù†Ù„ÙˆØ¯ Ø´Ø¯');
+    toast.success('Excel دانلود شد');
   };
 
   return (
@@ -72,12 +72,12 @@ export default function DetailedTrialBalancePage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-brand-600" />
-            ØªØ±Ø§Ø² Ø¢Ø²Ù…Ø§ÛŒØ´ÛŒ ØªÙØµÛŒÙ„ÛŒ
+            تراز آزمایشی تفصیلی
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Ø¨Ø§ Ù…Ø§Ù†Ø¯Ù‡ Ø§Ø¨ØªØ¯Ø§ Ú¯Ø±Ø¯Ø´ Ø¯ÙˆØ±Ù‡ Ùˆ Ù…Ø§Ù†Ø¯Ù‡ Ø§Ù†ØªÙ‡Ø§</p>
+          <p className="text-sm text-slate-500 mt-1">با مانده ابتدا گردش دوره و مانده انتها</p>
         </div>
         <div className="flex gap-2">
-          <PrintButton contentRef={printRef} documentTitle="ØªØ±Ø§Ø² Ø¢Ø²Ù…Ø§ÛŒØ´ÛŒ ØªÙØµÛŒÙ„ÛŒ"  orientation="landscape" /> {/* LANDSCAPE_PATCH */}
+          <PrintButton contentRef={printRef} documentTitle="تراز آزمایشی تفصیلی" />
           <button className="btn-secondary" onClick={() => load()}><RefreshCw className="w-4 h-4" /></button>
           <button className="btn-secondary" onClick={exportExcel} disabled={!data}><FileSpreadsheet className="w-4 h-4" /> Excel</button>
         </div>
@@ -85,23 +85,23 @@ export default function DetailedTrialBalancePage() {
 
       <div className="card p-4 grid grid-cols-1 md:grid-cols-4 gap-3 no-print">
         <div>
-          <label className="block text-xs text-slate-500 mb-1">Ø³Ø§Ù„ Ù…Ø§Ù„ÛŒ</label>
+          <label className="block text-xs text-slate-500 mb-1">سال مالی</label>
           <select value={fiscalYearId} onChange={(e) => setFiscalYearId(e.target.value)} className="input w-full">
-            <option value="">â€” Ø§Ù†ØªØ®Ø§Ø¨ â€”</option>
+            <option value="">— انتخاب —</option>
             {fiscalYears.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-500 mb-1">Ø§Ø² ØªØ§Ø±ÛŒØ®</label>
+          <label className="block text-xs text-slate-500 mb-1">از تاریخ</label>
           <PersianDatePicker value={fromDate} onChange={(v: string | null) => setFromDate(v || '')} />
         </div>
         <div>
-          <label className="block text-xs text-slate-500 mb-1">ØªØ§ ØªØ§Ø±ÛŒØ®</label>
+          <label className="block text-xs text-slate-500 mb-1">تا تاریخ</label>
           <PersianDatePicker value={toDate} onChange={(v: string | null) => setToDate(v || '')} />
         </div>
         <div className="flex items-end">
           <button className="btn-primary w-full" onClick={() => load()} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Ù†Ù…Ø§ÛŒØ´
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} نمایش
           </button>
         </div>
       </div>
@@ -109,25 +109,25 @@ export default function DetailedTrialBalancePage() {
       {data && (
         <div ref={printRef} className="card overflow-hidden">
           <div className="p-6 border-b">
-            <PrintHeader title="ØªØ±Ø§Ø² Ø¢Ø²Ù…Ø§ÛŒØ´ÛŒ ØªÙØµÛŒÙ„ÛŒ" subtitle={fiscalYears.find((f: any) => f.id === fiscalYearId)?.name || ''} />
+            <PrintHeader title="تراز آزمایشی تفصیلی" subtitle={fiscalYears.find((f: any) => f.id === fiscalYearId)?.name || ''} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs min-w-[1000px]">
               <thead className="bg-slate-100 border-b">
                 <tr>
-                  <th rowSpan={2} className="border-l px-2 py-2 text-right font-medium text-slate-600 w-20">Ú©Ø¯</th>
-                  <th rowSpan={2} className="border-l px-2 py-2 text-right font-medium text-slate-600">Ù†Ø§Ù… Ø­Ø³Ø§Ø¨</th>
-                  <th colSpan={2} className="border-l px-2 py-2 text-center font-medium text-slate-600 bg-blue-50">Ù…Ø§Ù†Ø¯Ù‡ Ø§Ø¨ØªØ¯Ø§ÛŒ Ø¯ÙˆØ±Ù‡</th>
-                  <th colSpan={2} className="border-l px-2 py-2 text-center font-medium text-slate-600 bg-emerald-50">Ú¯Ø±Ø¯Ø´ Ø¯ÙˆØ±Ù‡</th>
-                  <th colSpan={2} className="px-2 py-2 text-center font-medium text-slate-600 bg-amber-50">Ù…Ø§Ù†Ø¯Ù‡ Ø§Ù†ØªÙ‡Ø§ÛŒ Ø¯ÙˆØ±Ù‡</th>
+                  <th rowSpan={2} className="border-l px-2 py-2 text-right font-medium text-slate-600 w-20">کد</th>
+                  <th rowSpan={2} className="border-l px-2 py-2 text-right font-medium text-slate-600">نام حساب</th>
+                  <th colSpan={2} className="border-l px-2 py-2 text-center font-medium text-slate-600 bg-blue-50">مانده ابتدای دوره</th>
+                  <th colSpan={2} className="border-l px-2 py-2 text-center font-medium text-slate-600 bg-emerald-50">گردش دوره</th>
+                  <th colSpan={2} className="px-2 py-2 text-center font-medium text-slate-600 bg-amber-50">مانده انتهای دوره</th>
                 </tr>
                 <tr>
-                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-blue-50 w-32">Ø¨Ø¯Ù‡Ú©Ø§Ø±</th>
-                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-blue-50 w-32">Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±</th>
-                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-emerald-50 w-32">Ø¨Ø¯Ù‡Ú©Ø§Ø±</th>
-                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-emerald-50 w-32">Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±</th>
-                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-amber-50 w-32">Ø¨Ø¯Ù‡Ú©Ø§Ø±</th>
-                  <th className="px-2 py-1 text-left font-medium text-slate-500 bg-amber-50 w-32">Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±</th>
+                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-blue-50 w-32">بدهکار</th>
+                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-blue-50 w-32">بستانکار</th>
+                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-emerald-50 w-32">بدهکار</th>
+                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-emerald-50 w-32">بستانکار</th>
+                  <th className="border-l px-2 py-1 text-left font-medium text-slate-500 bg-amber-50 w-32">بدهکار</th>
+                  <th className="px-2 py-1 text-left font-medium text-slate-500 bg-amber-50 w-32">بستانکار</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -135,16 +135,16 @@ export default function DetailedTrialBalancePage() {
                   <tr key={r.accountId} className="hover:bg-slate-50/50">
                     <td className="border-l px-2 py-1 num" dir="ltr">{r.accountCode}</td>
                     <td className="border-l px-2 py-1">{r.accountName}</td>
-                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.openingDebit ? formatNumber(r.openingDebit) : 'â€”'}</td>
-                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.openingCredit ? formatNumber(r.openingCredit) : 'â€”'}</td>
-                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.periodDebit ? formatNumber(r.periodDebit) : 'â€”'}</td>
-                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.periodCredit ? formatNumber(r.periodCredit) : 'â€”'}</td>
-                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.closingDebit ? formatNumber(r.closingDebit) : 'â€”'}</td>
-                    <td className="px-2 py-1 text-left num" dir="ltr">{r.closingCredit ? formatNumber(r.closingCredit) : 'â€”'}</td>
+                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.openingDebit ? formatNumber(r.openingDebit) : '—'}</td>
+                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.openingCredit ? formatNumber(r.openingCredit) : '—'}</td>
+                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.periodDebit ? formatNumber(r.periodDebit) : '—'}</td>
+                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.periodCredit ? formatNumber(r.periodCredit) : '—'}</td>
+                    <td className="border-l px-2 py-1 text-left num" dir="ltr">{r.closingDebit ? formatNumber(r.closingDebit) : '—'}</td>
+                    <td className="px-2 py-1 text-left num" dir="ltr">{r.closingCredit ? formatNumber(r.closingCredit) : '—'}</td>
                   </tr>
                 ))}
                 <tr className="bg-slate-100 font-bold">
-                  <td colSpan={2} className="border-l px-2 py-2 text-right">Ø¬Ù…Ø¹ Ú©Ù„</td>
+                  <td colSpan={2} className="border-l px-2 py-2 text-right">جمع کل</td>
                   <td className="border-l px-2 py-2 text-left num" dir="ltr">{formatNumber(data.totals.openingDebit)}</td>
                   <td className="border-l px-2 py-2 text-left num" dir="ltr">{formatNumber(data.totals.openingCredit)}</td>
                   <td className="border-l px-2 py-2 text-left num" dir="ltr">{formatNumber(data.totals.periodDebit)}</td>

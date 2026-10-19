@@ -89,7 +89,6 @@ export class ItemsService {
         code,
         name: dto.name,
         type: dto.type as any,
-        unit: dto.unit as any,
         unitId,
         categoryId: dto.categoryId,
         minStock: dto.minStock,
@@ -110,7 +109,6 @@ export class ItemsService {
       data: {
         name: dto.name,
         type: dto.type as any,
-        unit: dto.unit as any,
         ...(unitId !== undefined && { unitId }),
         categoryId: dto.categoryId,
         minStock: dto.minStock,

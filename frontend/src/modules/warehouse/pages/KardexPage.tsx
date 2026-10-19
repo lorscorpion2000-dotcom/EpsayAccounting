@@ -3,13 +3,16 @@ import { toast } from 'sonner';
 import { Loader2, Search, BookMarked, FileSpreadsheet } from 'lucide-react';
 import clsx from 'clsx';
 import { warehouseApi } from '../services/warehouse.api';
-import type { Item, Warehouse, KardexResult } from '@/types/warehouse';
+import type { Item, Warehouse, KardexResult, ItemUnit } from '@/types/warehouse';
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_COLORS, ITEM_UNIT_LABELS } from '@/types/warehouse';
 import { formatJalaliDate, toPersianDigits } from '@/utils/format';
 
 import { exportToExcel } from '@/utils/export-excel';
 import { todayLocalISO } from '@/utils/local-date';
 import PagePrintButton from '@/components/PagePrintButton'; // PHASE2_PRINT_PATCHED
+const getMovementItemUnitLabel = (item?: { unit?: ItemUnit; unitObj?: { symbol?: string | null; name: string } | null }) =>
+  item?.unitObj?.symbol || item?.unitObj?.name || (item?.unit ? ITEM_UNIT_LABELS[item.unit] : '') || '—';
+
 export default function KardexPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -153,7 +156,7 @@ export default function KardexPage() {
                   {result.item.name}
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  واحد: {ITEM_UNIT_LABELS[result.item.unit]}
+                  واحد: {getMovementItemUnitLabel(result.item)}
                 </div>
               </div>
               {result.totals && (

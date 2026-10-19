@@ -17,7 +17,8 @@ interface Props {
 interface FormData {
   name: string;
   type: ItemType;
-  unit: ItemUnit;
+  unit?: ItemUnit;
+  unitId?: string | null;
   categoryId?: string;
   minStock?: number;
   maxStock?: number;

@@ -72,7 +72,7 @@ export class MaterialPriceDiffService {
         contractId: dto.contractId,
         statementId: dto.statementId,
         materialType: dto.materialType,
-        unit: dto.unit,
+        
         unitId,
         quantity: dto.quantity,
         basePrice: dto.basePrice,

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PaySupplierDto } from './dto/pay-supplier.dto';
 import { FiscalYearsService } from '../accounting/fiscal-years.service';
+import { JournalsService } from '../accounting/journals.service';
 import { generateCode } from '../../shared/utils/code-generator';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class SupplierPaymentsService {
   constructor(
     private prisma: PrismaService,
     private fiscalYears: FiscalYearsService,
+    private journals: JournalsService,
   ) {}
 
   private async generateCode(): Promise<string> {
@@ -149,29 +151,84 @@ export class SupplierPaymentsService {
     );
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId?: string, reason?: string) {
     const p = await this.prisma.supplierPayment.findUnique({ where: { id } });
     if (!p) throw new NotFoundException('پرداخت یافت نشد');
-    // حذف JE
-    if (p.journalEntryId) {
-      await this.prisma.journalLine.deleteMany({ where: { journalEntryId: p.journalEntryId } });
-      await this.prisma.journalEntry.delete({ where: { id: p.journalEntryId } }).catch(() => {});
+    if ((p as any).deletedAt) {
+      throw new BadRequestException('این پرداخت قبلاً حذف شده است');
     }
-    // به‌روزرسانی فاکتور
-    if (p.invoiceId) {
-      const inv = await this.prisma.purchaseInvoice.findUnique({ where: { id: p.invoiceId } });
-      if (inv) {
-        const newPaid = Math.max(Number(inv.paidAmount) - Number(p.amount), 0);
-        const newStatus = newPaid < 0.01 ? 'APPROVED'
-          : newPaid >= Number(inv.totalAmount) - 0.01 ? 'PAID' : 'PARTIALLY_PAID';
-        await this.prisma.purchaseInvoice.update({
-          where: { id: inv.id },
-          data: { paidAmount: newPaid, status: newStatus },
+
+    const finalReason =
+      reason && reason.trim().length >= 5
+        ? reason.trim()
+        : 'حذف پرداخت به تأمین‌کننده ' + p.code;
+    const reversalDate = new Date();
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        let reversedId: string | null = null;
+        if (p.journalEntryId) {
+          try {
+            const rev = await this.journals.reverse(
+              p.journalEntryId,
+              finalReason,
+              reversalDate,
+              userId || '',
+            );
+            reversedId = rev.id;
+          } catch (e: any) {
+            if (/only posted/i.test(e?.message || '')) {
+              reversedId = null;
+            } else {
+              throw new BadRequestException(
+                'سند برگشتی ناموفق: ' + (e?.message || 'خطای نامشخص'),
+              );
+            }
+          }
+        }
+
+        let invoiceStatus: string | null = null;
+        if (p.invoiceId) {
+          const inv = await tx.purchaseInvoice.findUnique({ where: { id: p.invoiceId } });
+          if (inv) {
+            const newPaid = Math.max(
+              Number(inv.paidAmount) - Number(p.amount),
+              0,
+            );
+            const newStatus =
+              newPaid < 0.01
+                ? 'APPROVED'
+                : newPaid >= Number(inv.totalAmount) - 0.01
+                ? 'PAID'
+                : 'PARTIALLY_PAID';
+
+            await tx.purchaseInvoice.update({
+              where: { id: inv.id },
+              data: { paidAmount: newPaid, status: newStatus },
+            });
+            invoiceStatus = newStatus;
+          }
+        }
+
+        await tx.supplierPayment.update({
+          where: { id },
+          data: {
+            deletedAt: new Date(),
+            deletedBy: userId || null,
+          } as any,
         });
-      }
-    }
-    await this.prisma.supplierPayment.delete({ where: { id } });
-    return { success: true };
+
+        return {
+          ok: true,
+          reversedJournalId: reversedId,
+          softDeleted: true,
+          invoiceStatus,
+          reason: finalReason,
+          by: userId || null,
+        };
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   private async resolveSupplierPayable(supplierId: string) {

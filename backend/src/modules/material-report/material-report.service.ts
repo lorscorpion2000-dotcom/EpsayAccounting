@@ -30,7 +30,7 @@ export class MaterialReportService {
     const movements = await this.prisma.stockMovement.findMany({
       where,
       include: {
-        item: { select: { id: true, code: true, name: true, unit: true, category: { select: { name: true } } } },
+        item: { select: { id: true, code: true, name: true, unitObj: { select: { name: true } }, category: { select: { name: true } } } },
         warehouse: { select: { id: true, code: true, name: true } },
       },
       orderBy: [{ movementDate: 'desc' }, { createdAt: 'desc' }],
@@ -60,7 +60,7 @@ export class MaterialReportService {
       itemCode: m.item.code,
       itemName: m.item.name,
       category: m.item.category?.name || '',
-      unit: m.item.unit,
+      unit: m.item.unitObj?.name || '',
       quantity: Number(m.quantity),
       unitCost: Number(m.unitCost),
       totalCost: Number(m.totalCost),
@@ -200,7 +200,7 @@ export class MaterialReportService {
         wbsCode: wbs.code,
         wbsTitle: wbs.title,
         level: wbs.level,
-        unit: wbs.unit,
+        
         quantity,
         contractUnitPrice: Number(wbs.unitPrice || 0),
         contractTotalPrice: Number(wbs.totalPrice || 0),

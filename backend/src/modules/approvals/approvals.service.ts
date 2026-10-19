@@ -819,7 +819,7 @@ export class ApprovalsService {
               rowNumber: it.rowNumber,
               description: it.description,
               quantity: it.quantity,
-              unit: it.unit,
+              unit: '', // Phase C: legacy text unit removed
               unitPrice: 0,
               totalPrice: 0,
               notes: it.notes,

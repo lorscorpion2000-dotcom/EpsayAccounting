@@ -32,7 +32,7 @@ export class DataIoService {
       orderBy: { code: 'asc' },
       include: { category: { select: { code: true, name: true } } },
     }).then((rows) => rows.map((r) => ({
-      code: r.code, name: r.name, type: r.type, unit: r.unit,
+      code: r.code, name: r.name, type: r.type, 
       categoryCode: r.category?.code || '',
       categoryName: r.category?.name || '',
       minStock: r.minStock, maxStock: r.maxStock,
@@ -56,7 +56,7 @@ export class DataIoService {
       title: r.title,
       level: r.level,
       parentCode: r.parent?.code || '',
-      unit: r.unit || '',
+      
       quantity: r.quantity,
       unitPrice: r.unitPrice,
       sortOrder: r.sortOrder,

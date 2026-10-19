@@ -50,7 +50,7 @@ export class WarehouseTransferService {
         fromWarehouse: true,
         toWarehouse: true,
         items: {
-          include: { item: { select: { id: true, code: true, name: true, unit: true } } },
+          include: { item: { select: { id: true, code: true, name: true, unitObj: { select: { id: true, name: true, symbol: true } } } } },
           orderBy: { rowNumber: 'asc' },
         },
       },

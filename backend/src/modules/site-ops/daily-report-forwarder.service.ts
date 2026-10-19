@@ -291,7 +291,7 @@ export class DailyReportForwarderService {
             },
             update: {
               quantity: Number(row.quantity) || 0,
-              unit: row.unit || null,
+              
               unitId: progressUnitId,
               progressPct: row.progressPct ? Number(row.progressPct) : null,
               description: row.description,
@@ -303,7 +303,7 @@ export class DailyReportForwarderService {
               reportId: report.id,
               snapshotDate: report.reportDate,
               quantity: Number(row.quantity) || 0,
-              unit: row.unit || null,
+              
               unitId: progressUnitId,
               progressPct: row.progressPct ? Number(row.progressPct) : null,
               description: row.description,
