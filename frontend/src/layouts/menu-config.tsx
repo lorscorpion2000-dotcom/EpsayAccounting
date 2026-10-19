@@ -22,7 +22,6 @@ import {
   Wallet,
   Coins,
   DollarSign,
-  UserCheck,
   CalendarCheck,
   FileText,
   PieChart,
@@ -38,8 +37,7 @@ import {
   Clock,
   BadgePercent,
   Warehouse,
-  ClipboardList,
-} from 'lucide-react';
+  ClipboardList } from 'lucide-react';
 import { getMenuPermission } from '../config/route-permissions';
 
 export interface MenuItem {
@@ -86,8 +84,7 @@ export const MENU: MenuSection[] = [
       { to: '/contracts', label: 'قراردادها و پیمان‌ها', icon: FileSignature },
       { to: '/contracts/templates', label: 'قالب‌های قرارداد', icon: FileSpreadsheet },
       { to: '/timeline/guarantees', label: 'ضمانت‌نامه‌های پروژه', icon: ShieldCheck },
-    ],
-  },
+    ] },
 
   // 3. تدارکات و خرید
   {
@@ -99,8 +96,7 @@ export const MENU: MenuSection[] = [
       { to: '/procurement/orders', label: 'سفارش‌های خرید (کارپرداز)', icon: ShoppingCart },
       { to: '/procurement/invoices', label: 'فاکتورهای خرید و تأمین', icon: Receipt },
       { to: '/procurement/supplier-payments', label: 'پرداخت به تأمین‌کنندگان', icon: DollarSign },
-    ],
-  },
+    ] },
 
   // 4. انبارداری و مصالح
   {
@@ -116,8 +112,7 @@ export const MENU: MenuSection[] = [
       { to: '/inventory-counts', label: 'انبارگردانی و کسری/اضافی', icon: CheckSquare },
       { to: '/warehouse/kardex', label: 'کاردکس ریالی و تعدادی', icon: FileSpreadsheet },
       { to: '/material-report/consumption', label: 'مدیریت مصالح پای کار', icon: Package },
-    ],
-  },
+    ] },
 
   // 5. کارگاه و عملیات اجرایی
   {
@@ -128,8 +123,7 @@ export const MENU: MenuSection[] = [
       { to: '/site-ops/daily-reports', label: 'گزارش روزانه سرپرست', icon: HardHat },
       { to: '/site-ops/failed-forwardings', label: 'صندوق ارسال گزارشات', icon: AlertTriangle },
       { to: '/equipment', label: 'ماشین‌آلات و تجهیزات کارگاه', icon: Truck },
-    ],
-  },
+    ] },
 
   // 6. حسابداری مالی و پروژه‌ای
   {
@@ -146,8 +140,7 @@ export const MENU: MenuSection[] = [
           { to: '/accounting/advanced-ledger', label: 'دفتر کل و معین پیشرفته', icon: FileSpreadsheet },
           { to: '/adjustments', label: 'اسناد تعدیل و اصلاحی', icon: SlidersHorizontal },
           { to: '/settings/period-lock', label: 'بستن حساب‌ها و قفل دوره', icon: ShieldCheck },
-        ],
-      },
+        ] },
       {
         key: 'financial-statements',
         title: 'صورت‌های مالی و ترازها',
@@ -160,10 +153,8 @@ export const MENU: MenuSection[] = [
           { to: '/overhead-allocations', label: 'تسهیم هزینه‌های بالاسری', icon: BadgePercent },
           { to: '/accounting/reports/vat', label: 'مالیات بر ارزش افزوده (VAT)', icon: Receipt },
           { to: '/tax-reports', label: 'گزارشات فصلی و مالیاتی', icon: FileSpreadsheet },
-        ],
-      },
-    ],
-  },
+        ] },
+    ] },
 
   // 7. خزانه‌داری و تنخواه‌گردان
   {
@@ -178,8 +169,7 @@ export const MENU: MenuSection[] = [
       { to: '/accounting/reports/cash-flow', label: 'جریان وجوه نقد (Cash Flow)', icon: DollarSign },
       { to: '/partner-capital/accounts', label: 'سرمایه، سهم‌الشرکه و شرکا', icon: Users },
       { to: '/accounting/fixed-assets', label: 'اموال و دارایی‌های ثابت', icon: Package },
-    ],
-  },
+    ] },
 
     // 9. فروش و صورت‌وضعیت‌ها
   {
@@ -193,8 +183,7 @@ export const MENU: MenuSection[] = [
       { to: '/sales/contracts', label: 'قراردادهای پیش‌فروش و فروش', icon: FileSignature },
       { to: '/sales/invoices', label: 'فاکتورهای فروش و درآمد', icon: Receipt },
       { to: '/sales/receipts', label: 'رسید دریافت وجوه فروش', icon: DollarSign },
-    ],
-  },
+    ] },
 
   // 10. گزارشات جامع مدیریتی
   {
@@ -208,8 +197,7 @@ export const MENU: MenuSection[] = [
       { to: '/accounting/reports/ap-aging-detail', label: 'گزارش سنی بدهی‌ها (بستانکاران)', icon: FileSpreadsheet },
       { to: '/accounting/reports/ar-aging-detail', label: 'گزارش سنی مطالبات (بدهکاران)', icon: FileSpreadsheet },
       { to: '/wip', label: 'کنترل پروژه و بودجه‌بندی', icon: Scale },
-    ],
-  },
+    ] },
 
   // 11. پایه‌ها، تعاریف و مدیریت سیستم
   {
@@ -230,8 +218,7 @@ export const MENU: MenuSection[] = [
           { to: '/settings/units', label: 'واحدهای سنجش و اندازه‌گیری', icon: SlidersHorizontal },
           { to: '/settings/expense-categories', label: 'سرفصل‌های هزینه‌های کارگاه', icon: Tags },
           { to: '/timeline/permits', label: 'مجوزها، بیمه و اسناد پروژه', icon: Clock },
-        ],
-      },
+        ] },
       {
         key: 'system-management',
         title: 'امنیت و نگهداری',
@@ -245,10 +232,8 @@ export const MENU: MenuSection[] = [
           { to: '/settings/company', label: 'مشخصات شرکت و مهر و لوگو', icon: Building2 },
           { to: '/settings/profile', label: 'پروفایل کاربر جاری', icon: Users },
           { to: '/help/workflows', label: 'راهنمای گردش‌کارهای سیستم', icon: HelpCircle },
-        ],
-      },
-    ],
-  },
+        ] },
+    ] },
 ];
 
 export function findActiveSection(pathname: string): string {
@@ -327,8 +312,7 @@ export function buildFilteredMenu(hasPermission: (code: string) => boolean): Men
             const code = getMenuPermission(item.to);
             if (!code) return true;
             return hasPermission(code);
-          }),
-        }))
+          }) }))
         .filter((sub) => sub.items.length > 0);
     }
 
@@ -339,8 +323,7 @@ export function buildFilteredMenu(hasPermission: (code: string) => boolean): Men
       result.push({
         ...section,
         items: hasItems ? filteredItems : undefined,
-        subsections: hasSubs ? filteredSubsections : undefined,
-      });
+        subsections: hasSubs ? filteredSubsections : undefined });
     }
   }
 

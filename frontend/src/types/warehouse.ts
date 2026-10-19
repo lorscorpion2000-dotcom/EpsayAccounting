@@ -222,6 +222,7 @@ export interface IssueItem {
 }
 
 export interface GoodsIssue {
+  description?: string | null;
   id: string;
   code: string;
   warehouseId: string;
