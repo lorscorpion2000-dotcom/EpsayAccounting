@@ -52,8 +52,8 @@ export class CreatePODto {
   @IsUUID()
   projectId!: string;
 
-  @ApiProperty()
-    @IsOptional()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUUID()
   supplierId?: string;
 

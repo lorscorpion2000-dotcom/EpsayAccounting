@@ -20,7 +20,7 @@ export class PurchaseOrdersService {
 
     let lastNum = 0;
     if (last && last.code) {
-      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)$'));
+      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)\$'));
       if (m) lastNum = parseInt(m[1], 10) || 0;
     }
 
@@ -58,6 +58,27 @@ export class PurchaseOrdersService {
     const effectiveTaxPercent =
       subtotal > 0 ? Math.round((taxAmount / subtotal) * 10000) / 100 : Number(defaultTaxPercent);
     return { subtotal, taxAmount, totalAmount, effectiveTaxPercent, items: enriched };
+  }
+
+  async checkBudgetLimit(projectId: string, totalAmount: number) {
+    const budget = await (this.prisma as any).projectBudget.aggregate({
+      where: { projectId },
+      _sum: { amount: true },
+    });
+    const totalBudget = Number(budget._sum?.amount || 0);
+    if (totalBudget <= 0) return;
+
+    const existingPOs = await (this.prisma as any).purchaseOrder.aggregate({
+      where: { projectId, status: { in: ['APPROVED', 'SENT', 'RECEIVED'] } },
+      _sum: { totalAmount: true },
+    });
+    const spent = Number(existingPOs._sum?.totalAmount || 0);
+
+    if (spent + totalAmount > totalBudget) {
+      throw new BadRequestException(
+        `مبلغ سفارش (${totalAmount.toLocaleString()} ریال) به همراه خریدهای قبلی (${spent.toLocaleString()} ریال) از سقف بودجه مصوب پروژه (${totalBudget.toLocaleString()} ریال) تجاوز می‌کند.`
+      );
+    }
   }
 
   async findAll(query?: { status?: string; projectId?: string; supplierId?: string; search?: string }) {
@@ -176,7 +197,6 @@ export class PurchaseOrdersService {
     return { success: true };
   }
 
-
   private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
     if (unique.length === 0) return new Map();
@@ -194,7 +214,6 @@ export class PurchaseOrdersService {
   }
 
   async create(dto: CreatePODto, userId: string) {
-    const code = await this.generateCode();
     const defaultTaxPercent = dto.taxPercent ?? 9;
 
     const rawItems = dto.items.map((it, idx) => ({
@@ -208,12 +227,17 @@ export class PurchaseOrdersService {
     }));
 
     const totals = this.computeTotals(rawItems, defaultTaxPercent);
+
+    // کنترل سقف بودجه
+    await this.checkBudgetLimit(dto.projectId, totals.totalAmount);
+
+    const code = await this.generateCode();
     const poUnitMap = await this.resolveUnitIds(rawItems.map((it) => it.unit));
     for (const it of totals.items as any[]) {
       it.unitId = it.unit ? (poUnitMap.get(it.unit) ?? null) : null;
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.\$transaction(async (tx) => {
       const po = await tx.purchaseOrder.create({
         data: {
           code,
@@ -238,7 +262,6 @@ export class PurchaseOrdersService {
         },
       });
 
-      // به‌روزرسانی PR به ORDERED
       if (dto.prId) {
         await tx.purchaseRequest.update({
           where: { id: dto.prId },
@@ -262,7 +285,7 @@ export class PurchaseOrdersService {
     if (dto.supplierId !== undefined) data.supplierId = dto.supplierId;
     if (dto.notes !== undefined) data.notes = dto.notes;
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.\$transaction(async (tx) => {
       if (dto.items) {
         const defaultTaxPercent = dto.taxPercent ?? Number(po.taxPercent);
         const rawItems = dto.items.map((it, idx) => ({
@@ -352,16 +375,11 @@ export class PurchaseOrdersService {
   async restore(id: string, userId?: string) {
     const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    if (!(existing as any).deletedAt) throw new Error('حذف‌نشده است');
     await this.prisma.purchaseOrder.update({
       where: { id },
       data: { deletedAt: null, deletedBy: null } as any,
     });
-    return { ok: true, id, restored: true, by: userId || null };
+    return { ok: true, id, restored: true, restoredBy: userId || null };
   }
-
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
-    return this.softDelete(id, userId, reason || 'admin-delete', meta);
-  }
-
 }
