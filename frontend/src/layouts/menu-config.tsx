@@ -31,7 +31,6 @@
   DatabaseBackup,
   Trash2,
   ScrollText,
-  Tags,
   SlidersHorizontal,
   FolderSync,
   Clock,
