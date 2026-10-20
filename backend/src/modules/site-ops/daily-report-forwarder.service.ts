@@ -64,7 +64,7 @@ export class DailyReportsService {
   async create(dto: CreateDailyReportDto, userId: string) {
     const code = await this.generateCode(dto.projectId);
 
-    return this.prisma.\$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const report = await tx.dailyReport.create({
         data: {
           code,
@@ -118,7 +118,7 @@ export class DailyReportsService {
       throw new BadRequestException('فقط گزارش‌های پیش‌نویس یا ارسال‌شده قابل تأیید هستند');
     }
 
-    return this.prisma.\$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       // ۱. اگر درخواست خرید در گزارش ثبت شده بود، به PR تبدیل شود
       if (report.requests && report.requests.length > 0) {
         const prItems = report.requests.map((r, idx) => ({

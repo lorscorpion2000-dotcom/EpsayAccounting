@@ -247,7 +247,7 @@ export class SiteOpsService {
       ...(dto.requests || []).map((r: any) => r.unit),
     ]);
 
-    return this.prisma.\$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       if (dto.workers) {
         await tx.dailyReportWorker.deleteMany({ where: { reportId: id } });
         data.workers = { create: this.buildWorkers(dto.workers) };
@@ -351,7 +351,7 @@ export class SiteOpsService {
       );
     }
 
-    return this.prisma.\$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       // تولید خودکار درخواست خرید (PR) در صورت وجود درخواست خرید در گزارش کارگاه
       if (r.requests && r.requests.length > 0) {
         const purchaseReqs = r.requests.filter((req: any) => req.requestType === 'PURCHASE');
