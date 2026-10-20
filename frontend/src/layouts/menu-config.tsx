@@ -67,7 +67,7 @@ export const MENU: MenuSection[] = [
     title: 'داشبورد و کارتابل',
     icon: LayoutDashboard,
     items: [
-      { to: '/', label: 'داشبورد ارشد', icon: LayoutDashboard },
+      { to: '/dashboard', label: 'داشبورد ارشد', icon: LayoutDashboard },
       { to: '/approvals', label: 'کارتابل تأییدات', icon: CheckSquare },
       { to: '/notifications', label: 'اعلان‌ها و یادآوری‌ها', icon: Bell },
     ]
@@ -258,7 +258,7 @@ export function findActiveSection(pathname: string): string {
   if (!pathname) return '';
 
   if (pathname === '/contracts' || pathname.startsWith('/contracts/')) {
-    return 'projects-hub';
+    return 'contracts';
   }
 
   if (
@@ -267,7 +267,11 @@ export function findActiveSection(pathname: string): string {
     pathname === '/accounting' ||
     pathname.startsWith('/accounting/')
   ) {
-    return 'accounting';
+    return 'financial';
+  }
+
+  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
+    return 'dashboard';
   }
 
   for (const section of MENU) {
@@ -292,7 +296,7 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  return 'dashboard';
+  return '';
 }
 
 export function buildFilteredMenu(hasPermission: (code: string) => boolean): MenuSection[] {
