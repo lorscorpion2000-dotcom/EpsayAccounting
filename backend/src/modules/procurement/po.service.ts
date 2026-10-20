@@ -76,7 +76,7 @@ export class PurchaseOrdersService {
 
     if (spent + totalAmount > totalBudget) {
       throw new BadRequestException(
-        `Ù…Ø¨Ù„Øº Ø³ÙØ§Ø±Ø´ (${totalAmount.toLocaleString()} Ø±ÛŒØ§Ù„) Ø¨Ù‡ Ù‡Ù…Ø±Ø§Ù‡ Ø®Ø±ÛŒØ¯Ù‡Ø§ÛŒ Ù‚Ø¨Ù„ÛŒ (${spent.toLocaleString()} Ø±ÛŒØ§Ù„) Ø§Ø² Ø³Ù‚Ù Ø¨ÙˆØ¯Ø¬Ù‡ Ù…ØµÙˆØ¨ Ù¾Ø±ÙˆÚ˜Ù‡ (${totalBudget.toLocaleString()} Ø±ÛŒØ§Ù„) ØªØ¬Ø§ÙˆØ² Ù…ÛŒâ€ŒÚ©Ù†Ø¯.`
+        `مبلغ سفارش (${totalAmount.toLocaleString()} ریال) به همراه خریدهای قبلی (${spent.toLocaleString()} ریال) از سقف بودجه مصوب پروژه (${totalBudget.toLocaleString()} ریال) تجاوز می‌کند.`
       );
     }
   }
@@ -114,7 +114,7 @@ export class PurchaseOrdersService {
         items: { orderBy: { rowNumber: 'asc' } },
       },
     });
-    if (!po) throw new NotFoundException('Ø¯Ø³ØªÙˆØ± Ø®Ø±ÛŒØ¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
     return po;
   }
 
@@ -123,7 +123,7 @@ export class PurchaseOrdersService {
       where: { id },
       include: { items: true },
     });
-    if (!po) throw new NotFoundException('Ø¯Ø³ØªÙˆØ± Ø®Ø±ÛŒØ¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
     const defaultTaxPercent = Number(po.taxPercent);
     const rawItems = (po.items as any[]).map((it) => ({
       rowNumber: it.rowNumber,
@@ -150,12 +150,12 @@ export class PurchaseOrdersService {
     const item = await this.prisma.purchaseOrderItem.findUnique({
       where: { id: itemId },
     });
-    if (!item) throw new NotFoundException('Ø±Ø¯ÛŒÙ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id: item.poId },
     });
-    if (!po) throw new NotFoundException('Ø¯Ø³ØªÙˆØ± Ø®Ø±ÛŒØ¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
-    if (po.status !== 'DRAFT') throw new BadRequestException('ÙÙ‚Ø· Ù¾ÛŒØ´â€ŒÙ†ÙˆÛŒØ³ Ù‚Ø§Ø¨Ù„ ØªØºÛŒÛŒØ± Ø§Ø³Øª');
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
 
     const quantity = dto.quantity !== undefined ? Number(dto.quantity) : Number(item.quantity);
     const unitPrice = dto.unitPrice !== undefined ? Number(dto.unitPrice) : Number(item.unitPrice);
@@ -186,12 +186,12 @@ export class PurchaseOrdersService {
     const item = await this.prisma.purchaseOrderItem.findUnique({
       where: { id: itemId },
     });
-    if (!item) throw new NotFoundException('Ø±Ø¯ÛŒÙ ÛŒØ§ÙØª Ù†Ø´Ø¯');
+    if (!item) throw new NotFoundException('ردیف یافت نشد');
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id: item.poId },
     });
-    if (!po) throw new NotFoundException('Ø¯Ø³ØªÙˆØ± Ø®Ø±ÛŒØ¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
-    if (po.status !== 'DRAFT') throw new BadRequestException('ÙÙ‚Ø· Ù¾ÛŒØ´â€ŒÙ†ÙˆÛŒØ³ Ù‚Ø§Ø¨Ù„ ØªØºÛŒÛŒØ± Ø§Ø³Øª');
+    if (!po) throw new NotFoundException('دستور خرید یافت نشد');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تغییر است');
     await this.prisma.purchaseOrderItem.delete({ where: { id: itemId } });
     await this.recompute(item.poId);
     return { success: true };
@@ -228,7 +228,7 @@ export class PurchaseOrdersService {
 
     const totals = this.computeTotals(rawItems, defaultTaxPercent);
 
-    // Ú©Ù†ØªØ±Ù„ Ø³Ù‚Ù Ø¨ÙˆØ¯Ø¬Ù‡
+    // کنترل سقف بودجه
     await this.checkBudgetLimit(dto.projectId, totals.totalAmount);
 
     const code = await this.generateCode();
@@ -338,14 +338,14 @@ export class PurchaseOrdersService {
 
   async remove(id: string) {
     const po = await this.findOne(id);
-    if (po.status !== 'DRAFT') throw new BadRequestException('ÙÙ‚Ø· Ù¾ÛŒØ´â€ŒÙ†ÙˆÛŒØ³ Ù‚Ø§Ø¨Ù„ Ø­Ø°Ù Ø§Ø³Øª');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل حذف است');
     await this.prisma.purchaseOrder.delete({ where: { id } });
     return { success: true };
   }
 
   async approve(id: string, _userId: string) {
     const po = await this.findOne(id);
-    if (po.status !== 'DRAFT') throw new BadRequestException('ÙÙ‚Ø· Ù¾ÛŒØ´â€ŒÙ†ÙˆÛŒØ³ Ù‚Ø§Ø¨Ù„ ØªØ§ÛŒÛŒØ¯ Ø§Ø³Øª');
+    if (po.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل تایید است');
     return this.prisma.purchaseOrder.update({
       where: { id },
       data: { status: 'APPROVED' },
@@ -354,7 +354,7 @@ export class PurchaseOrdersService {
 
   async send(id: string) {
     const po = await this.findOne(id);
-    if (po.status !== 'APPROVED') throw new BadRequestException('Ø§Ø¨ØªØ¯Ø§ Ø¨Ø§ÛŒØ¯ ØªØ§ÛŒÛŒØ¯ Ø´ÙˆØ¯');
+    if (po.status !== 'APPROVED') throw new BadRequestException('ابتدا باید تایید شود');
     return this.prisma.purchaseOrder.update({
       where: { id },
       data: { status: 'SENT' },
@@ -363,8 +363,8 @@ export class PurchaseOrdersService {
 
   async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
     const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
-    if (!existing) throw new Error('Ø±Ú©ÙˆØ±Ø¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
-    if ((existing as any).deletedAt) throw new Error('Ù‚Ø¨Ù„Ø§Ù‹ Ø­Ø°Ù Ø´Ø¯Ù‡ Ø§Ø³Øª');
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
     await this.prisma.purchaseOrder.update({
       where: { id },
       data: { deletedAt: new Date(), deletedBy: userId || null } as any,
@@ -374,12 +374,16 @@ export class PurchaseOrdersService {
 
   async restore(id: string, userId?: string) {
     const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
-    if (!existing) throw new Error('Ø±Ú©ÙˆØ±Ø¯ ÛŒØ§ÙØª Ù†Ø´Ø¯');
-    if (!(existing as any).deletedAt) throw new Error('Ø­Ø°Ùâ€ŒÙ†Ø´Ø¯Ù‡ Ø§Ø³Øª');
+    if (!existing) throw new Error('رکورد یافت نشد');
+    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
     await this.prisma.purchaseOrder.update({
       where: { id },
       data: { deletedAt: null, deletedBy: null } as any,
     });
-    return { ok: true, id, restored: true, restoredBy: userId || null };
+    return { ok: true, id, restored: true, by: userId || null };
+  }
+
+  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+    return this.softDelete(id, userId, reason || 'admin-delete', meta);
   }
 }
