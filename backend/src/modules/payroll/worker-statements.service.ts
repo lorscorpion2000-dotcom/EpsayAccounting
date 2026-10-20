@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PayrollTaxService } from './payroll-tax.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -134,8 +134,7 @@ export class WorkerStatementsService {
 
       return {
         description: it.description,
-        unit: it.unit || '',
-        quantity: qty,
+                quantity: qty,
         unitPrice: Number(it.unitPrice),
         totalPrice: qty * Number(it.unitPrice),
         contractItemId: it.id,
@@ -276,8 +275,7 @@ export class WorkerStatementsService {
           create: dto.items.map((it, idx) => ({
             rowNumber: idx + 1,
             description: it.description,
-            unit: it.unit,
-            unitId: it.unit ? (wsCreateUnitMap.get(it.unit) ?? null) : null,
+                        unitId: it.unit ? (wsCreateUnitMap.get(it.unit) ?? null) : null,
             quantity: it.quantity,
             unitPrice: it.unitPrice,
             totalPrice: Number(it.quantity) * Number(it.unitPrice),
@@ -328,8 +326,7 @@ export class WorkerStatementsService {
           create: dto.items.map((it, idx) => ({
             rowNumber: idx + 1,
             description: it.description,
-            unit: it.unit,
-            unitId: it.unit ? (wsUpdateUnitMap.get(it.unit) ?? null) : null,
+                        unitId: it.unit ? (wsUpdateUnitMap.get(it.unit) ?? null) : null,
             quantity: it.quantity,
             unitPrice: it.unitPrice,
             totalPrice: Number(it.quantity) * Number(it.unitPrice),
@@ -518,3 +515,5 @@ export class WorkerStatementsService {
     return { total, draft, submitted, approved, paid };
   }
 }
+
+

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -143,8 +143,7 @@ export class SubcontractorStatementsService {
             rowNumber: idx + 1,
             wbsItemId: item.wbsItemId,
             description: item.description,
-            unit: item.unit,
-            unitId: item.unit ? (scCreateUnitMap.get(item.unit) ?? null) : null,
+                        unitId: item.unit ? (scCreateUnitMap.get(item.unit) ?? null) : null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: Number(item.quantity) * Number(item.unitPrice),
@@ -191,8 +190,7 @@ export class SubcontractorStatementsService {
             rowNumber: idx + 1,
             wbsItemId: item.wbsItemId,
             description: item.description,
-            unit: item.unit,
-            unitId: item.unit ? (scUpdateUnitMap.get(item.unit) ?? null) : null,
+                        unitId: item.unit ? (scUpdateUnitMap.get(item.unit) ?? null) : null,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: Number(item.quantity) * Number(item.unitPrice),
@@ -460,3 +458,4 @@ export class SubcontractorStatementsService {
     return { total, draft, submitted, approved, paid };
   }
 }
+

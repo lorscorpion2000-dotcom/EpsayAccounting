@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
@@ -255,7 +255,10 @@ export class ClientStatementCrudService {
       notes: it.notes,
     }));
     const csCreateUnitMap = await this.resolveUnitIds(items.map((x) => x.unit));
-    for (const it of items) it.unitId = it.unit ? (csCreateUnitMap.get(it.unit) ?? null) : null;
+    for (const it of items) {
+  it.unitId = it.unit ? (csCreateUnitMap.get(it.unit) ?? null) : null;
+  delete (it as any).unit;
+}
 
     const totals = this.computeTotals(items, coefficient, contractData.prepaymentAmount, prepaymentDeductionPercent, {
       contractorShareAmount: dto.contractorShareAmount,
@@ -431,3 +434,4 @@ export class ClientStatementCrudService {
     return { total, drafts, submitted, approved, paid, totalNetPayable: Number(sum._sum.netPayable || 0) };
   }
 }
+
