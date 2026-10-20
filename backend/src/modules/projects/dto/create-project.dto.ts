@@ -1,12 +1,14 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum, IsOptional, IsString, IsNumber, IsInt, IsBoolean, IsDateString, IsUUID,
 } from 'class-validator';
 
 export enum ProjectTypeDto {
   MAIN_CONTRACTOR = 'MAIN_CONTRACTOR',
+  COST_PLUS = 'COST_PLUS',
   SELF_OWNER = 'SELF_OWNER',
   PARTNERSHIP = 'PARTNERSHIP',
+  RENOVATION = 'RENOVATION',
 }
 
 export enum ProjectStatusDto {

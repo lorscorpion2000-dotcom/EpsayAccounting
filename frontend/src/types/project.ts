@@ -1,4 +1,4 @@
-export type ProjectType = 'MAIN_CONTRACTOR' | 'SELF_OWNER' | 'PARTNERSHIP';
+﻿export type ProjectType = 'MAIN_CONTRACTOR' | 'COST_PLUS' | 'SELF_OWNER' | 'PARTNERSHIP' | 'RENOVATION';
 export type ProjectStatus = 'PLANNING' | 'IN_PROGRESS' | 'SUSPENDED' | 'COMPLETED' | 'CANCELLED';
 export type ProjectUsage = 'RESIDENTIAL' | 'COMMERCIAL' | 'OFFICE' | 'HOSPITAL' | 'INDUSTRIAL' | 'CIVIL' | 'OTHER';
 
@@ -12,8 +12,10 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   MAIN_CONTRACTOR: 'پیمانکار ارشد',
-  SELF_OWNER: 'خودمالک',
-  PARTNERSHIP: 'مشارکتی',
+  COST_PLUS: 'مدیریت پیمان (Cost-Plus)',
+  SELF_OWNER: 'پروژه خودمالک',
+  PARTNERSHIP: 'مشارکت در ساخت',
+  RENOVATION: 'بازسازی و نوسازی',
 };
 
 export const PROJECT_USAGE_LABELS: Record<ProjectUsage, string> = {
@@ -149,15 +151,4 @@ export interface WbsItem {
   sortOrder: number;
   description?: string | null;
   children?: WbsItem[];
-}
-
-export interface ProjectBudget {
-  id: string;
-  projectId: string;
-  wbsItemId?: string | null;
-  wbsItem?: { id: string; code: string; title: string } | null;
-  amount: string;
-  approvedAt: string;
-  isLocked: boolean;
-  description?: string | null;
 }
