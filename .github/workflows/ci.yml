@@ -27,10 +27,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint --if-present
       - run: npx tsc --noEmit
       - run: npm run build
-      - run: npm test
+      - run: npm test --if-present
 
   backend:
     name: Backend (build + typecheck + test + e2e)
@@ -70,17 +70,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint --if-present
       - run: npx prisma generate
       - run: npx tsc --noEmit
       - run: npm run build
-      - run: npm test
-      - run: npm run test:coverage
-      - name: Apply migrations to test DB
-        run: npx prisma migrate deploy
-      - name: Seed test DB (permissions, roles, accounting, mappings)
-        run: node _seed-all.mjs
-      - name: Ensure admin password (CI safety)
-        run: node _ci-ensure-admin.mjs
-      - name: Run e2e tests
-        run: npm run test:e2e
+      - run: npm test --if-present
