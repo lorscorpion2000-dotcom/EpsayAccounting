@@ -5,10 +5,8 @@ import {
 
 export enum ProjectTypeDto {
   MAIN_CONTRACTOR = 'MAIN_CONTRACTOR',
-  COST_PLUS = 'COST_PLUS',
   SELF_OWNER = 'SELF_OWNER',
   PARTNERSHIP = 'PARTNERSHIP',
-  RENOVATION = 'RENOVATION',
 }
 
 export enum ProjectStatusDto {
