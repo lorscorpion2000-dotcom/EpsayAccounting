@@ -1,4 +1,4 @@
-// Flat config for Epsay Backend (NestJS)
+﻿// Flat config for Epsay Backend (NestJS)
 import js from '@eslint/js';
 import ts from 'typescript-eslint';
 
@@ -8,7 +8,6 @@ export default ts.config(
       'dist', 'build', 'coverage', 'node_modules',
       'prisma/migrations',
       'src/generated',
-      // Legacy Node scripts (CommonJS / .mjs, not part of NestJS app)
       'scripts/**',
       'prisma/*.js',
       'prisma/*.mjs',
@@ -16,6 +15,8 @@ export default ts.config(
       'prisma/*.ts',
       'test/**',
       '_*.mjs',
+      'diag-*.mjs',
+      '*.mjs',
       '*.config.js',
       '*.config.mjs',
     ],
@@ -43,9 +44,6 @@ export default ts.config(
       '@typescript-eslint/no-unsafe-function-type': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-useless-escape': 'warn',
-      'no-constant-binary-expression': 'warn',
-      'prefer-const': 'warn',
-      'no-undef': 'off',
     },
   },
 );
