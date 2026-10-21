@@ -32,7 +32,7 @@ export const ExcelLikeGrid: React.FC<ExcelLikeGridProps> = ({
   };
 
   // پشتیبانی از Paste اکسل
-  const handlePaste = (e: ClipboardEvent<HTMLTableElement>, startRow: number, startColIndex: number) => {
+  const handlePaste = (e: ClipboardEvent<HTMLElement>, startRow: number, startColIndex: number) => {
     e.preventDefault();
     const pasteData = e.clipboardData.getData('text');
     const pastedRows = pasteData.split(/\r\n|\n|\r/).filter((r) => r.trim() !== '');
