@@ -1,6 +1,6 @@
-import { Controller, Get } from '@nestjs/swagger';
+import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @ApiTags('Health - پایش سلامت سیستم')
 @Controller('health')
@@ -18,7 +18,7 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       dbResponseTimeMs = Date.now() - start;
-    } catch (error) {
+    } catch {
       dbStatus = 'DOWN';
     }
 
