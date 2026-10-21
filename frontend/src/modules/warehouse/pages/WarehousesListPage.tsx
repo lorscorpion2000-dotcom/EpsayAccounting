@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 import { toast } from 'sonner';
 import { Plus, Search, Loader2, Warehouse as WarehouseIcon, Edit, FolderOpen, MapPin, RefreshCw, Archive } from 'lucide-react';
 import clsx from 'clsx';
@@ -10,8 +9,8 @@ import { toPersianDigits } from '@/utils/format';
 import WarehouseFormModal from '../components/WarehouseFormModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AdminDeleteButton from '@/components/AdminDeleteButton';
-export default function WarehousesListPage() {
 
+export default function WarehousesListPage() {
   const [items, setItems] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -20,7 +19,6 @@ export default function WarehousesListPage() {
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
   const [forceConfirm, setForceConfirm] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
-  useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -28,7 +26,7 @@ export default function WarehousesListPage() {
       const data = await warehouseApi.warehouses.list();
       setItems(data);
     } catch {
-      toast.error('Ø®Ø·Ø§ Ø¯Ø± Ø¨Ø§Ø±Ú¯Ø°Ø§Ø±ÛŒ');
+      toast.error('خطا در بارگذاری');
     } finally {
       setLoading(false);
     }
@@ -40,8 +38,7 @@ export default function WarehousesListPage() {
     if (!deleting) return;
     setForceError(null);
     try {
-
-      toast.success(force ? 'Ø§Ù†Ø¨Ø§Ø± Ø¨Ù‡â€ŒØ·ÙˆØ± Ú©Ø§Ù…Ù„ Ø­Ø°Ù Ø´Ø¯' : 'Ø§Ù†Ø¨Ø§Ø± ØºÛŒØ±ÙØ¹Ø§Ù„ Ø´Ø¯');
+      toast.success(force ? 'انبار به‌طور کامل حذف شد' : 'انبار غیرفعال شد');
       setDeleting(null);
       setForceConfirm(false);
       load();
@@ -51,7 +48,7 @@ export default function WarehousesListPage() {
       if (force && typeof msg === 'string' && msg.includes('\n')) {
         setForceError(msg);
       } else {
-        toast.error(Array.isArray(msg) ? msg[0] : msg || 'Ø®Ø·Ø§ Ø¯Ø± Ø­Ø°Ù');
+        toast.error(Array.isArray(msg) ? msg[0] : msg || 'خطا در حذف');
       }
     }
   };
@@ -68,14 +65,14 @@ export default function WarehousesListPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <WarehouseIcon className="w-6 h-6 text-brand-600" />
-            Ø§Ù†Ø¨Ø§Ø±Ù‡Ø§
+            انبارها
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Ù…Ø¯ÛŒØ±ÛŒØª Ø§Ù†Ø¨Ø§Ø±Ù‡Ø§ÛŒ Ù…Ø±Ú©Ø²ÛŒ Ùˆ Ú©Ø§Ø±Ú¯Ø§Ù‡ÛŒ</p>
+          <p className="text-sm text-slate-500 mt-1">مدیریت انبارهای مرکزی و کارگاهی</p>
         </div>
         <div className="flex items-center gap-2">
-                        <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
+          <button className="btn-secondary" onClick={load}><RefreshCw className="w-4 h-4" /></button>
           <button className="btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
-            <Plus className="w-4 h-4" /> Ø§Ù†Ø¨Ø§Ø± Ø¬Ø¯ÛŒØ¯
+            <Plus className="w-4 h-4" /> انبار جدید
           </button>
         </div>
       </div>
@@ -87,7 +84,7 @@ export default function WarehousesListPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Ø¬Ø³ØªØ¬Ùˆ..."
+            placeholder="جستجو..."
             className="input ps-10 pe-4 w-full"
           />
         </div>
@@ -100,9 +97,9 @@ export default function WarehousesListPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <WarehouseIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 mb-4">Ù‡ÛŒÚ† Ø§Ù†Ø¨Ø§Ø±ÛŒ Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª</p>
+          <p className="text-slate-500 mb-4">هیچ انباری ثبت نشده است</p>
           <button className="btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
-            <Plus className="w-4 h-4" /> Ø§ÙˆÙ„ÛŒÙ† Ø§Ù†Ø¨Ø§Ø±
+            <Plus className="w-4 h-4" /> اولین انبار
           </button>
         </div>
       ) : (
@@ -113,23 +110,23 @@ export default function WarehousesListPage() {
                 <button
                   onClick={(e) => { e.stopPropagation(); setEditing(wh); setShowModal(true); }}
                   className="p-1.5 rounded-lg bg-white shadow-sm border hover:bg-amber-50 text-slate-600"
-                  title="ÙˆÛŒØ±Ø§ÛŒØ´"
+                  title="ویرایش"
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setDeleting(wh); }}
                   className="p-1.5 rounded-lg bg-white shadow-sm border hover:bg-red-50 text-slate-600"
-                  title="Ø­Ø°Ù"
+                  title="حذف"
                 >
                   <Archive className="w-3.5 h-3.5" />
                 </button>
-                        <AdminDeleteButton
-                          endpoint="/warehouses"
-                          id={wh.id}
-                          itemLabel={(wh as any).code || (wh as any).name || (wh as any).title || ''}
-                          onSuccess={load}
-                        />
+                <AdminDeleteButton
+                  endpoint="/warehouses"
+                  id={wh.id}
+                  itemLabel={(wh as any).code || (wh as any).name || (wh as any).title || ''}
+                  onSuccess={load}
+                />
               </div>
 
               <div onClick={() => { setEditing(wh); setShowModal(true); }} className="cursor-pointer">
@@ -161,15 +158,15 @@ export default function WarehousesListPage() {
 
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-xs">
                   <div>
-                    <div className="text-slate-400">Ú©Ø§Ù„Ø§</div>
+                    <div className="text-slate-400">کالا</div>
                     <div className="font-bold num">{toPersianDigits(wh._count?.stocks || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Ø±Ø³ÛŒØ¯</div>
+                    <div className="text-slate-400">رسید</div>
                     <div className="font-bold num">{toPersianDigits(wh._count?.receipts || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Ø­ÙˆØ§Ù„Ù‡</div>
+                    <div className="text-slate-400">حواله</div>
                     <div className="font-bold num">{toPersianDigits(wh._count?.issues || 0)}</div>
                   </div>
                 </div>
@@ -188,9 +185,9 @@ export default function WarehousesListPage() {
 
       <ConfirmDialog
         isOpen={!!deleting && !forceConfirm}
-        title="Ø­Ø°Ù Ø§Ù†Ø¨Ø§Ø±"
-        message={deleting ? "Ø§Ù†Ø¨Ø§Ø± Â«" + deleting.name + "Â» ØºÛŒØ±ÙØ¹Ø§Ù„ Ø´ÙˆØ¯ØŸ Ø§ÛŒÙ† Ø¹Ù…Ù„ Ù‚Ø§Ø¨Ù„ Ø¨Ø§Ø²Ú¯Ø´Øª Ø§Ø³Øª." : ""}
-        confirmLabel="Ø¨Ù„Ù‡ØŒ ØºÛŒØ±ÙØ¹Ø§Ù„ Ø´ÙˆØ¯"
+        title="حذف انبار"
+        message={deleting ? "انبار «" + deleting.name + "» غیرفعال شود؟ این عمل قابل بازگشت است." : ""}
+        confirmLabel="بله، غیرفعال شود"
         variant="danger"
         onConfirm={() => handleDelete(false)}
         onCancel={() => { setDeleting(null); setForceError(null); }}
@@ -200,14 +197,14 @@ export default function WarehousesListPage() {
         <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b bg-red-50">
-              <h3 className="text-lg font-bold text-red-800">Ø­Ø°Ù Ú©Ø§Ù…Ù„ Ø§Ù†Ø¨Ø§Ø± (Ù…Ø¯ÛŒØ± Ø³ÛŒØ³ØªÙ…)</h3>
+              <h3 className="text-lg font-bold text-red-800">حذف کامل انبار (مدیر سیستم)</h3>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-slate-700 whitespace-pre-line">{forceError}</p>
-              <p className="text-xs text-slate-500">Ø¨Ø§ Ú©Ù„ÛŒÚ© Ø±ÙˆÛŒ Â«Ø­Ø°Ù Ú©Ø§Ù…Ù„Â»ØŒ ØªÙ…Ø§Ù… Ù…ÙˆØ¬ÙˆØ¯ÛŒØŒ Ú¯Ø±Ø¯Ø´ Ùˆ Ø±Ø³ÛŒØ¯/Ø­ÙˆØ§Ù„Ù‡ Ø§ÛŒÙ† Ø§Ù†Ø¨Ø§Ø± Ù¾Ø§Ú© Ù…ÛŒâ€ŒØ´ÙˆØ¯. Ø§Ø·Ù…ÛŒÙ†Ø§Ù† Ø¯Ø§Ø±ÛŒØ¯ØŸ</p>
+              <p className="text-xs text-slate-500">با کلیک روی «حذف کامل»، تمام موجودی، گردش و رسید/حواله این انبار پاک می‌شود. اطمینان دارید؟</p>
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">Ø§Ù†ØµØ±Ø§Ù</button>
-                <button onClick={() => handleDelete(true)} className="btn-danger">Ø­Ø°Ù Ú©Ø§Ù…Ù„ (Ø®Ø·Ø±Ù†Ø§Ú©)</button>
+                <button onClick={() => { setForceConfirm(false); setForceError(null); setDeleting(null); }} className="btn-secondary">انصراف</button>
+                <button onClick={() => handleDelete(true)} className="btn-danger">حذف کامل (خطرناک)</button>
               </div>
             </div>
           </div>
