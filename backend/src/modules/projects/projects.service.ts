@@ -16,7 +16,7 @@ export class ProjectsService {
   /**
    * دریافت لیست پروژه‌ها همراه با اعمال محدودیت دسترسی کاربر (Project RBAC)
    */
-  async findAll(userId?: string, query?: { status?: string; search?: string }) {
+  async findAll(query?: { status?: string; search?: string }, userId?: string) {
     const where: any = { isActive: true };
     if (query?.status) where.status = query.status;
     if (query?.search) {

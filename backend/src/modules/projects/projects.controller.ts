@@ -1,103 +1,50 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
-import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
-import { SoftDeleteService } from '../../common/services/soft-delete.service';
-import { ReasonDto } from '../../common/dto';
-import { ProjectStatus } from '@prisma/client';
-import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Projects - پروژه‌ها')
 @ApiBearerAuth()
 @Controller('projects')
 export class ProjectsController {
-  constructor(private projects: ProjectsService,
-    private softDelete: SoftDeleteService,) {}
+  constructor(private service: ProjectsService) {}
 
   @Get()
   @RequirePermissions('projects.read')
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@Query('status', new ParseEnumPipe(ProjectStatus, { optional: true })) status?: ProjectStatus, @Query('search') search?: string) {
-    return this.projects.findAll({ status, search });
+  findAll(
+    @CurrentUser('id') userId: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.service.findAll({ status, search }, userId);
   }
 
   @Get(':id')
   @RequirePermissions('projects.read')
-  findOne(@Param('id') id: string) {
-    return this.projects.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.findOne(id, userId);
   }
 
   @Post()
   @RequirePermissions('projects.create')
   create(@Body() dto: CreateProjectDto) {
-    return this.projects.create(dto);
+    return this.service.create(dto);
   }
 
   @Patch(':id')
   @RequirePermissions('projects.update')
   update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projects.update(id, dto);
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @RequirePermissions('projects.delete')
   remove(@Param('id') id: string) {
-    return this.projects.remove(id);
+    return this.service.remove(id);
   }
-
-  // ═══════════════════════════════════════════════════════
-  // Admin Delete / Restore
-  // ═══════════════════════════════════════════════════════
-
-  @Delete(':id/admin')
-  @RequirePermissions('projects.update')
-  async adminDelete(
-    @Param('id') id: string,
-    @Body() body: ReasonDto,
-    @Req() req: any,
-  ) {
-    const user = req.user || {};
-    return this.softDelete.adminDelete({
-      model: 'project',
-      id,
-      user,
-      reason: body?.reason || '',
-      meta: {
-        ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
-      },
-    });
-  }
-
-  @Patch(':id/restore')
-  @RequirePermissions('projects.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
-    return this.softDelete.restore({
-      model: 'project',
-      id,
-      user,
-      meta: {
-        ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
-      },
-    });
-  }
-
-  @Get('deleted/list')
-  @RequirePermissions('projects.update')
-  listDeleted(
-    @Query('take', new OptionalIntPipe()) take?: number,
-    @Query('skip', new OptionalIntPipe()) skip?: number,
-  ) {
-    return this.softDelete.listDeleted({
-      model: 'project',
-      take: take ?? 100,
-      skip: skip ?? 0,
-    });
-  }
-
 }
