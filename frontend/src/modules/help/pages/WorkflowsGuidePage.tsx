@@ -1,5 +1,4 @@
-import React from 'react';
-import { BookOpen, FileText, TableGrid, ShieldCheck, Wallet, HardHat } from 'lucide-react';
+import { BookOpen, Table, ShieldCheck, Wallet, HardHat } from 'lucide-react';
 
 export default function WorkflowsGuidePage() {
   return (
@@ -18,7 +17,7 @@ export default function WorkflowsGuidePage() {
         {/* ۱. جدول اکسلی ثبت اسناد */}
         <div className="card p-5 space-y-3 border-r-4 border-r-blue-500">
           <div className="flex items-center gap-2 text-blue-700 font-bold">
-            <TableGrid className="w-5 h-5" />
+            <Table className="w-5 h-5" />
             <h2>ثبت سریع اسناد با جدول اکسلی</h2>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
