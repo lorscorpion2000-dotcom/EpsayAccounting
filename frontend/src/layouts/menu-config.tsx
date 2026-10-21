@@ -1,4 +1,4 @@
-﻿import {
+import {
   LayoutDashboard,
   Bell,
   CheckSquare,
@@ -256,23 +256,11 @@ export function findActiveSection(pathname: string): string {
     return 'contracts';
   }
 
-  if (
-    pathname === '/payroll' ||
-    pathname.startsWith('/payroll/') ||
-    pathname === '/accounting' ||
-    pathname.startsWith('/accounting/')
-  ) {
-    return 'financial';
-  }
-
-  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
-    return 'dashboard';
-  }
-
+  // ۱. ابتدا پیمایش مستقیم منو
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
-        if (pathname === item.to || pathname.startsWith(item.to + '/')) {
+        if (pathname === item.to || (item.to !== '/' && pathname.startsWith(item.to + '/'))) {
           return section.key;
         }
       }
@@ -282,7 +270,7 @@ export function findActiveSection(pathname: string): string {
       for (const sub of section.subsections) {
         if (sub.items) {
           for (const item of sub.items) {
-            if (pathname === item.to || pathname.startsWith(item.to + '/')) {
+            if (pathname === item.to || (item.to !== '/' && pathname.startsWith(item.to + '/'))) {
               return section.key;
             }
           }
@@ -290,6 +278,12 @@ export function findActiveSection(pathname: string): string {
       }
     }
   }
+
+  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
+    return 'dashboard';
+  }
+
+
 
   return '';
 }
