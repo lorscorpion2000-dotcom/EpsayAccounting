@@ -7,7 +7,7 @@ import { z } from 'zod';
 import {
   Save, X, Loader2, Plus, Trash2, CheckCircle2, AlertCircle,
   FileText, Printer, ClipboardPaste, Copy, ArrowUp, ArrowDown,
-  Keyboard,
+  Keyboard, TableGrid
 } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
@@ -16,6 +16,7 @@ import AccountSelect from '../components/AccountSelect';
 import MoneyInput from '../components/MoneyInput';
 import TemplatePicker from '../components/TemplatePicker';
 import PasteDialog from '../components/PasteDialog';
+import { ExcelLikeGrid, GridColumn } from '@/components/common/ExcelLikeGrid';
 import type { Account, FiscalYear } from '@/types/accounting';
 import { formatNumber, formatJalaliDate } from '@/utils/format';
 import { todayLocalISO } from '@/utils/local-date';
@@ -79,6 +80,7 @@ export default function JournalFormPage() {
   const [saving, setSaving] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isGridMode, setIsGridMode] = useState(true); // حالت پیش‌فرض اکسلی
 
   const { register, control, handleSubmit, reset, setValue, setError, getValues } = useForm<FormData>({
     resolver: zodResolver(journalSchema),
@@ -97,6 +99,41 @@ export default function JournalFormPage() {
   const watchedDesc = useWatch({ control, name: 'description' });
   const watchedRef = useWatch({ control, name: 'reference' });
   const watchedFyId = useWatch({ control, name: 'fiscalYearId' });
+
+  // ستون‌های جدول اکسلی
+  const gridColumns: GridColumn[] = useMemo(
+    () => [
+      {
+        key: 'accountId',
+        label: 'حساب *',
+        type: 'select',
+        options: accounts.map((a) => ({
+          value: a.id,
+          label: `${a.code} - ${a.name}`,
+        })),
+        width: '35%',
+      },
+      {
+        key: 'description',
+        label: 'شرح ردیف',
+        type: 'text',
+        width: '35%',
+      },
+      {
+        key: 'debit',
+        label: 'بدهکار (ریال)',
+        type: 'number',
+        width: '15%',
+      },
+      {
+        key: 'credit',
+        label: 'بستانکار (ریال)',
+        type: 'number',
+        width: '15%',
+      },
+    ],
+    [accounts],
+  );
 
   const totals = useMemo(
     () => (watchedLines || []).reduce(
@@ -307,6 +344,14 @@ export default function JournalFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsGridMode(!isGridMode)}
+            className="btn-secondary text-sm bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+          >
+            <TableGrid className="w-4 h-4" />
+            {isGridMode ? 'نمایش فرم استاندارد' : 'نمایش جدول اکسلی'}
+          </button>
           <TemplatePicker accounts={accounts} currentLines={(watchedLines as any) || []} onApply={applyTemplate} />
           <button type="button" onClick={() => setPasteOpen(true)} className="btn-secondary text-sm" title="ورود گروهی از Excel">
             <ClipboardPaste className="w-4 h-4" />
@@ -361,81 +406,98 @@ export default function JournalFormPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[860px]">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="text-center px-2 py-2 font-medium text-slate-600 w-10">#</th>
-                  <th className="text-right px-2 py-2 font-medium text-slate-600 min-w-[260px]">حساب *</th>
-                  <th className="text-right px-2 py-2 font-medium text-slate-600 min-w-[160px]">شرح</th>
-                  <th className="text-center px-2 py-2 font-medium text-slate-600 w-40">بدهکار</th>
-                  <th className="text-center px-2 py-2 font-medium text-slate-600 w-40">بستانکار</th>
-                  <th className="text-center px-2 py-2 w-28 no-print"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {fields.map((field, idx) => {
-                  const isSuspect = suspectRow === idx;
-                  return (
-                    <tr key={field.id} className={clsx('hover:bg-slate-50/30 group', isSuspect && 'bg-amber-50/50')}>
-                      <td className="px-2 py-1.5 text-center text-slate-400 text-xs num">
-                        {idx + 1}
-                        {isSuspect && <span className="block text-[9px] text-amber-600">مشکوک</span>}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Controller name={`lines.${idx}.accountId` as any} control={control} render={({ field: f }) => (
-                          <AccountSelect accounts={accounts} value={f.value || ''} onChange={f.onChange} placeholder="جستجوی کد یا نام..." />
-                        )} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input {...register(`lines.${idx}.description` as any)} className="input w-full text-xs" placeholder="شرح ردیف" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Controller name={`lines.${idx}.debit` as any} control={control} render={({ field: f }) => (
-                          <MoneyInput value={Number(f.value) || 0} onChange={f.onChange} />
-                        )} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <Controller name={`lines.${idx}.credit` as any} control={control} render={({ field: f }) => (
-                          <MoneyInput value={Number(f.value) || 0} onChange={f.onChange} />
-                        )} />
-                      </td>
-                      <td className="px-2 py-1.5 no-print">
-                        <div className="flex items-center justify-center gap-0.5 opacity-30 group-hover:opacity-100 transition">
-                          <button type="button" onClick={() => duplicateRow(idx)} className="p-1 rounded hover:bg-blue-50 text-blue-600" title="کپی">
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                          {idx > 0 && (
-                            <button type="button" onClick={() => move(idx, idx - 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="بالا">
-                              <ArrowUp className="w-3.5 h-3.5" />
+          {isGridMode ? (
+            /* ورود داده در جدول اکسلی */
+            <div className="p-3">
+              <ExcelLikeGrid
+                columns={gridColumns}
+                rows={(watchedLines as any) || []}
+                onChange={(updatedRows) => setValue('lines', updatedRows as any, { shouldValidate: true, shouldDirty: true })}
+                onAddRow={() => append(emptyLine())}
+              />
+              <div className="mt-3 flex justify-between items-center bg-gray-100 p-2 rounded text-sm font-semibold text-gray-700">
+                <span>جمع کل بدهکار: {formatNumber(totals.debit)}</span>
+                <span>جمع کل بستانکار: {formatNumber(totals.credit)}</span>
+              </div>
+            </div>
+          ) : (
+            /* فرم جدول استاندارد */
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[860px]">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="text-center px-2 py-2 font-medium text-slate-600 w-10">#</th>
+                    <th className="text-right px-2 py-2 font-medium text-slate-600 min-w-[260px]">حساب *</th>
+                    <th className="text-right px-2 py-2 font-medium text-slate-600 min-w-[160px]">شرح</th>
+                    <th className="text-center px-2 py-2 font-medium text-slate-600 w-40">بدهکار</th>
+                    <th className="text-center px-2 py-2 font-medium text-slate-600 w-40">بستانکار</th>
+                    <th className="text-center px-2 py-2 w-28 no-print"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {fields.map((field, idx) => {
+                    const isSuspect = suspectRow === idx;
+                    return (
+                      <tr key={field.id} className={clsx('hover:bg-slate-50/30 group', isSuspect && 'bg-amber-50/50')}>
+                        <td className="px-2 py-1.5 text-center text-slate-400 text-xs num">
+                          {idx + 1}
+                          {isSuspect && <span className="block text-[9px] text-amber-600">مشکوک</span>}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Controller name={`lines.${idx}.accountId` as any} control={control} render={({ field: f }) => (
+                            <AccountSelect accounts={accounts} value={f.value || ''} onChange={f.onChange} placeholder="جستجوی کد یا نام..." />
+                          )} />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input {...register(`lines.${idx}.description` as any)} className="input w-full text-xs" placeholder="شرح ردیف" />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Controller name={`lines.${idx}.debit` as any} control={control} render={({ field: f }) => (
+                            <MoneyInput value={Number(f.value) || 0} onChange={f.onChange} />
+                          )} />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Controller name={`lines.${idx}.credit` as any} control={control} render={({ field: f }) => (
+                            <MoneyInput value={Number(f.value) || 0} onChange={f.onChange} />
+                          )} />
+                        </td>
+                        <td className="px-2 py-1.5 no-print">
+                          <div className="flex items-center justify-center gap-0.5 opacity-30 group-hover:opacity-100 transition">
+                            <button type="button" onClick={() => duplicateRow(idx)} className="p-1 rounded hover:bg-blue-50 text-blue-600" title="کپی">
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                          {idx < fields.length - 1 && (
-                            <button type="button" onClick={() => move(idx, idx + 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="پایین">
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {fields.length > 2 && (
-                            <button type="button" onClick={() => remove(idx)} className="p-1 rounded hover:bg-red-50 text-red-600" title="حذف">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="bg-slate-100 border-t-2 border-slate-300">
-                <tr>
-                  <td colSpan={3} className="px-3 py-2 text-right font-bold text-slate-700">جمع کل</td>
-                  <td className="px-3 py-2 text-center num font-bold" dir="ltr">{formatNumber(totals.debit)}</td>
-                  <td className="px-3 py-2 text-center num font-bold" dir="ltr">{formatNumber(totals.credit)}</td>
-                  <td className="no-print"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                            {idx > 0 && (
+                              <button type="button" onClick={() => move(idx, idx - 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="بالا">
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {idx < fields.length - 1 && (
+                              <button type="button" onClick={() => move(idx, idx + 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="پایین">
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {fields.length > 2 && (
+                              <button type="button" onClick={() => remove(idx)} className="p-1 rounded hover:bg-red-50 text-red-600" title="حذف">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-right font-bold text-slate-700">جمع کل</td>
+                    <td className="px-3 py-2 text-center num font-bold" dir="ltr">{formatNumber(totals.debit)}</td>
+                    <td className="px-3 py-2 text-center num font-bold" dir="ltr">{formatNumber(totals.credit)}</td>
+                    <td className="no-print"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
 
           <div className={clsx(
             'p-4 flex items-center gap-3 text-sm border-t-2',
