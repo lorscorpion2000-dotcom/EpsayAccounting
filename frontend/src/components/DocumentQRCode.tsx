@@ -20,14 +20,11 @@ export const DocumentQRCode: React.FC<DocumentQRCodeProps> = ({
   issuedAt,
   verifyUrl,
 }) => {
-  // تولید لینک استعلام اصالت سند
-  const baseUrl = verifyUrl || window.location.origin;
+  const baseUrl = verifyUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   const targetVerifyUrl = `${baseUrl}/verify?type=${documentType}&code=${encodeURIComponent(documentCode)}`;
 
-  // تولید آدرس تصویر QR کد به صورت مستقیم و بدون نیاز به نصب بسته جدید
-  const qrImageUrl = `[suspicious link removed]{encodeURIComponent(
-    targetVerifyUrl
-  )}`;
+  const qrApiBase = '[suspicious link removed]';
+  const qrImageUrl = `${qrApiBase}?size=150x150&data=${encodeURIComponent(targetVerifyUrl)}`;
 
   return (
     <div className="flex items-center gap-3 p-2 border border-slate-300 rounded bg-white w-fit print:border-black" dir="rtl">
