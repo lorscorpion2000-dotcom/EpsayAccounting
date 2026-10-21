@@ -2,9 +2,6 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
 
-/**
- * انواع بخش‌های گزارش روزانه (طبق سند بخش ۱۵-۳)
- */
 export const SECTION_TYPES = [
   'HEADER',
   'PROGRESS',
@@ -25,7 +22,6 @@ export class DailyReportSectionsService {
     private forwarder: DailyReportForwarderService,
   ) {}
 
-  /** ساخت ۹ ردیف بخش برای یک گزارش جدید (idempotent) */
   async initSections(reportId: string) {
     const existing = await this.prisma.dailyReportSection.findMany({
       where: { reportId },
@@ -51,8 +47,6 @@ export class DailyReportSectionsService {
     });
   }
 
-  /** لیست بخش‌های یک گزارش */
-  /** بازمحاسبه وضعیت کلی گزارش بر اساس وضعیت بخش‌ها */
   private async syncReportStatus(reportId: string) {
     const sections = await this.prisma.dailyReportSection.findMany({
       where: { reportId },
@@ -94,7 +88,6 @@ export class DailyReportSectionsService {
     });
   }
 
-  /** تأیید یک بخش */
   async approve(reportId: string, sectionType: string, userId: string) {
     await this.ensureReport(reportId);
     await this.assertNotSelfApprove(reportId, userId);
@@ -104,7 +97,6 @@ export class DailyReportSectionsService {
       where: { reportId_sectionType: { reportId, sectionType: type as any } },
     });
     if (!section) {
-      // بساز اگر نیست
       await this.initSections(reportId);
     }
 
@@ -127,7 +119,6 @@ export class DailyReportSectionsService {
       },
     });
 
-    // فوروارد خودکار به مقصدها
     let forward: any = null;
     try {
       forward = await this.forwarder.forwardSection(reportId, type);
@@ -135,13 +126,11 @@ export class DailyReportSectionsService {
       forward = { success: 0, failed: 0, error: e?.message || 'forward failed' };
     }
 
-    // بازمحاسبه وضعیت کلی گزارش
     await this.syncReportStatus(reportId);
 
     return { ...updated, forward };
   }
 
-  /** رد یک بخش با دلیل */
   async reject(reportId: string, sectionType: string, reason: string) {
     if (!reason || !reason.trim()) throw new BadRequestException('دلیل رد الزامی است');
     await this.ensureReport(reportId);
@@ -166,13 +155,11 @@ export class DailyReportSectionsService {
       },
     });
 
-    // بازمحاسبه وضعیت کلی گزارش
     await this.syncReportStatus(reportId);
 
     return rejected;
   }
 
-  /** خلاصه وضعیت بخش‌ها (برای UI) */
   async summary(reportId: string) {
     await this.initSections(reportId);
     const sections = await this.prisma.dailyReportSection.findMany({
@@ -196,18 +183,12 @@ export class DailyReportSectionsService {
     };
   }
 
-  // ═══ helpers ═══
   private async ensureReport(reportId: string) {
     const r = await this.prisma.dailyReport.findUnique({ where: { id: reportId } });
     if (!r) throw new NotFoundException('گزارش روزانه یافت نشد');
     return r;
   }
 
-
-  /**
-   * F2 — تأییدکننده ≠ ثبت‌کننده
-   * اگر کاربر ثبت‌کننده گزارش باشد اجازه تأیید ندارد، مگر super_admin با ثبت در AuditLog.
-   */
   private async assertNotSelfApprove(reportId: string, userId: string) {
     const report = await this.prisma.dailyReport.findUnique({
       where: { id: reportId },
