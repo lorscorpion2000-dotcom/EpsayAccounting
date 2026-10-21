@@ -1,42 +1,45 @@
 ﻿import {
+  LayoutDashboard,
+  Bell,
+  CheckSquare,
+  FileSpreadsheet,
   FolderKanban,
   Building2,
   FileSignature,
-  FileSpreadsheet,
   ShieldCheck,
   ShoppingCart,
-  ClipboardList,
-  Receipt,
-  DollarSign,
-  Warehouse,
   Package,
   Layers,
   ArrowRightLeft,
-  CheckSquare,
+  Truck,
   HardHat,
   AlertTriangle,
-  Truck,
+  Receipt,
+  Users,
   BookOpen,
-  FileText,
-  SlidersHorizontal,
   Scale,
-  PieChart,
-  BadgePercent,
   Landmark,
   Wallet,
   Coins,
-  Users,
-  Settings,
+  DollarSign,
   CalendarCheck,
-  Tags,
-  Clock,
+  FileText,
+  PieChart,
+  Settings,
   Shield,
-  ScrollText,
-  DatabaseBackup,
-  FolderSync,
-  Trash2,
   HelpCircle,
+  DatabaseBackup,
+  Trash2,
+  ScrollText,
+  Tags,
+  SlidersHorizontal,
+  FolderSync,
+  Clock,
+  BadgePercent,
+  Warehouse,
+  ClipboardList,
 } from 'lucide-react';
+import { getMenuPermission } from '../config/route-permissions';
 
 export interface MenuItem {
   to: string;
@@ -58,16 +61,22 @@ export interface MenuSection {
   subsections?: MenuSubSection[];
 }
 
-// لیست اصلی منوهای سیستم
 export const MENU: MenuSection[] = [
+  // 1. داشبورد و کارتابل
   {
     key: 'dashboard',
-    title: 'داشبورد و وضعیت عمومی',
-    icon: PieChart,
-    items: [{ to: '/dashboard', label: 'داشبورد مدیریتی', icon: PieChart }],
+    title: 'داشبورد و کارتابل',
+    icon: LayoutDashboard,
+    items: [
+      { to: '/dashboard', label: 'داشبورد ارشد', icon: LayoutDashboard },
+      { to: '/approvals', label: 'کارتابل تأییدات', icon: CheckSquare },
+      { to: '/notifications', label: 'اعلان‌ها و یادآوری‌ها', icon: Bell },
+    ],
   },
+
+  // 2. پروژه‌ها و قراردادها
   {
-    key: 'projects-hub',
+    key: 'contracts',
     title: 'پروژه‌ها و قراردادها',
     icon: FolderKanban,
     items: [
@@ -77,6 +86,8 @@ export const MENU: MenuSection[] = [
       { to: '/timeline/guarantees', label: 'ضمانت‌نامه‌های پروژه', icon: ShieldCheck },
     ],
   },
+
+  // 3. تدارکات و خرید
   {
     key: 'procurement',
     title: 'تدارکات و خرید',
@@ -88,6 +99,8 @@ export const MENU: MenuSection[] = [
       { to: '/procurement/supplier-payments', label: 'پرداخت به تأمین‌کنندگان', icon: DollarSign },
     ],
   },
+
+  // 4. انبارداری و مصالح
   {
     key: 'warehouse',
     title: 'انبار و مدیریت مصالح',
@@ -103,6 +116,8 @@ export const MENU: MenuSection[] = [
       { to: '/material-report/consumption', label: 'مدیریت مصالح پای کار', icon: Package },
     ],
   },
+
+  // 5. کارگاه و عملیات اجرایی
   {
     key: 'site-ops',
     title: 'کارگاه و عملیات اجرایی',
@@ -113,8 +128,10 @@ export const MENU: MenuSection[] = [
       { to: '/equipment', label: 'ماشین‌آلات و تجهیزات کارگاه', icon: Truck },
     ],
   },
+
+  // 6. حسابداری مالی و پروژه‌ای
   {
-    key: 'accounting',
+    key: 'financial',
     title: 'حسابداری مالی و پروژه‌ای',
     icon: BookOpen,
     subsections: [
@@ -145,6 +162,8 @@ export const MENU: MenuSection[] = [
       },
     ],
   },
+
+  // 7. خزانه‌داری و تنخواه‌گردان
   {
     key: 'treasury',
     title: 'خزانه‌داری و نقدینگی',
@@ -159,6 +178,8 @@ export const MENU: MenuSection[] = [
       { to: '/accounting/fixed-assets', label: 'اموال و دارایی‌های ثابت', icon: Package },
     ],
   },
+
+  // 8. فروش و صورت‌وضعیت‌ها
   {
     key: 'sales-and-revenue',
     title: 'فروش و صورت‌وضعیت',
@@ -172,6 +193,8 @@ export const MENU: MenuSection[] = [
       { to: '/sales/receipts', label: 'رسید دریافت وجوه فروش', icon: DollarSign },
     ],
   },
+
+  // 9. گزارشات جامع مدیریتی
   {
     key: 'reports',
     title: 'گزارش‌های جامع',
@@ -185,6 +208,8 @@ export const MENU: MenuSection[] = [
       { to: '/wip', label: 'کنترل پروژه و بودجه‌بندی', icon: Scale },
     ],
   },
+
+  // 10. پایه‌ها، تعاریف و مدیریت سیستم
   {
     key: 'settings',
     title: 'پایه‌ها و تنظیمات سیستم',
@@ -224,17 +249,30 @@ export const MENU: MenuSection[] = [
   },
 ];
 
-// پیدا کردن بخش فعال منو بر اساس مسیر URL
 export function findActiveSection(pathname: string): string {
   if (!pathname) return '';
+
+  if (pathname === '/contracts' || pathname.startsWith('/contracts/')) {
+    return 'contracts';
+  }
+
+  if (
+    pathname === '/payroll' ||
+    pathname.startsWith('/payroll/') ||
+    pathname === '/accounting' ||
+    pathname.startsWith('/accounting/')
+  ) {
+    return 'financial';
+  }
+
+  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
+    return 'dashboard';
+  }
 
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
-        if (
-          pathname === item.to ||
-          (item.to !== '/' && pathname.startsWith(item.to + '/'))
-        ) {
+        if (pathname === item.to || pathname.startsWith(item.to + '/')) {
           return section.key;
         }
       }
@@ -244,10 +282,7 @@ export function findActiveSection(pathname: string): string {
       for (const sub of section.subsections) {
         if (sub.items) {
           for (const item of sub.items) {
-            if (
-              pathname === item.to ||
-              (item.to !== '/' && pathname.startsWith(item.to + '/'))
-            ) {
+            if (pathname === item.to || pathname.startsWith(item.to + '/')) {
               return section.key;
             }
           }
@@ -256,49 +291,9 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  if (pathname.startsWith('/projects') || pathname.startsWith('/contracts') || pathname.startsWith('/timeline')) {
-    return 'projects-hub';
-  }
-  if (pathname.startsWith('/procurement')) {
-    return 'procurement';
-  }
-  if (pathname.startsWith('/warehouse') || pathname.startsWith('/inventory') || pathname.startsWith('/material')) {
-    return 'warehouse';
-  }
-  if (pathname.startsWith('/site-ops') || pathname.startsWith('/equipment')) {
-    return 'site-ops';
-  }
-  if (pathname.startsWith('/accounting') || pathname.startsWith('/adjustments') || pathname.startsWith('/tax')) {
-    return 'accounting';
-  }
-  if (pathname.startsWith('/petty-cash') || pathname.startsWith('/expenses') || pathname.startsWith('/partner-capital')) {
-    return 'treasury';
-  }
-  if (pathname.startsWith('/payroll') && !pathname.startsWith('/payroll/subcontractor-statements')) {
-    return 'payroll';
-  }
-  if (pathname.startsWith('/sales') || pathname.startsWith('/payroll/subcontractor-statements')) {
-    return 'sales-and-revenue';
-  }
-  if (pathname.startsWith('/reports') || pathname.startsWith('/wip')) {
-    return 'reports';
-  }
-  if (
-    pathname.startsWith('/settings') ||
-    pathname.startsWith('/directory') ||
-    pathname.startsWith('/price-lists') ||
-    pathname.startsWith('/audit') ||
-    pathname.startsWith('/backup') ||
-    pathname.startsWith('/data-io') ||
-    pathname.startsWith('/recycle-bin')
-  ) {
-    return 'settings';
-  }
-
   return '';
 }
 
-// فیلتر کردن منو بر اساس مجوزهای کاربر
 export function buildFilteredMenu(hasPermission: (code: string) => boolean): MenuSection[] {
   const result: MenuSection[] = [];
 
@@ -307,10 +302,18 @@ export function buildFilteredMenu(hasPermission: (code: string) => boolean): Men
     let filteredSubsections: MenuSubSection[] | undefined = undefined;
 
     if (section.items) {
-      filteredItems = section.items.filter((item) => {
-        if (!item.to) return true;
-        return hasPermission ? hasPermission(item.to) : true;
-      });
+      filteredItems = section.items
+        .filter((item) => {
+          const code = getMenuPermission(item.to);
+          if (!code) return true;
+          return hasPermission(code);
+        })
+        .map((item) => {
+          if (item.to === '/approvals' && !hasPermission('approvals.update')) {
+            return { ...item, label: 'کارتابل من' };
+          }
+          return item;
+        });
     }
 
     if (section.subsections) {
@@ -318,21 +321,22 @@ export function buildFilteredMenu(hasPermission: (code: string) => boolean): Men
         .map((sub) => ({
           ...sub,
           items: sub.items.filter((item) => {
-            if (!item.to) return true;
-            return hasPermission ? hasPermission(item.to) : true;
+            const code = getMenuPermission(item.to);
+            if (!code) return true;
+            return hasPermission(code);
           }),
         }))
         .filter((sub) => sub.items.length > 0);
     }
 
-    if (
-      (filteredItems && filteredItems.length > 0) ||
-      (filteredSubsections && filteredSubsections.length > 0)
-    ) {
+    const hasItems = filteredItems && filteredItems.length > 0;
+    const hasSubs = filteredSubsections && filteredSubsections.length > 0;
+
+    if (hasItems || hasSubs) {
       result.push({
         ...section,
-        items: filteredItems,
-        subsections: filteredSubsections,
+        items: hasItems ? filteredItems : undefined,
+        subsections: hasSubs ? filteredSubsections : undefined,
       });
     }
   }
