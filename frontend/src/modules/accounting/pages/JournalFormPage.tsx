@@ -7,7 +7,7 @@ import { z } from 'zod';
 import {
   Save, X, Loader2, Plus, Trash2, CheckCircle2, AlertCircle,
   FileText, Printer, ClipboardPaste, Copy, ArrowUp, ArrowDown,
-  Keyboard, TableGrid
+  Keyboard, Table
 } from 'lucide-react';
 import clsx from 'clsx';
 import { accountingApi } from '../services/accounting.api';
@@ -349,7 +349,7 @@ export default function JournalFormPage() {
             onClick={() => setIsGridMode(!isGridMode)}
             className="btn-secondary text-sm bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
           >
-            <TableGrid className="w-4 h-4" />
+            <Table className="w-4 h-4" />
             {isGridMode ? 'نمایش فرم استاندارد' : 'نمایش جدول اکسلی'}
           </button>
           <TemplatePicker accounts={accounts} currentLines={(watchedLines as any) || []} onApply={applyTemplate} />
