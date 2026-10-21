@@ -13,7 +13,10 @@ export class ProjectsService {
     return 'PRJ-' + year + '-' + String(count + 1).padStart(3, '0');
   }
 
-  async findAll(query?: { status?: string; search?: string }) {
+  /**
+   * دریافت لیست پروژه‌ها همراه با اعمال محدودیت دسترسی کاربر (Project RBAC)
+   */
+  async findAll(userId?: string, query?: { status?: string; search?: string }) {
     const where: any = { isActive: true };
     if (query?.status) where.status = query.status;
     if (query?.search) {
@@ -22,6 +25,25 @@ export class ProjectsService {
         { code: { contains: query.search, mode: 'insensitive' } },
       ];
     }
+
+    // بررسی دسترسی پروژه‌ای کاربر در صورتی که کاربر super_admin نباشد
+    if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: { include: { role: true } } },
+      });
+      const isSuperAdmin = user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+
+      if (!isSuperAdmin) {
+        const assignedProjects = await this.prisma.userProject.findMany({
+          where: { userId },
+          select: { projectId: true },
+        });
+        const allowedIds = assignedProjects.map((p) => p.projectId);
+        where.id = { in: allowedIds };
+      }
+    }
+
     return this.prisma.project.findMany({
       where,
       include: {
@@ -33,7 +55,7 @@ export class ProjectsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string) {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
@@ -44,6 +66,24 @@ export class ProjectsService {
       },
     });
     if (!project) throw new NotFoundException('پروژه یافت نشد');
+
+    // چک دسترسی پروژه‌ای
+    if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: { include: { role: true } } },
+      });
+      const isSuperAdmin = user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+      if (!isSuperAdmin) {
+        const hasAccess = await this.prisma.userProject.findFirst({
+          where: { userId, projectId: id },
+        });
+        if (!hasAccess) {
+          throw new BadRequestException('شما دسترسی به این پروژه را ندارید');
+        }
+      }
+    }
+
     return project;
   }
 
