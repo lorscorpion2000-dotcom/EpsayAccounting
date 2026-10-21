@@ -1,9 +1,234 @@
-﻿export function findActiveSection(pathname: string): string {
+﻿import {
+  FolderKanban,
+  Building2,
+  FileSignature,
+  FileSpreadsheet,
+  ShieldCheck,
+  ShoppingCart,
+  ClipboardList,
+  Receipt,
+  DollarSign,
+  Warehouse,
+  Package,
+  Layers,
+  ArrowRightLeft,
+  CheckSquare,
+  HardHat,
+  AlertTriangle,
+  Truck,
+  BookOpen,
+  FileText,
+  SlidersHorizontal,
+  Scale,
+  PieChart,
+  BadgePercent,
+  Landmark,
+  Wallet,
+  Coins,
+  Users,
+  Settings,
+  CalendarCheck,
+  Tags,
+  Clock,
+  Shield,
+  ScrollText,
+  DatabaseBackup,
+  FolderSync,
+  Trash2,
+  HelpCircle,
+} from 'lucide-react';
+
+export interface MenuItem {
+  to: string;
+  label: string;
+  icon?: any;
+}
+
+export interface MenuSubSection {
+  key: string;
+  title: string;
+  items: MenuItem[];
+}
+
+export interface MenuSection {
+  key: string;
+  title: string;
+  icon?: any;
+  items?: MenuItem[];
+  subsections?: MenuSubSection[];
+}
+
+// لیست اصلی منوهای سیستم
+export const MENU: MenuSection[] = [
+  {
+    key: 'dashboard',
+    title: 'داشبورد و وضعیت عمومی',
+    icon: PieChart,
+    items: [{ to: '/dashboard', label: 'داشبورد مدیریتی', icon: PieChart }],
+  },
+  {
+    key: 'projects-hub',
+    title: 'پروژه‌ها و قراردادها',
+    icon: FolderKanban,
+    items: [
+      { to: '/projects', label: 'پروژه‌های عمرانی و ساخت', icon: Building2 },
+      { to: '/contracts', label: 'قراردادها و پیمان‌ها', icon: FileSignature },
+      { to: '/contracts/templates', label: 'قالب‌های قرارداد', icon: FileSpreadsheet },
+      { to: '/timeline/guarantees', label: 'ضمانت‌نامه‌های پروژه', icon: ShieldCheck },
+    ],
+  },
+  {
+    key: 'procurement',
+    title: 'تدارکات و خرید',
+    icon: ShoppingCart,
+    items: [
+      { to: '/procurement/requests', label: 'درخواست‌های خرید کارگاه', icon: ClipboardList },
+      { to: '/procurement/orders', label: 'سفارش‌های خرید (کارپرداز)', icon: ShoppingCart },
+      { to: '/procurement/invoices', label: 'فاکتورهای خرید و تأمین', icon: Receipt },
+      { to: '/procurement/supplier-payments', label: 'پرداخت به تأمین‌کنندگان', icon: DollarSign },
+    ],
+  },
+  {
+    key: 'warehouse',
+    title: 'انبار و مدیریت مصالح',
+    icon: Warehouse,
+    items: [
+      { to: '/warehouse/warehouses', label: 'انبار مرکزی و پروژه‌ها', icon: Warehouse },
+      { to: '/warehouse/items', label: 'کاتالوگ کالا و مصالح', icon: Package },
+      { to: '/warehouse/receipts', label: 'رسید ورود کالا (انبارداری)', icon: Layers },
+      { to: '/warehouse/issues', label: 'حواله خروج و مصرف پروژه', icon: Layers },
+      { to: '/warehouse-transfers', label: 'انتقال بین انبارها', icon: ArrowRightLeft },
+      { to: '/inventory-counts', label: 'انبارگردانی و کسری/اضافی', icon: CheckSquare },
+      { to: '/warehouse/kardex', label: 'کاردکس ریالی و تعدادی', icon: FileSpreadsheet },
+      { to: '/material-report/consumption', label: 'مدیریت مصالح پای کار', icon: Package },
+    ],
+  },
+  {
+    key: 'site-ops',
+    title: 'کارگاه و عملیات اجرایی',
+    icon: HardHat,
+    items: [
+      { to: '/site-ops/daily-reports', label: 'گزارش روزانه سرپرست', icon: HardHat },
+      { to: '/site-ops/failed-forwardings', label: 'صندوق ارسال گزارشات', icon: AlertTriangle },
+      { to: '/equipment', label: 'ماشین‌آلات و تجهیزات کارگاه', icon: Truck },
+    ],
+  },
+  {
+    key: 'accounting',
+    title: 'حسابداری مالی و پروژه‌ای',
+    icon: BookOpen,
+    subsections: [
+      {
+        key: 'accounting-ops',
+        title: 'عملیات اسناد و دفاتر',
+        items: [
+          { to: '/accounting/journals', label: 'اسناد حسابداری (سند دوبل)', icon: BookOpen },
+          { to: '/accounting/journal-book', label: 'دفتر روزنامه رسمی', icon: FileText },
+          { to: '/accounting/advanced-ledger', label: 'دفتر کل و معین پیشرفته', icon: FileSpreadsheet },
+          { to: '/adjustments', label: 'اسناد تعدیل و اصلاحی', icon: SlidersHorizontal },
+          { to: '/settings/period-lock', label: 'بستن حساب‌ها و قفل دوره', icon: ShieldCheck },
+        ],
+      },
+      {
+        key: 'financial-statements',
+        title: 'صورت‌های مالی و ترازها',
+        items: [
+          { to: '/accounting/trial-balance', label: 'تراز آزمایشی (۴ و ۸ ستونی)', icon: Scale },
+          { to: '/accounting/reports/detailed-trial-balance', label: 'تراز تفصیلی حساب‌ها', icon: Scale },
+          { to: '/accounting/reports/balance-sheet', label: 'ترازنامه مالی', icon: FileSpreadsheet },
+          { to: '/accounting/reports/profit-loss', label: 'صورت سود و زیان (پروژه/ستاد)', icon: PieChart },
+          { to: '/accounting/reports/project-ledger', label: 'ریز تفصیلی به تفکیک پروژه', icon: Layers },
+          { to: '/overhead-allocations', label: 'تسهیم هزینه‌های بالاسری', icon: BadgePercent },
+          { to: '/accounting/reports/vat', label: 'مالیات بر ارزش افزوده (VAT)', icon: Receipt },
+          { to: '/tax-reports', label: 'گزارشات فصلی و مالیاتی', icon: FileSpreadsheet },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'treasury',
+    title: 'خزانه‌داری و نقدینگی',
+    icon: Landmark,
+    items: [
+      { to: '/accounting/banks', label: 'بانک‌ها و صندوق‌های شرکت', icon: Landmark },
+      { to: '/accounting/cheques', label: 'مدیریت چک‌های دریافتی/پرداختی', icon: FileText },
+      { to: '/petty-cash', label: 'تنخواه‌گردان‌های پروژه‌ها', icon: Wallet },
+      { to: '/expenses', label: 'هزینه‌های جاری کارگاه و ستاد', icon: Coins },
+      { to: '/accounting/reports/cash-flow', label: 'جریان وجوه نقد (Cash Flow)', icon: DollarSign },
+      { to: '/partner-capital/accounts', label: 'سرمایه، سهم‌الشرکه و شرکا', icon: Users },
+      { to: '/accounting/fixed-assets', label: 'اموال و دارایی‌های ثابت', icon: Package },
+    ],
+  },
+  {
+    key: 'sales-and-revenue',
+    title: 'فروش و صورت‌وضعیت',
+    icon: Receipt,
+    items: [
+      { to: '/payroll/subcontractor-statements', label: 'صورت‌وضعیت پیمانکاران جزء', icon: FileSpreadsheet },
+      { to: '/sales/units', label: 'واحدهای ساختمانی و فروش', icon: Building2 },
+      { to: '/sales/customers', label: 'خریداران و کارفرمایان', icon: Users },
+      { to: '/sales/contracts', label: 'قراردادهای پیش‌فروش و فروش', icon: FileSignature },
+      { to: '/sales/invoices', label: 'فاکتورهای فروش و درآمد', icon: Receipt },
+      { to: '/sales/receipts', label: 'رسید دریافت وجوه فروش', icon: DollarSign },
+    ],
+  },
+  {
+    key: 'reports',
+    title: 'گزارش‌های جامع',
+    icon: PieChart,
+    items: [
+      { to: '/reports', label: 'مرکز جامع گزارشات', icon: PieChart },
+      { to: '/reports/project', label: 'گزارش تحلیلی بهای تمام‌شده پروژه', icon: FolderKanban },
+      { to: '/reports/contracting-revenue', label: 'گزارش درآمد و سود پیمانکاری', icon: DollarSign },
+      { to: '/accounting/reports/ap-aging-detail', label: 'گزارش سنی بدهی‌ها (بستانکاران)', icon: FileSpreadsheet },
+      { to: '/accounting/reports/ar-aging-detail', label: 'گزارش سنی مطالبات (بدهکاران)', icon: FileSpreadsheet },
+      { to: '/wip', label: 'کنترل پروژه و بودجه‌بندی', icon: Scale },
+    ],
+  },
+  {
+    key: 'settings',
+    title: 'پایه‌ها و تنظیمات سیستم',
+    icon: Settings,
+    subsections: [
+      {
+        key: 'base-definitions',
+        title: 'اطلاعات و تعاریف پایه',
+        items: [
+          { to: '/settings/fiscal-years', label: 'سال‌های مالی', icon: CalendarCheck },
+          { to: '/accounting/accounts', label: 'کدینگ حساب‌ها (کل، معین، تفصیلی)', icon: BookOpen },
+          { to: '/accounting/cost-centers', label: 'مراکز هزینه و پروژه‌ها', icon: FolderKanban },
+          { to: '/accounting/mappings', label: 'نگاشت خودکار اسناد حسابداری', icon: SlidersHorizontal },
+          { to: '/directory', label: 'دفترچه مخاطبان و اشخاص', icon: Users },
+          { to: '/price-lists', label: 'فهرست‌بهای رسمی و قیمت‌ها', icon: Tags },
+          { to: '/settings/units', label: 'واحدهای سنجش و اندازه‌گیری', icon: SlidersHorizontal },
+          { to: '/settings/expense-categories', label: 'سرفصل‌های هزینه‌های کارگاه', icon: Tags },
+          { to: '/timeline/permits', label: 'مجوزها، بیمه و اسناد پروژه', icon: Clock },
+        ],
+      },
+      {
+        key: 'system-management',
+        title: 'امنیت و نگهداری',
+        items: [
+          { to: '/settings/users', label: 'کاربران سیستم', icon: Users },
+          { to: '/settings/roles', label: 'نقش‌ها و ماتریس مجوزها', icon: Shield },
+          { to: '/audit', label: 'ردپای عملیات و لاگ‌های امنیتی', icon: ScrollText },
+          { to: '/backup', label: 'پشتیبان‌گیری از دیتابیس', icon: DatabaseBackup },
+          { to: '/data-io', label: 'ورود و خروج گروهی داده‌ها (Excel)', icon: FolderSync },
+          { to: '/recycle-bin', label: 'سطل بازیافت موارد حذف‌شده', icon: Trash2 },
+          { to: '/settings/company', label: 'مشخصات شرکت و مهر و لوگو', icon: Building2 },
+          { to: '/settings/profile', label: 'پروفایل کاربر جاری', icon: Users },
+          { to: '/help/workflows', label: 'راهنمای گردش‌کارهای سیستم', icon: HelpCircle },
+        ],
+      },
+    ],
+  },
+];
+
+// پیدا کردن بخش فعال منو بر اساس مسیر URL
+export function findActiveSection(pathname: string): string {
   if (!pathname) return '';
 
-  // ۱. جستجوی پویا در تمام بخش‌ها، زیربخش‌ها و آیتم‌های منوی فعلی
   for (const section of MENU) {
-    // بررسی آیتم‌های مستقیم بخش
     if (section.items) {
       for (const item of section.items) {
         if (
@@ -15,7 +240,6 @@
       }
     }
 
-    // بررسی آیتم‌های زیربخش‌ها (Subsections)
     if (section.subsections) {
       for (const sub of section.subsections) {
         if (sub.items) {
@@ -32,7 +256,6 @@
     }
   }
 
-  // ۲. نگاشت پیش‌فرض برای صفحات جزئیات و مسیرهایی که دقیقاً همنام هدر نیستند
   if (pathname.startsWith('/projects') || pathname.startsWith('/contracts') || pathname.startsWith('/timeline')) {
     return 'projects-hub';
   }
@@ -73,4 +296,46 @@
   }
 
   return '';
+}
+
+// فیلتر کردن منو بر اساس مجوزهای کاربر
+export function buildFilteredMenu(hasPermission: (code: string) => boolean): MenuSection[] {
+  const result: MenuSection[] = [];
+
+  for (const section of MENU) {
+    let filteredItems: MenuItem[] | undefined = undefined;
+    let filteredSubsections: MenuSubSection[] | undefined = undefined;
+
+    if (section.items) {
+      filteredItems = section.items.filter((item) => {
+        if (!item.to) return true;
+        return hasPermission ? hasPermission(item.to) : true;
+      });
+    }
+
+    if (section.subsections) {
+      filteredSubsections = section.subsections
+        .map((sub) => ({
+          ...sub,
+          items: sub.items.filter((item) => {
+            if (!item.to) return true;
+            return hasPermission ? hasPermission(item.to) : true;
+          }),
+        }))
+        .filter((sub) => sub.items.length > 0);
+    }
+
+    if (
+      (filteredItems && filteredItems.length > 0) ||
+      (filteredSubsections && filteredSubsections.length > 0)
+    ) {
+      result.push({
+        ...section,
+        items: filteredItems,
+        subsections: filteredSubsections,
+      });
+    }
+  }
+
+  return result;
 }
