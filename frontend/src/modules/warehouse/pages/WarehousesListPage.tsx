@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { toast } from 'sonner';
 import { Plus, Search, Loader2, Warehouse as WarehouseIcon, Edit, FolderOpen, MapPin, RefreshCw, Archive } from 'lucide-react';
