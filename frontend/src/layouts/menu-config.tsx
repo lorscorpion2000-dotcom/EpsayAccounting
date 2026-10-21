@@ -256,7 +256,11 @@ export function findActiveSection(pathname: string): string {
     return 'contracts';
   }
 
-  // ۱. ابتدا پیمایش مستقیم منو
+  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
+    return 'dashboard';
+  }
+
+  // 1. اولویت پیمایش مستقیم آیتم‌های منو جهت جلوگیری از پرش منوی خزانه‌داری
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
@@ -279,11 +283,15 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
-    return 'dashboard';
+  // 2. فال‌بک برای مسیرهای فرعی مالی و حقوق و دستمزد
+  if (
+    pathname === '/payroll' ||
+    pathname.startsWith('/payroll/') ||
+    pathname === '/accounting' ||
+    pathname.startsWith('/accounting/')
+  ) {
+    return 'financial';
   }
-
-
 
   return '';
 }
