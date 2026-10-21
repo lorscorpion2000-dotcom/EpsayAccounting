@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID, IsNumber, IsDateString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, IsNumber, IsDateString, IsBoolean } from 'class-validator';
 
 export enum PettyCashTxTypeDto {
   FUNDING = 'FUNDING',
@@ -68,4 +68,14 @@ export class CreatePettyCashTransactionDto {
   @IsOptional()
   @IsUUID()
   sourceAccountId?: string;
+
+  @ApiPropertyOptional({ description: 'آیا هزینه قابل مطالبه از کارفرما است؟' })
+  @IsOptional()
+  @IsBoolean()
+  isReimbursable?: boolean;
+
+  @ApiPropertyOptional({ description: 'درصد ضریب/مدیریت پیمان' })
+  @IsOptional()
+  @IsNumber()
+  markupPercent?: number;
 }
