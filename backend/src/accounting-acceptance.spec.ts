@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from './shared/prisma/prisma.service';
 
 describe('Accounting Acceptance Tests (Financial Logic)', () => {
-  let prisma: any;
+  let prisma: PrismaService;
 
   const mockPrisma: any = {
     journalLine: {
@@ -33,12 +33,12 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
       _sum: { debit: 1500000000, credit: 1500000000 },
     });
 
-    const result = await mockPrisma.journalLine.aggregate({
+    const result = await prisma.journalLine.aggregate({
       _sum: { debit: true, credit: true },
     });
 
-    const debitSum = result._sum.debit || 0;
-    const creditSum = result._sum.credit || 0;
+    const debitSum = result._sum?.debit || 0;
+    const creditSum = result._sum?.credit || 0;
     const difference = debitSum - creditSum;
 
     expect(difference).toBe(0);
@@ -50,11 +50,11 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
       isClosed: true,
     });
 
-    const period = await mockPrisma.financialPeriod.findFirst({
+    const period = await prisma.financialPeriod.findFirst({
       where: { isClosed: true },
     });
 
-    expect(period.isClosed).toBe(true);
+    expect(period?.isClosed).toBe(true);
   });
 
   it('۳. ذخیره‌گیری عیدی (۲/۱۲) و سنوات (۱/۱۲) باید دقیق محاسبه شود', () => {
