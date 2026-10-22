@@ -1,4 +1,3 @@
-import * as jalaali from 'jalaali-js';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { toLocalDateString } from '../../common/utils/date.util';

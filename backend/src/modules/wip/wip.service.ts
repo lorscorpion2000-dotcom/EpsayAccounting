@@ -1,4 +1,3 @@
-import * as jalaali from 'jalaali-js';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 

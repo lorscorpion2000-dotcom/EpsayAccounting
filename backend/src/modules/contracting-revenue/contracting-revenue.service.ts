@@ -186,10 +186,12 @@ export class ContractingRevenueService {
 
     const buckets = new Map<string, { period: string; revenue: number; cost: number; profit: number }>();
     const keyOf = (d: Date): string => {
-      const y = d.getFullYear();
-      const m = d.getMonth();
-      if (groupBy === 'quarter') return y + '-Q' + (Math.floor(m / 3) + 1);
-      return y + '-' + String(m + 1).padStart(2, '0');
+      if (!d) return '';
+      const dateObj = typeof d === 'string' ? new Date(d) : d;
+      if (isNaN(dateObj.getTime())) return '';
+      const j = jalaali.toJalaali(dateObj);
+      if (groupBy === 'quarter') return j.jy + '-Q' + (Math.floor((j.jm - 1) / 3) + 1);
+      return j.jy + '-' + String(j.jm).padStart(2, '0');
     };
     const ensure = (k: string) => {
       if (!buckets.has(k)) buckets.set(k, { period: k, revenue: 0, cost: 0, profit: 0 });
