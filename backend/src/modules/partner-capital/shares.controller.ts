@@ -1,68 +1,49 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SharesService } from './shares.service';
-import { CreateShareDto, UpdateShareDto } from './dto/share.dto';
-import { RequirePermissions } from '../../common/decorators/permissions.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { ReasonDto } from '../../common/dto';
-import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import { CreateShareDto, UpdateShareDto, AddPartnerWithDilutionDto } from './dto/share.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@ApiTags('Project Partner Shares - سهم‌الشرکه پروژه‌ها')
+@ApiTags('Partner Shares')
 @ApiBearerAuth()
-@Controller('partner-capital/shares')
+@UseGuards(JwtAuthGuard)
+@Controller('partner-shares')
 export class SharesController {
-  constructor(private s: SharesService) {}
+  constructor(private readonly sharesService: SharesService) {}
 
   @Get()
-  @RequirePermissions('partners.read')
-  @ApiQuery({ name: 'projectId', required: false })
-  @ApiQuery({ name: 'partnerId', required: false })
-  findAll(
-    @Query('projectId') projectId?: string,
-    @Query('partnerId') partnerId?: string,
-  ) { return this.s.findAll({ projectId, partnerId }); }
+  @ApiOperation({ summary: 'لیست سهم‌الشرکه‌ها' })
+  findAll(@Query('projectId') projectId?: string) {
+    return this.sharesService.findAll(projectId);
+  }
 
   @Get(':id')
-  @RequirePermissions('partners.read')
-  findOne(@Param('id') id: string) { return this.s.findOne(id); }
+  @ApiOperation({ summary: 'جزئیات یک سهم‌الشرکه' })
+  findOne(@Param('id') id: string) {
+    return this.sharesService.findOne(id);
+  }
 
   @Post()
-  @RequirePermissions('partners.create')
-  create(@Body() dto: CreateShareDto) { return this.s.create(dto); }
+  @ApiOperation({ summary: 'ثبت سهم جدید' })
+  create(@Body() dto: CreateShareDto) {
+    return this.sharesService.create(dto);
+  }
+
+  @Post('add-with-dilution')
+  @ApiOperation({ summary: 'ثبت شریک جدید با رقیق‌سازی پویای سهم شرکا' })
+  addWithDilution(@Body() dto: AddPartnerWithDilutionDto) {
+    return this.sharesService.addPartnerWithDilution(dto);
+  }
 
   @Patch(':id')
-  @RequirePermissions('partners.update')
+  @ApiOperation({ summary: 'ویرایش سهم‌الشرکه' })
   update(@Param('id') id: string, @Body() dto: UpdateShareDto) {
-    return this.s.update(id, dto);
+    return this.sharesService.update(id, dto);
   }
 
   @Delete(':id')
-  @RequirePermissions('partners.delete')
-  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.s.remove(id, userId);
-  }
-
-  @Get('deleted/list')
-  @RequirePermissions('partners.update')
-  listDeleted(
-    @Query('take', new OptionalIntPipe()) take?: number,
-    @Query('skip', new OptionalIntPipe()) skip?: number,
-  ) {
-    return this.s.listDeleted(take ?? 100, skip ?? 0);
-  }
-
-  @Delete(':id/admin')
-  @RequirePermissions('partners.update')
-  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
-    return this.s.adminDelete(id, req.user?.id, body?.reason, {
-      ipAddress: req.ip,
-      userAgent: req.headers?.['user-agent'],
-    });
-  }
-
-  @Patch(':id/restore')
-  @RequirePermissions('partners.update')
-  restore(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.s.restore(id, userId);
+  @ApiOperation({ summary: 'حذف سهم‌الشرکه' })
+  remove(@Param('id') id: string) {
+    return this.sharesService.remove(id);
   }
 }
