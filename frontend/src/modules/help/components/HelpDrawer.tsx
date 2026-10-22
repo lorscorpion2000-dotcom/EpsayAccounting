@@ -1,6 +1,6 @@
 import { X, BookOpen, Lightbulb, HelpCircle, Sparkles, ChevronLeft } from 'lucide-react';
 import clsx from 'clsx';
-import type { PageHelp } from '../helpContent';
+import type { PageHelp, HelpSection } from '../helpContent';
 
 interface Props {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export default function HelpDrawer({ isOpen, onClose, help }: Props) {
                     <h4 className="font-bold text-emerald-800">شروع سریع</h4>
                   </div>
                   <ol className="space-y-2">
-                    {help.quickStart.map((step, i) => (
+                    {help.quickStart.map((step: string, i: number) => (
                       <li key={i} className="flex items-start gap-3 text-sm text-slate-700">
                         <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-500 text-white text-xs flex items-center justify-center font-bold">
                           {i + 1}
@@ -84,24 +84,26 @@ export default function HelpDrawer({ isOpen, onClose, help }: Props) {
               )}
 
               {/* Sections */}
-              {help.sections.map((section, idx) => (
+              {help.sections.map((section: HelpSection, idx: number) => (
                 <div key={idx} className="border-b border-slate-100 last:border-0 pb-5 last:pb-0">
                   <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
                     <span className="w-1 h-4 bg-brand-500 rounded"></span>
                     {section.title}
                   </h4>
-                  <ul className="space-y-2">
-                    {section.items.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <ChevronLeft className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {section.items && section.items.length > 0 && (
+                    <ul className="space-y-2">
+                      {section.items.map((item: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                          <ChevronLeft className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                   {section.tips && section.tips.length > 0 && (
                     <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                      {section.tips.map((tip, i) => (
+                      {section.tips.map((tip: string, i: number) => (
                         <div key={i} className="flex items-start gap-2 text-xs text-amber-800">
                           <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
                           <span>{tip}</span>
@@ -120,7 +122,7 @@ export default function HelpDrawer({ isOpen, onClose, help }: Props) {
                     <h4 className="font-bold text-slate-800">سوالات متداول</h4>
                   </div>
                   <div className="space-y-3">
-                    {help.faqs.map((faq, i) => (
+                    {help.faqs.map((faq: { q: string; a: string }, i: number) => (
                       <div key={i}>
                         <div className="font-medium text-slate-800 text-sm mb-1">
                           ❓ {faq.q}
@@ -139,9 +141,12 @@ export default function HelpDrawer({ isOpen, onClose, help }: Props) {
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 bg-slate-50">
-          <div className="text-xs text-slate-500 text-center">
-            نسخه ۱.۰ — راهنمای کاربری حسابداری اپسای
-          </div>
+          <button
+            onClick={onClose}
+            className="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold rounded-lg transition-colors"
+          >
+            متوجه شدم
+          </button>
         </div>
       </div>
     </>
