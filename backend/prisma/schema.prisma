@@ -2425,6 +2425,10 @@ model ProjectPartnerShare {
   @@index([projectId])
   @@index([partnerId])
   @@map("project_partner_shares")
+
+  usdRate            Decimal?  @map("usd_rate") @db.Decimal(12, 2)
+  valuationAmountUsd Decimal?  @map("valuation_amount_usd") @db.Decimal(15, 2)
+  valuationAmountRial Decimal? @map("valuation_amount_rial") @db.Decimal(18, 2)
 }
 
 model PartnerCapitalAccount {

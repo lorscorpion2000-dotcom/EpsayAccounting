@@ -1,13 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SharesService } from './shares.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import Decimal from 'decimal.js';
 
 describe('SharesService - Dynamic Dilution', () => {
   let service: SharesService;
-  let prisma: any;
 
-  const mockPrisma = {
+  const mockPrisma: any = {
     projectPartnerShare: {
       findMany: jest.fn(),
       updateMany: jest.fn(),
@@ -17,7 +16,7 @@ describe('SharesService - Dynamic Dilution', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-    $transaction: jest.fn((cb) => cb(mockPrisma)),
+    $transaction: jest.fn((cb: any) => cb(mockPrisma)),
   };
 
   beforeEach(async () => {
@@ -29,7 +28,6 @@ describe('SharesService - Dynamic Dilution', () => {
     }).compile();
 
     service = module.get<SharesService>(SharesService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   it('باید سهم شریک جدید را درست محاسبه کرده و مجموع سهم‌ها را دقیقاً روی ۱۰۰٪ تنظیم کند', async () => {

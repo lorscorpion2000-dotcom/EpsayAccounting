@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateShareDto, UpdateShareDto, AddPartnerWithDilutionDto } from './dto/share.dto';
 import Decimal from 'decimal.js';
 
