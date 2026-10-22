@@ -278,28 +278,17 @@ export const MENU: MenuSection[] = [
 export function findActiveSection(pathname: string): string {
   if (!pathname) return '';
 
-  if (pathname === '/contracts' || pathname.startsWith('/contracts/')) {
-    return 'contracts';
-  }
-
-  if (
-    pathname === '/payroll' ||
-    pathname.startsWith('/payroll/') ||
-    pathname === '/accounting' ||
-    pathname.startsWith('/accounting/')
-  ) {
-    return 'financial';
-  }
-
-  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
-    return 'dashboard';
-  }
+  let bestMatchKey = '';
+  let maxMatchLength = 0;
 
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
         if (pathname === item.to || pathname.startsWith(item.to + '/')) {
-          return section.key;
+          if (item.to.length > maxMatchLength) {
+            maxMatchLength = item.to.length;
+            bestMatchKey = section.key;
+          }
         }
       }
     }
@@ -309,7 +298,10 @@ export function findActiveSection(pathname: string): string {
         if (sub.items) {
           for (const item of sub.items) {
             if (pathname === item.to || pathname.startsWith(item.to + '/')) {
-              return section.key;
+              if (item.to.length > maxMatchLength) {
+                maxMatchLength = item.to.length;
+                bestMatchKey = section.key;
+              }
             }
           }
         }
@@ -317,7 +309,7 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  return '';
+  return bestMatchKey;
 }
 
 export function buildFilteredMenu(
