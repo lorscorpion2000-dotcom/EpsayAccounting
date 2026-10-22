@@ -61,46 +61,20 @@ export interface MenuSection {
   subsections?: MenuSubSection[];
 }
 
-/**
- * مسیر ورودی (Landing Page) پیش‌فرض بر اساس نقش کاربری
- */
-export const ROLE_HOME_ROUTES: Record<string, string> = {
-  CEO: '/dashboard',
-  CFO: '/dashboard',
-  ACCOUNTANT: '/accounting/journals',
-  SITE_MANAGER: '/site-ops/daily-reports',
-  WAREHOUSE_KEEPER: '/warehouse/receipts',
-  PROCUREMENT_OFFICER: '/procurement/orders',
-  ADMIN: '/dashboard',
-};
-
-/**
- * کلید بخش‌های مجاز منو به تفکیک نقش کاربری
- */
-export const ROLE_MENU_PRESETS: Record<string, string[]> = {
-  CEO: ['dashboard', 'contracts', 'reports', 'financial', 'sales-and-revenue'],
-  CFO: ['dashboard', 'contracts', 'procurement', 'warehouse', 'financial', 'treasury', 'sales-and-revenue', 'reports', 'settings'],
-  ACCOUNTANT: ['dashboard', 'procurement', 'warehouse', 'financial', 'treasury', 'sales-and-revenue', 'reports'],
-  SITE_MANAGER: ['dashboard', 'procurement', 'warehouse', 'site-ops'],
-  WAREHOUSE_KEEPER: ['dashboard', 'warehouse'],
-  PROCUREMENT_OFFICER: ['dashboard', 'procurement', 'treasury'],
-  ADMIN: ['dashboard', 'contracts', 'procurement', 'warehouse', 'site-ops', 'financial', 'treasury', 'sales-and-revenue', 'reports', 'settings'],
-};
-
 export const MENU: MenuSection[] = [
-  // ۱. داشبورد و کارتابل
+  // 1. داشبورد و کارتابل
   {
     key: 'dashboard',
     title: 'داشبورد و کارتابل',
     icon: LayoutDashboard,
     items: [
-      { to: '/dashboard', label: 'داشبورد مدیریتی', icon: LayoutDashboard },
+      { to: '/dashboard', label: 'داشبورد ارشد', icon: LayoutDashboard },
       { to: '/approvals', label: 'کارتابل تأییدات', icon: CheckSquare },
       { to: '/notifications', label: 'اعلان‌ها و یادآوری‌ها', icon: Bell },
     ],
   },
 
-  // ۲. پروژه‌ها و قراردادها
+  // 2. پروژه‌ها و قراردادها
   {
     key: 'contracts',
     title: 'پروژه‌ها و قراردادها',
@@ -113,7 +87,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۳. تدارکات و خرید
+  // 3. تدارکات و خرید
   {
     key: 'procurement',
     title: 'تدارکات و خرید',
@@ -126,7 +100,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۴. انبار و مدیریت مصالح
+  // 4. انبارداری و مصالح
   {
     key: 'warehouse',
     title: 'انبار و مدیریت مصالح',
@@ -143,7 +117,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۵. کارگاه و عملیات اجرایی
+  // 5. کارگاه و عملیات اجرایی
   {
     key: 'site-ops',
     title: 'کارگاه و عملیات اجرایی',
@@ -155,7 +129,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۶. حسابداری مالی و پروژه‌ای
+  // 6. حسابداری مالی و پروژه‌ای
   {
     key: 'financial',
     title: 'حسابداری مالی و پروژه‌ای',
@@ -189,7 +163,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۷. خزانه‌داری و نقدینگی
+  // 7. خزانه‌داری و تنخواه‌گردان
   {
     key: 'treasury',
     title: 'خزانه‌داری و نقدینگی',
@@ -205,7 +179,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۸. فروش و صورت‌وضعیت‌ها
+  // 8. فروش و صورت‌وضعیت‌ها
   {
     key: 'sales-and-revenue',
     title: 'فروش و صورت‌وضعیت',
@@ -220,7 +194,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۹. گزارشات جامع مدیریتی
+  // 9. گزارشات جامع مدیریتی
   {
     key: 'reports',
     title: 'گزارش‌های جامع',
@@ -235,7 +209,7 @@ export const MENU: MenuSection[] = [
     ],
   },
 
-  // ۱۰. پایه‌ها و تنظیمات سیستم
+  // 10. پایه‌ها، تعاریف و مدیریت سیستم
   {
     key: 'settings',
     title: 'پایه‌ها و تنظیمات سیستم',
@@ -278,17 +252,20 @@ export const MENU: MenuSection[] = [
 export function findActiveSection(pathname: string): string {
   if (!pathname) return '';
 
-  let bestMatchKey = '';
-  let maxMatchLength = 0;
+  if (pathname === '/contracts' || pathname.startsWith('/contracts/')) {
+    return 'contracts';
+  }
 
+  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
+    return 'dashboard';
+  }
+
+  // ۱. اولویت اول: بررسی دقیق تمام آیتم‌های تعریف‌شده در منو (جهت حفظ ثبات منوی تنظیمات)
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
         if (pathname === item.to || pathname.startsWith(item.to + '/')) {
-          if (item.to.length > maxMatchLength) {
-            maxMatchLength = item.to.length;
-            bestMatchKey = section.key;
-          }
+          return section.key;
         }
       }
     }
@@ -298,10 +275,7 @@ export function findActiveSection(pathname: string): string {
         if (sub.items) {
           for (const item of sub.items) {
             if (pathname === item.to || pathname.startsWith(item.to + '/')) {
-              if (item.to.length > maxMatchLength) {
-                maxMatchLength = item.to.length;
-                bestMatchKey = section.key;
-              }
+              return section.key;
             }
           }
         }
@@ -309,22 +283,23 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  return bestMatchKey;
+  // ۲. فال‌بک برای مسیرهای فرعی ۳سطحی غیرمستقیم (مانند /payroll/periods یا /accounting/journals)
+  if (
+    pathname === '/payroll' ||
+    pathname.startsWith('/payroll/') ||
+    pathname === '/accounting' ||
+    pathname.startsWith('/accounting/')
+  ) {
+    return 'financial';
+  }
+
+  return '';
 }
 
-export function buildFilteredMenu(
-  hasPermission: (code: string) => boolean,
-  role?: string
-): MenuSection[] {
-  const allowedSections = role && ROLE_MENU_PRESETS[role] ? ROLE_MENU_PRESETS[role] : null;
-
+export function buildFilteredMenu(hasPermission: (code: string) => boolean): MenuSection[] {
   const result: MenuSection[] = [];
 
   for (const section of MENU) {
-    if (allowedSections && !allowedSections.includes(section.key)) {
-      continue;
-    }
-
     let filteredItems: MenuItem[] | undefined = undefined;
     let filteredSubsections: MenuSubSection[] | undefined = undefined;
 
@@ -356,11 +331,14 @@ export function buildFilteredMenu(
         .filter((sub) => sub.items.length > 0);
     }
 
-    if ((filteredItems && filteredItems.length > 0) || (filteredSubsections && filteredSubsections.length > 0)) {
+    const hasItems = filteredItems && filteredItems.length > 0;
+    const hasSubs = filteredSubsections && filteredSubsections.length > 0;
+
+    if (hasItems || hasSubs) {
       result.push({
         ...section,
-        items: filteredItems,
-        subsections: filteredSubsections,
+        items: hasItems ? filteredItems : undefined,
+        subsections: hasSubs ? filteredSubsections : undefined,
       });
     }
   }
