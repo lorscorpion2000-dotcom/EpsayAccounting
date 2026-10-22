@@ -6,7 +6,7 @@ export class RegisterDirectPaymentDto {
   @IsUUID()
   clientId!: string;
 
-  @ApiProperty({ description: 'شناسه شخص/تامین‌کننده دریافت‌کننده وجه' })
+  @ApiProperty({ description: 'شناسه شخص یا تامین‌کننده دریافت‌کننده وجه' })
   @IsUUID()
   personOrSupplierId!: string;
 
@@ -14,7 +14,7 @@ export class RegisterDirectPaymentDto {
   @IsUUID()
   projectId!: string;
 
-  @ApiProperty({ description: 'مبلغ واریزی مستقیم کارفرما (ریال)' })
+  @ApiProperty({ description: 'مبلغ واریز مستقیم کارفرما (ریال)' })
   @IsNumber()
   @Min(1)
   amount!: number;
@@ -23,7 +23,7 @@ export class RegisterDirectPaymentDto {
   @IsDateString()
   paymentDate!: string;
 
-  @ApiPropertyOptional({ description: 'شماره فیش / پیگیری واریز' })
+  @ApiPropertyOptional({ description: 'شماره فیش یا پیگیری' })
   @IsOptional()
   @IsString()
   referenceNumber?: string;
