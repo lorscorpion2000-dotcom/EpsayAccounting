@@ -47,7 +47,6 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
   it('۲. ثبت سند در دوره مالی قفل‌شده (بسته‌شده) باید رد شود', async () => {
     mockPrisma.fiscalYear.findFirst.mockResolvedValue({
       id: 'period-2025',
-      isClosed: true,
       status: 'CLOSED',
     });
 
@@ -55,7 +54,7 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
       where: { status: 'CLOSED' },
     });
 
-    expect(period?.isClosed || period?.status === 'CLOSED').toBeTruthy();
+    expect(period?.status).toBe('CLOSED');
   });
 
   it('۳. ذخیره‌گیری عیدی (۲/۱۲) و سنوات (۱/۱۲) باید دقیق محاسبه شود', () => {
