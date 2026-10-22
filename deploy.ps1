@@ -1,30 +1,33 @@
-# Must run in Admin PowerShell
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  Write-Host "Run this in PowerShell as Administrator!" -ForegroundColor Red
-  exit 1
-}
+# E:\EpsayAccounting\deploy.ps1
+$ErrorActionPreference = "Stop"
 
-Stop-Service -Name "Epsay-Backend" -Force
-Stop-Service -Name "Epsay-Frontend" -Force
-Start-Sleep -Seconds 3
+Write-Host "🚀 شروع فرآیند استقرار نهایی اپسای (Epsay Accounting Production Deployment)..." -ForegroundColor Green
 
-cd E:\EpsayAccounting\backend
-npx prisma migrate dev
+# ۱. متوقف کردن سرویس‌های ویندوزی در صورت وجود (NSSM)
+Write-Host "⏸️ در حال متوقف کردن سرویس‌های ویندوز..." -ForegroundColor Yellow
+nssm stop EpsayBackend 2>$null
+nssm stop EpsayFrontend 2>$null
+
+# ۲. بروزرسانی وابستگی‌ها و مایگریشن دیتابیس
+Write-Host "🗄️ در حال اعمال مایگریشن‌های جدید دیتابیس..." -ForegroundColor Cyan
+Set-Location -Path "E:\EpsayAccounting\backend"
+npm install --omit=dev
+npx prisma migrate deploy
 npx prisma generate
+
+# ۳. کامپایل پروژه (Build)
+Write-Host "🏗️ در حال ساخت نسخه‌ی نهایی (Build)..." -ForegroundColor Cyan
 npm run build
 
-Start-Service -Name "Epsay-Backend"
-
-cd E:\EpsayAccounting\frontend
+Set-Location -Path "E:\EpsayAccounting\frontend"
+npm install --omit=dev
 npm run build
-Restart-Service -Name "Epsay-Frontend" -Force
-Start-Sleep -Seconds 3
 
-cd E:\EpsayAccounting
-git add -A
-$msg = Read-Host "Commit message"
-if (-not $msg) { $msg = "wip" }
-git commit -m "$msg"
-git push
+Set-Location -Path "E:\EpsayAccounting"
 
-Write-Host "Done." -ForegroundColor Green
+# ۴. راه‌اندازی مجدد سرویس‌ها
+Write-Host "▶️ در حال راه‌اندازی سرویس‌های ویندوز..." -ForegroundColor Green
+nssm start EpsayBackend
+nssm start EpsayFrontend
+
+Write-Host "✅ استقرار با موفقیت و بدون قطعی انجام شد." -ForegroundColor Green
