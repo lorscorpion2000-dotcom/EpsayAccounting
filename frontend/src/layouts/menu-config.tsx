@@ -1,4 +1,4 @@
-﻿import {
+import {
   LayoutDashboard,
   Bell,
   CheckSquare,
@@ -62,7 +62,7 @@ export interface MenuSection {
 }
 
 /**
- * Ù…Ø³ÛŒØ± ÙˆØ±ÙˆØ¯ÛŒ (Landing Page) Ù¾ÛŒØ´â€ŒÙØ±Ø¶ Ø¨Ø± Ø§Ø³Ø§Ø³ Ù†Ù‚Ø´ Ú©Ø§Ø±Ø¨Ø±ÛŒ
+ * مسیر ورودی (Landing Page) پیش‌فرض بر اساس نقش کاربری
  */
 export const ROLE_HOME_ROUTES: Record<string, string> = {
   CEO: '/dashboard',
@@ -75,7 +75,7 @@ export const ROLE_HOME_ROUTES: Record<string, string> = {
 };
 
 /**
- * Ú©Ù„ÛŒØ¯ Ø¨Ø®Ø´â€ŒÙ‡Ø§ÛŒ Ù…Ø¬Ø§Ø² Ù…Ù†Ùˆ Ø¨Ù‡ ØªÙÚ©ÛŒÚ© Ù†Ù‚Ø´ Ú©Ø§Ø±Ø¨Ø±ÛŒ
+ * کلید بخش‌های مجاز منو به تفکیک نقش کاربری
  */
 export const ROLE_MENU_PRESETS: Record<string, string[]> = {
   CEO: ['dashboard', 'contracts', 'reports', 'financial', 'sales-and-revenue'],
@@ -88,187 +88,187 @@ export const ROLE_MENU_PRESETS: Record<string, string[]> = {
 };
 
 export const MENU: MenuSection[] = [
-  // Û±. Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯ Ùˆ Ú©Ø§Ø±ØªØ§Ø¨Ù„
+  // ۱. داشبورد و کارتابل
   {
     key: 'dashboard',
-    title: 'Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯ Ùˆ Ú©Ø§Ø±ØªØ§Ø¨Ù„',
+    title: 'داشبورد و کارتابل',
     icon: LayoutDashboard,
     items: [
-      { to: '/dashboard', label: 'Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯ Ù…Ø¯ÛŒØ±ÛŒØªÛŒ', icon: LayoutDashboard },
+      { to: '/dashboard', label: 'داشبورد مدیریتی', icon: LayoutDashboard },
       { to: '/approvals', label: 'کارتابل تأییدات', icon: CheckSquare },
-      { to: '/notifications', label: 'Ø§Ø¹Ù„Ø§Ù†â€ŒÙ‡Ø§ Ùˆ ÛŒØ§Ø¯Ø¢ÙˆØ±ÛŒâ€ŒÙ‡Ø§', icon: Bell },
+      { to: '/notifications', label: 'اعلان‌ها و یادآوری‌ها', icon: Bell },
     ],
   },
 
-  // Û². Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§ Ùˆ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯Ù‡Ø§
+  // ۲. پروژه‌ها و قراردادها
   {
     key: 'contracts',
-    title: 'Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§ Ùˆ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯Ù‡Ø§',
+    title: 'پروژه‌ها و قراردادها',
     icon: FolderKanban,
     items: [
-      { to: '/projects', label: 'Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§ÛŒ Ø¹Ù…Ø±Ø§Ù†ÛŒ Ùˆ Ø³Ø§Ø®Øª', icon: Building2 },
-      { to: '/contracts', label: 'Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯Ù‡Ø§ Ùˆ Ù¾ÛŒÙ…Ø§Ù†â€ŒÙ‡Ø§', icon: FileSignature },
-      { to: '/contracts/templates', label: 'Ù‚Ø§Ù„Ø¨â€ŒÙ‡Ø§ÛŒ Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯', icon: FileSpreadsheet },
-      { to: '/timeline/guarantees', label: 'Ø¶Ù…Ø§Ù†Øªâ€ŒÙ†Ø§Ù…Ù‡â€ŒÙ‡Ø§ÛŒ Ù¾Ø±ÙˆÚ˜Ù‡', icon: ShieldCheck },
+      { to: '/projects', label: 'پروژه‌های عمرانی و ساخت', icon: Building2 },
+      { to: '/contracts', label: 'قراردادها و پیمان‌ها', icon: FileSignature },
+      { to: '/contracts/templates', label: 'قالب‌های قرارداد', icon: FileSpreadsheet },
+      { to: '/timeline/guarantees', label: 'ضمانت‌نامه‌های پروژه', icon: ShieldCheck },
     ],
   },
 
-  // Û³. ØªØ¯Ø§Ø±Ú©Ø§Øª Ùˆ Ø®Ø±ÛŒØ¯
+  // ۳. تدارکات و خرید
   {
     key: 'procurement',
-    title: 'ØªØ¯Ø§Ø±Ú©Ø§Øª Ùˆ Ø®Ø±ÛŒØ¯',
+    title: 'تدارکات و خرید',
     icon: ShoppingCart,
     items: [
-      { to: '/procurement/requests', label: 'Ø¯Ø±Ø®ÙˆØ§Ø³Øªâ€ŒÙ‡Ø§ÛŒ Ø®Ø±ÛŒØ¯ Ú©Ø§Ø±Ú¯Ø§Ù‡', icon: ClipboardList },
-      { to: '/procurement/orders', label: 'Ø³ÙØ§Ø±Ø´â€ŒÙ‡Ø§ÛŒ Ø®Ø±ÛŒØ¯ (Ú©Ø§Ø±Ù¾Ø±Ø¯Ø§Ø²)', icon: ShoppingCart },
-      { to: '/procurement/invoices', label: 'ÙØ§Ú©ØªÙˆØ±Ù‡Ø§ÛŒ Ø®Ø±ÛŒØ¯ Ùˆ ØªØ£Ù…ÛŒÙ†', icon: Receipt },
-      { to: '/procurement/supplier-payments', label: 'Ù¾Ø±Ø¯Ø§Ø®Øª Ø¨Ù‡ ØªØ£Ù…ÛŒÙ†â€ŒÚ©Ù†Ù†Ø¯Ú¯Ø§Ù†', icon: DollarSign },
+      { to: '/procurement/requests', label: 'درخواست‌های خرید کارگاه', icon: ClipboardList },
+      { to: '/procurement/orders', label: 'سفارش‌های خرید (کارپرداز)', icon: ShoppingCart },
+      { to: '/procurement/invoices', label: 'فاکتورهای خرید و تأمین', icon: Receipt },
+      { to: '/procurement/supplier-payments', label: 'پرداخت به تأمین‌کنندگان', icon: DollarSign },
     ],
   },
 
-  // Û´. Ø§Ù†Ø¨Ø§Ø± Ùˆ Ù…Ø¯ÛŒØ±ÛŒØª Ù…ØµØ§Ù„Ø­
+  // ۴. انبار و مدیریت مصالح
   {
     key: 'warehouse',
-    title: 'Ø§Ù†Ø¨Ø§Ø± Ùˆ Ù…Ø¯ÛŒØ±ÛŒØª Ù…ØµØ§Ù„Ø­',
+    title: 'انبار و مدیریت مصالح',
     icon: Warehouse,
     items: [
-      { to: '/warehouse/warehouses', label: 'Ø§Ù†Ø¨Ø§Ø± Ù…Ø±Ú©Ø²ÛŒ Ùˆ Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§', icon: Warehouse },
-      { to: '/warehouse/items', label: 'Ú©Ø§ØªØ§Ù„ÙˆÚ¯ Ú©Ø§Ù„Ø§ Ùˆ Ù…ØµØ§Ù„Ø­', icon: Package },
-      { to: '/warehouse/receipts', label: 'Ø±Ø³ÛŒØ¯ ÙˆØ±ÙˆØ¯ Ú©Ø§Ù„Ø§ (Ø§Ù†Ø¨Ø§Ø±Ø¯Ø§Ø±ÛŒ)', icon: Layers },
-      { to: '/warehouse/issues', label: 'Ø­ÙˆØ§Ù„Ù‡ Ø®Ø±ÙˆØ¬ Ùˆ Ù…ØµØ±Ù Ù¾Ø±ÙˆÚ˜Ù‡', icon: Layers },
-      { to: '/warehouse-transfers', label: 'Ø§Ù†ØªÙ‚Ø§Ù„ Ø¨ÛŒÙ† Ø§Ù†Ø¨Ø§Ø±Ù‡Ø§', icon: ArrowRightLeft },
-      { to: '/inventory-counts', label: 'Ø§Ù†Ø¨Ø§Ø±Ú¯Ø±Ø¯Ø§Ù†ÛŒ Ùˆ Ú©Ø³Ø±ÛŒ/Ø§Ø¶Ø§ÙÛŒ', icon: CheckSquare },
-      { to: '/warehouse/kardex', label: 'Ú©Ø§Ø±Ø¯Ú©Ø³ Ø±ÛŒØ§Ù„ÛŒ Ùˆ ØªØ¹Ø¯Ø§Ø¯ÛŒ', icon: FileSpreadsheet },
-      { to: '/material-report/consumption', label: 'Ù…Ø¯ÛŒØ±ÛŒØª Ù…ØµØ§Ù„Ø­ Ù¾Ø§ÛŒ Ú©Ø§Ø±', icon: Package },
+      { to: '/warehouse/warehouses', label: 'انبار مرکزی و پروژه‌ها', icon: Warehouse },
+      { to: '/warehouse/items', label: 'کاتالوگ کالا و مصالح', icon: Package },
+      { to: '/warehouse/receipts', label: 'رسید ورود کالا (انبارداری)', icon: Layers },
+      { to: '/warehouse/issues', label: 'حواله خروج و مصرف پروژه', icon: Layers },
+      { to: '/warehouse-transfers', label: 'انتقال بین انبارها', icon: ArrowRightLeft },
+      { to: '/inventory-counts', label: 'انبارگردانی و کسری/اضافی', icon: CheckSquare },
+      { to: '/warehouse/kardex', label: 'کاردکس ریالی و تعدادی', icon: FileSpreadsheet },
+      { to: '/material-report/consumption', label: 'مدیریت مصالح پای کار', icon: Package },
     ],
   },
 
-  // Ûµ. Ú©Ø§Ø±Ú¯Ø§Ù‡ Ùˆ Ø¹Ù…Ù„ÛŒØ§Øª Ø§Ø¬Ø±Ø§ÛŒÛŒ
+  // ۵. کارگاه و عملیات اجرایی
   {
     key: 'site-ops',
-    title: 'Ú©Ø§Ø±Ú¯Ø§Ù‡ Ùˆ Ø¹Ù…Ù„ÛŒØ§Øª Ø§Ø¬Ø±Ø§ÛŒÛŒ',
+    title: 'کارگاه و عملیات اجرایی',
     icon: HardHat,
     items: [
-      { to: '/site-ops/daily-reports', label: 'Ú¯Ø²Ø§Ø±Ø´ Ø±ÙˆØ²Ø§Ù†Ù‡ Ø³Ø±Ù¾Ø±Ø³Øª', icon: HardHat },
-      { to: '/site-ops/failed-forwardings', label: 'ØµÙ†Ø¯ÙˆÙ‚ Ø§Ø±Ø³Ø§Ù„ Ú¯Ø²Ø§Ø±Ø´Ø§Øª', icon: AlertTriangle },
-      { to: '/equipment', label: 'Ù…Ø§Ø´ÛŒÙ†â€ŒØ¢Ù„Ø§Øª Ùˆ ØªØ¬Ù‡ÛŒØ²Ø§Øª Ú©Ø§Ø±Ú¯Ø§Ù‡', icon: Truck },
+      { to: '/site-ops/daily-reports', label: 'گزارش روزانه سرپرست', icon: HardHat },
+      { to: '/site-ops/failed-forwardings', label: 'صندوق ارسال گزارشات', icon: AlertTriangle },
+      { to: '/equipment', label: 'ماشین‌آلات و تجهیزات کارگاه', icon: Truck },
     ],
   },
 
-  // Û¶. Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±ÛŒ Ù…Ø§Ù„ÛŒ Ùˆ Ù¾Ø±ÙˆÚ˜Ù‡â€ŒØ§ÛŒ
+  // ۶. حسابداری مالی و پروژه‌ای
   {
     key: 'financial',
-    title: 'Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±ÛŒ Ù…Ø§Ù„ÛŒ Ùˆ Ù¾Ø±ÙˆÚ˜Ù‡â€ŒØ§ÛŒ',
+    title: 'حسابداری مالی و پروژه‌ای',
     icon: BookOpen,
     subsections: [
       {
         key: 'accounting-ops',
-        title: 'Ø¹Ù…Ù„ÛŒØ§Øª Ø§Ø³Ù†Ø§Ø¯ Ùˆ Ø¯ÙØ§ØªØ±',
+        title: 'عملیات اسناد و دفاتر',
         items: [
-          { to: '/accounting/journals', label: 'Ø§Ø³Ù†Ø§Ø¯ Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±ÛŒ (Ø³Ù†Ø¯ Ø¯ÙˆØ¨Ù„)', icon: BookOpen },
-          { to: '/accounting/journal-book', label: 'Ø¯ÙØªØ± Ø±ÙˆØ²Ù†Ø§Ù…Ù‡ Ø±Ø³Ù…ÛŒ', icon: FileText },
-          { to: '/accounting/advanced-ledger', label: 'Ø¯ÙØªØ± Ú©Ù„ Ùˆ Ù…Ø¹ÛŒÙ† Ù¾ÛŒØ´Ø±ÙØªÙ‡', icon: FileSpreadsheet },
-          { to: '/adjustments', label: 'Ø§Ø³Ù†Ø§Ø¯ ØªØ¹Ø¯ÛŒÙ„ Ùˆ Ø§ØµÙ„Ø§Ø­ÛŒ', icon: SlidersHorizontal },
-          { to: '/settings/period-lock', label: 'Ø¨Ø³ØªÙ† Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§ Ùˆ Ù‚ÙÙ„ Ø¯ÙˆØ±Ù‡', icon: ShieldCheck },
+          { to: '/accounting/journals', label: 'اسناد حسابداری (سند دوبل)', icon: BookOpen },
+          { to: '/accounting/journal-book', label: 'دفتر روزنامه رسمی', icon: FileText },
+          { to: '/accounting/advanced-ledger', label: 'دفتر کل و معین پیشرفته', icon: FileSpreadsheet },
+          { to: '/adjustments', label: 'اسناد تعدیل و اصلاحی', icon: SlidersHorizontal },
+          { to: '/settings/period-lock', label: 'بستن حساب‌ها و قفل دوره', icon: ShieldCheck },
         ],
       },
       {
         key: 'financial-statements',
-        title: 'ØµÙˆØ±Øªâ€ŒÙ‡Ø§ÛŒ Ù…Ø§Ù„ÛŒ Ùˆ ØªØ±Ø§Ø²Ù‡Ø§',
+        title: 'صورت‌های مالی و ترازها',
         items: [
-          { to: '/accounting/trial-balance', label: 'ØªØ±Ø§Ø² Ø¢Ø²Ù…Ø§ÛŒØ´ÛŒ (Û´ Ùˆ Û¸ Ø³ØªÙˆÙ†ÛŒ)', icon: Scale },
-          { to: '/accounting/reports/detailed-trial-balance', label: 'ØªØ±Ø§Ø² ØªÙØµÛŒÙ„ÛŒ Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§', icon: Scale },
-          { to: '/accounting/reports/balance-sheet', label: 'ØªØ±Ø§Ø²Ù†Ø§Ù…Ù‡ Ù…Ø§Ù„ÛŒ', icon: FileSpreadsheet },
-          { to: '/accounting/reports/profit-loss', label: 'ØµÙˆØ±Øª Ø³ÙˆØ¯ Ùˆ Ø²ÛŒØ§Ù† (Ù¾Ø±ÙˆÚ˜Ù‡/Ø³ØªØ§Ø¯)', icon: PieChart },
-          { to: '/accounting/reports/project-ledger', label: 'Ø±ÛŒØ² ØªÙØµÛŒÙ„ÛŒ Ø¨Ù‡ ØªÙÚ©ÛŒÚ© Ù¾Ø±ÙˆÚ˜Ù‡', icon: Layers },
-          { to: '/overhead-allocations', label: 'ØªØ³Ù‡ÛŒÙ… Ù‡Ø²ÛŒÙ†Ù‡â€ŒÙ‡Ø§ÛŒ Ø¨Ø§Ù„Ø§Ø³Ø±ÛŒ', icon: BadgePercent },
-          { to: '/accounting/reports/vat', label: 'Ù…Ø§Ù„ÛŒØ§Øª Ø¨Ø± Ø§Ø±Ø²Ø´ Ø§ÙØ²ÙˆØ¯Ù‡ (VAT)', icon: Receipt },
-          { to: '/tax-reports', label: 'Ú¯Ø²Ø§Ø±Ø´Ø§Øª ÙØµÙ„ÛŒ Ùˆ Ù…Ø§Ù„ÛŒØ§ØªÛŒ', icon: FileSpreadsheet },
+          { to: '/accounting/trial-balance', label: 'تراز آزمایشی (۴ و ۸ ستونی)', icon: Scale },
+          { to: '/accounting/reports/detailed-trial-balance', label: 'تراز تفصیلی حساب‌ها', icon: Scale },
+          { to: '/accounting/reports/balance-sheet', label: 'ترازنامه مالی', icon: FileSpreadsheet },
+          { to: '/accounting/reports/profit-loss', label: 'صورت سود و زیان (پروژه/ستاد)', icon: PieChart },
+          { to: '/accounting/reports/project-ledger', label: 'ریز تفصیلی به تفکیک پروژه', icon: Layers },
+          { to: '/overhead-allocations', label: 'تسهیم هزینه‌های بالاسری', icon: BadgePercent },
+          { to: '/accounting/reports/vat', label: 'مالیات بر ارزش افزوده (VAT)', icon: Receipt },
+          { to: '/tax-reports', label: 'گزارشات فصلی و مالیاتی', icon: FileSpreadsheet },
         ],
       },
     ],
   },
 
-  // Û·. Ø®Ø²Ø§Ù†Ù‡â€ŒØ¯Ø§Ø±ÛŒ Ùˆ Ù†Ù‚Ø¯ÛŒÙ†Ú¯ÛŒ
+  // ۷. خزانه‌داری و نقدینگی
   {
     key: 'treasury',
-    title: 'Ø®Ø²Ø§Ù†Ù‡â€ŒØ¯Ø§Ø±ÛŒ Ùˆ Ù†Ù‚Ø¯ÛŒÙ†Ú¯ÛŒ',
+    title: 'خزانه‌داری و نقدینگی',
     icon: Landmark,
     items: [
-      { to: '/accounting/banks', label: 'Ø¨Ø§Ù†Ú©â€ŒÙ‡Ø§ Ùˆ ØµÙ†Ø¯ÙˆÙ‚â€ŒÙ‡Ø§ÛŒ Ø´Ø±Ú©Øª', icon: Landmark },
-      { to: '/accounting/cheques', label: 'Ù…Ø¯ÛŒØ±ÛŒØª Ú†Ú©â€ŒÙ‡Ø§ÛŒ Ø¯Ø±ÛŒØ§ÙØªÛŒ/Ù¾Ø±Ø¯Ø§Ø®ØªÛŒ', icon: FileText },
-      { to: '/petty-cash', label: 'ØªÙ†Ø®ÙˆØ§Ù‡â€ŒÚ¯Ø±Ø¯Ø§Ù†â€ŒÙ‡Ø§ÛŒ Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§', icon: Wallet },
-      { to: '/expenses', label: 'Ù‡Ø²ÛŒÙ†Ù‡â€ŒÙ‡Ø§ÛŒ Ø¬Ø§Ø±ÛŒ Ú©Ø§Ø±Ú¯Ø§Ù‡ Ùˆ Ø³ØªØ§Ø¯', icon: Coins },
-      { to: '/accounting/reports/cash-flow', label: 'Ø¬Ø±ÛŒØ§Ù† ÙˆØ¬ÙˆÙ‡ Ù†Ù‚Ø¯ (Cash Flow)', icon: DollarSign },
-      { to: '/partner-capital/accounts', label: 'Ø³Ø±Ù…Ø§ÛŒÙ‡ØŒ Ø³Ù‡Ù…â€ŒØ§Ù„Ø´Ø±Ú©Ù‡ Ùˆ Ø´Ø±Ú©Ø§', icon: Users },
-      { to: '/accounting/fixed-assets', label: 'Ø§Ù…ÙˆØ§Ù„ Ùˆ Ø¯Ø§Ø±Ø§ÛŒÛŒâ€ŒÙ‡Ø§ÛŒ Ø«Ø§Ø¨Øª', icon: Package },
+      { to: '/accounting/banks', label: 'بانک‌ها و صندوق‌های شرکت', icon: Landmark },
+      { to: '/accounting/cheques', label: 'مدیریت چک‌های دریافتی/پرداختی', icon: FileText },
+      { to: '/petty-cash', label: 'تنخواه‌گردان‌های پروژه‌ها', icon: Wallet },
+      { to: '/expenses', label: 'هزینه‌های جاری کارگاه و ستاد', icon: Coins },
+      { to: '/accounting/reports/cash-flow', label: 'جریان وجوه نقد (Cash Flow)', icon: DollarSign },
+      { to: '/partner-capital/accounts', label: 'سرمایه، سهم‌الشرکه و شرکا', icon: Users },
+      { to: '/accounting/fixed-assets', label: 'اموال و دارایی‌های ثابت', icon: Package },
     ],
   },
 
-  // Û¸. ÙØ±ÙˆØ´ Ùˆ ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØªâ€ŒÙ‡Ø§
+  // ۸. فروش و صورت‌وضعیت‌ها
   {
     key: 'sales-and-revenue',
-    title: 'ÙØ±ÙˆØ´ Ùˆ ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØª',
+    title: 'فروش و صورت‌وضعیت',
     icon: Receipt,
     items: [
-      { to: '/payroll/subcontractor-statements', label: 'ØµÙˆØ±Øªâ€ŒÙˆØ¶Ø¹ÛŒØª Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±Ø§Ù† Ø¬Ø²Ø¡', icon: FileSpreadsheet },
-      { to: '/sales/units', label: 'ÙˆØ§Ø­Ø¯Ù‡Ø§ÛŒ Ø³Ø§Ø®ØªÙ…Ø§Ù†ÛŒ Ùˆ ÙØ±ÙˆØ´', icon: Building2 },
-      { to: '/sales/customers', label: 'Ø®Ø±ÛŒØ¯Ø§Ø±Ø§Ù† Ùˆ Ú©Ø§Ø±ÙØ±Ù…Ø§ÛŒØ§Ù†', icon: Users },
-      { to: '/sales/contracts', label: 'Ù‚Ø±Ø§Ø±Ø¯Ø§Ø¯Ù‡Ø§ÛŒ Ù¾ÛŒØ´â€ŒÙØ±ÙˆØ´ Ùˆ ÙØ±ÙˆØ´', icon: FileSignature },
-      { to: '/sales/invoices', label: 'ÙØ§Ú©ØªÙˆØ±Ù‡Ø§ÛŒ ÙØ±ÙˆØ´ Ùˆ Ø¯Ø±Ø¢Ù…Ø¯', icon: Receipt },
-      { to: '/sales/receipts', label: 'Ø±Ø³ÛŒØ¯ Ø¯Ø±ÛŒØ§ÙØª ÙˆØ¬ÙˆÙ‡ ÙØ±ÙˆØ´', icon: DollarSign },
+      { to: '/payroll/subcontractor-statements', label: 'صورت‌وضعیت پیمانکاران جزء', icon: FileSpreadsheet },
+      { to: '/sales/units', label: 'واحدهای ساختمانی و فروش', icon: Building2 },
+      { to: '/sales/customers', label: 'خریداران و کارفرمایان', icon: Users },
+      { to: '/sales/contracts', label: 'قراردادهای پیش‌فروش و فروش', icon: FileSignature },
+      { to: '/sales/invoices', label: 'فاکتورهای فروش و درآمد', icon: Receipt },
+      { to: '/sales/receipts', label: 'رسید دریافت وجوه فروش', icon: DollarSign },
     ],
   },
 
-  // Û¹. Ú¯Ø²Ø§Ø±Ø´Ø§Øª Ø¬Ø§Ù…Ø¹ Ù…Ø¯ÛŒØ±ÛŒØªÛŒ
+  // ۹. گزارشات جامع مدیریتی
   {
     key: 'reports',
-    title: 'Ú¯Ø²Ø§Ø±Ø´â€ŒÙ‡Ø§ÛŒ Ø¬Ø§Ù…Ø¹',
+    title: 'گزارش‌های جامع',
     icon: PieChart,
     items: [
-      { to: '/reports', label: 'Ù…Ø±Ú©Ø² Ø¬Ø§Ù…Ø¹ Ú¯Ø²Ø§Ø±Ø´Ø§Øª', icon: PieChart },
-      { to: '/reports/project', label: 'Ú¯Ø²Ø§Ø±Ø´ ØªØ­Ù„ÛŒÙ„ÛŒ Ø¨Ù‡Ø§ÛŒ ØªÙ…Ø§Ù…â€ŒØ´Ø¯Ù‡ Ù¾Ø±ÙˆÚ˜Ù‡', icon: FolderKanban },
-      { to: '/reports/contracting-revenue', label: 'Ú¯Ø²Ø§Ø±Ø´ Ø¯Ø±Ø¢Ù…Ø¯ Ùˆ Ø³ÙˆØ¯ Ù¾ÛŒÙ…Ø§Ù†Ú©Ø§Ø±ÛŒ', icon: DollarSign },
-      { to: '/accounting/reports/ap-aging-detail', label: 'Ú¯Ø²Ø§Ø±Ø´ Ø³Ù†ÛŒ Ø¨Ø¯Ù‡ÛŒâ€ŒÙ‡Ø§ (Ø¨Ø³ØªØ§Ù†Ú©Ø§Ø±Ø§Ù†)', icon: FileSpreadsheet },
-      { to: '/accounting/reports/ar-aging-detail', label: 'Ú¯Ø²Ø§Ø±Ø´ Ø³Ù†ÛŒ Ù…Ø·Ø§Ù„Ø¨Ø§Øª (Ø¨Ø¯Ù‡Ú©Ø§Ø±Ø§Ù†)', icon: FileSpreadsheet },
-      { to: '/wip', label: 'Ú©Ù†ØªØ±Ù„ Ù¾Ø±ÙˆÚ˜Ù‡ Ùˆ Ø¨ÙˆØ¯Ø¬Ù‡â€ŒØ¨Ù†Ø¯ÛŒ', icon: Scale },
+      { to: '/reports', label: 'مرکز جامع گزارشات', icon: PieChart },
+      { to: '/reports/project', label: 'گزارش تحلیلی بهای تمام‌شده پروژه', icon: FolderKanban },
+      { to: '/reports/contracting-revenue', label: 'گزارش درآمد و سود پیمانکاری', icon: DollarSign },
+      { to: '/accounting/reports/ap-aging-detail', label: 'گزارش سنی بدهی‌ها (بستانکاران)', icon: FileSpreadsheet },
+      { to: '/accounting/reports/ar-aging-detail', label: 'گزارش سنی مطالبات (بدهکاران)', icon: FileSpreadsheet },
+      { to: '/wip', label: 'کنترل پروژه و بودجه‌بندی', icon: Scale },
     ],
   },
 
-  // Û±Û°. Ù¾Ø§ÛŒÙ‡â€ŒÙ‡Ø§ Ùˆ ØªÙ†Ø¸ÛŒÙ…Ø§Øª Ø³ÛŒØ³ØªÙ…
+  // ۱۰. پایه‌ها و تنظیمات سیستم
   {
     key: 'settings',
-    title: 'Ù¾Ø§ÛŒÙ‡â€ŒÙ‡Ø§ Ùˆ ØªÙ†Ø¸ÛŒÙ…Ø§Øª Ø³ÛŒØ³ØªÙ…',
+    title: 'پایه‌ها و تنظیمات سیستم',
     icon: Settings,
     subsections: [
       {
         key: 'base-definitions',
-        title: 'Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ùˆ ØªØ¹Ø§Ø±ÛŒÙ Ù¾Ø§ÛŒÙ‡',
+        title: 'اطلاعات و تعاریف پایه',
         items: [
-          { to: '/settings/fiscal-years', label: 'Ø³Ø§Ù„â€ŒÙ‡Ø§ÛŒ Ù…Ø§Ù„ÛŒ', icon: CalendarCheck },
-          { to: '/accounting/accounts', label: 'Ú©Ø¯ÛŒÙ†Ú¯ Ø­Ø³Ø§Ø¨â€ŒÙ‡Ø§ (Ú©Ù„ØŒ Ù…Ø¹ÛŒÙ†ØŒ ØªÙØµÛŒÙ„ÛŒ)', icon: BookOpen },
-          { to: '/accounting/cost-centers', label: 'Ù…Ø±Ø§Ú©Ø² Ù‡Ø²ÛŒÙ†Ù‡ Ùˆ Ù¾Ø±ÙˆÚ˜Ù‡â€ŒÙ‡Ø§', icon: FolderKanban },
-          { to: '/accounting/mappings', label: 'Ù†Ú¯Ø§Ø´Øª Ø®ÙˆØ¯Ú©Ø§Ø± Ø§Ø³Ù†Ø§Ø¯ Ø­Ø³Ø§Ø¨Ø¯Ø§Ø±ÛŒ', icon: SlidersHorizontal },
-          { to: '/directory', label: 'Ø¯ÙØªØ±Ú†Ù‡ Ù…Ø®Ø§Ø·Ø¨Ø§Ù† Ùˆ Ø§Ø´Ø®Ø§Øµ', icon: Users },
-          { to: '/price-lists', label: 'ÙÙ‡Ø±Ø³Øªâ€ŒØ¨Ù‡Ø§ÛŒ Ø±Ø³Ù…ÛŒ Ùˆ Ù‚ÛŒÙ…Øªâ€ŒÙ‡Ø§', icon: Tags },
-          { to: '/settings/units', label: 'ÙˆØ§Ø­Ø¯Ù‡Ø§ÛŒ Ø³Ù†Ø¬Ø´ Ùˆ Ø§Ù†Ø¯Ø§Ø²Ù‡â€ŒÚ¯ÛŒØ±ÛŒ', icon: SlidersHorizontal },
-          { to: '/settings/expense-categories', label: 'Ø³Ø±ÙØµÙ„â€ŒÙ‡Ø§ÛŒ Ù‡Ø²ÛŒÙ†Ù‡â€ŒÙ‡Ø§ÛŒ Ú©Ø§Ø±Ú¯Ø§Ù‡', icon: Tags },
-          { to: '/timeline/permits', label: 'Ù…Ø¬ÙˆØ²Ù‡Ø§ØŒ Ø¨ÛŒÙ…Ù‡ Ùˆ Ø§Ø³Ù†Ø§Ø¯ Ù¾Ø±ÙˆÚ˜Ù‡', icon: Clock },
+          { to: '/settings/fiscal-years', label: 'سال‌های مالی', icon: CalendarCheck },
+          { to: '/accounting/accounts', label: 'کدینگ حساب‌ها (کل، معین، تفصیلی)', icon: BookOpen },
+          { to: '/accounting/cost-centers', label: 'مراکز هزینه و پروژه‌ها', icon: FolderKanban },
+          { to: '/accounting/mappings', label: 'نگاشت خودکار اسناد حسابداری', icon: SlidersHorizontal },
+          { to: '/directory', label: 'دفترچه مخاطبان و اشخاص', icon: Users },
+          { to: '/price-lists', label: 'فهرست‌بهای رسمی و قیمت‌ها', icon: Tags },
+          { to: '/settings/units', label: 'واحدهای سنجش و اندازه‌گیری', icon: SlidersHorizontal },
+          { to: '/settings/expense-categories', label: 'سرفصل‌های هزینه‌های کارگاه', icon: Tags },
+          { to: '/timeline/permits', label: 'مجوزها، بیمه و اسناد پروژه', icon: Clock },
         ],
       },
       {
         key: 'system-management',
-        title: 'Ø§Ù…Ù†ÛŒØª Ùˆ Ù†Ú¯Ù‡Ø¯Ø§Ø±ÛŒ',
+        title: 'امنیت و نگهداری',
         items: [
-          { to: '/settings/users', label: 'Ú©Ø§Ø±Ø¨Ø±Ø§Ù† Ø³ÛŒØ³ØªÙ…', icon: Users },
-          { to: '/settings/roles', label: 'Ù†Ù‚Ø´â€ŒÙ‡Ø§ Ùˆ Ù…Ø§ØªØ±ÛŒØ³ Ù…Ø¬ÙˆØ²Ù‡Ø§', icon: Shield },
-          { to: '/audit', label: 'Ø±Ø¯Ù¾Ø§ÛŒ Ø¹Ù…Ù„ÛŒØ§Øª Ùˆ Ù„Ø§Ú¯â€ŒÙ‡Ø§ÛŒ Ø§Ù…Ù†ÛŒØªÛŒ', icon: ScrollText },
-          { to: '/backup', label: 'Ù¾Ø´ØªÛŒØ¨Ø§Ù†â€ŒÚ¯ÛŒØ±ÛŒ Ø§Ø² Ø¯ÛŒØªØ§Ø¨ÛŒØ³', icon: DatabaseBackup },
-          { to: '/data-io', label: 'ÙˆØ±ÙˆØ¯ Ùˆ Ø®Ø±ÙˆØ¬ Ú¯Ø±ÙˆÙ‡ÛŒ Ø¯Ø§Ø¯Ù‡â€ŒÙ‡Ø§ (Excel)', icon: FolderSync },
-          { to: '/recycle-bin', label: 'Ø³Ø·Ù„ Ø¨Ø§Ø²ÛŒØ§ÙØª Ù…ÙˆØ§Ø±Ø¯ Ø­Ø°Ùâ€ŒØ´Ø¯Ù‡', icon: Trash2 },
-          { to: '/settings/company', label: 'Ù…Ø´Ø®ØµØ§Øª Ø´Ø±Ú©Øª Ùˆ Ù…Ù‡Ø± Ùˆ Ù„ÙˆÚ¯Ùˆ', icon: Building2 },
-          { to: '/settings/profile', label: 'Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ú©Ø§Ø±Ø¨Ø± Ø¬Ø§Ø±ÛŒ', icon: Users },
-          { to: '/help/workflows', label: 'Ø±Ø§Ù‡Ù†Ù…Ø§ÛŒ Ú¯Ø±Ø¯Ø´â€ŒÚ©Ø§Ø±Ù‡Ø§ÛŒ Ø³ÛŒØ³ØªÙ…', icon: HelpCircle },
+          { to: '/settings/users', label: 'کاربران سیستم', icon: Users },
+          { to: '/settings/roles', label: 'نقش‌ها و ماتریس مجوزها', icon: Shield },
+          { to: '/audit', label: 'ردپای عملیات و لاگ‌های امنیتی', icon: ScrollText },
+          { to: '/backup', label: 'پشتیبان‌گیری از دیتابیس', icon: DatabaseBackup },
+          { to: '/data-io', label: 'ورود و خروج گروهی داده‌ها (Excel)', icon: FolderSync },
+          { to: '/recycle-bin', label: 'سطل بازیافت موارد حذف‌شده', icon: Trash2 },
+          { to: '/settings/company', label: 'مشخصات شرکت و مهر و لوگو', icon: Building2 },
+          { to: '/settings/profile', label: 'پروفایل کاربر جاری', icon: Users },
+          { to: '/help/workflows', label: 'راهنمای گردش‌کارهای سیستم', icon: HelpCircle },
         ],
       },
     ],
@@ -367,4 +367,3 @@ export function buildFilteredMenu(
 
   return result;
 }
-
