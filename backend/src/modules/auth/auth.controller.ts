@@ -85,20 +85,20 @@ export class AuthController {
     return this.authService.status2FA(req.user.id);
   }
 
-  @Post('2fa/enable')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'فعال‌سازی احراز هویت دو مرحله‌ای' })
-  async enable2fa(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
-    return this.authService.enable2FA(req.user.id, dto.code);
-  }
-
   @Post('2fa/setup')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'راه‌اندازی احراز هویت دو مرحله‌ای' })
   async setup2fa(@Req() req: any) {
     return this.authService.setup2FA(req.user.id);
+  }
+
+  @Post('2fa/enable')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'فعال‌سازی احراز هویت دو مرحله‌ای' })
+  async enable2fa(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
+    return this.authService.enable2FA(req.user.id, dto.code);
   }
 
   @Post('2fa/verify')
