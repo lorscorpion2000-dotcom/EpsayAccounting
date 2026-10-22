@@ -18,9 +18,6 @@ describe('Payroll Calculation Engine - Labor Law Compliance', () => {
 
   it('should apply full year bonus limit for permanent employees', () => {
     const baseSalary = 15000000;
-    const workedDays = 365;
-    const yearRatio = 1.0;
-
     const maxBonusLimit = minDailyWage * 90;
     const fullYearBonus = Math.min(baseSalary * 2, maxBonusLimit);
 
