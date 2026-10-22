@@ -13,7 +13,7 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
       findMany: jest.fn(),
       create: jest.fn(),
     },
-    financialPeriod: {
+    fiscalYear: {
       findFirst: jest.fn(),
     },
   };
@@ -37,24 +37,25 @@ describe('Accounting Acceptance Tests (Financial Logic)', () => {
       _sum: { debit: true, credit: true },
     });
 
-    const debitSum = result._sum?.debit || 0;
-    const creditSum = result._sum?.credit || 0;
+    const debitSum = Number(result._sum?.debit ?? 0);
+    const creditSum = Number(result._sum?.credit ?? 0);
     const difference = debitSum - creditSum;
 
     expect(difference).toBe(0);
   });
 
   it('۲. ثبت سند در دوره مالی قفل‌شده (بسته‌شده) باید رد شود', async () => {
-    mockPrisma.financialPeriod.findFirst.mockResolvedValue({
+    mockPrisma.fiscalYear.findFirst.mockResolvedValue({
       id: 'period-2025',
       isClosed: true,
+      status: 'CLOSED',
     });
 
-    const period = await prisma.financialPeriod.findFirst({
-      where: { isClosed: true },
+    const period = await prisma.fiscalYear.findFirst({
+      where: { status: 'CLOSED' },
     });
 
-    expect(period?.isClosed).toBe(true);
+    expect(period?.isClosed || period?.status === 'CLOSED').toBeTruthy();
   });
 
   it('۳. ذخیره‌گیری عیدی (۲/۱۲) و سنوات (۱/۱۲) باید دقیق محاسبه شود', () => {
