@@ -1,3 +1,4 @@
+import * as jalaali from 'jalaali-js';
 import type { PrismaService } from '../../../../shared/prisma/prisma.service';
 
 export async function kpiSummary(prisma: PrismaService, projectId: string, from: Date, to: Date) {

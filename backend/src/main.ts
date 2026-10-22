@@ -39,7 +39,7 @@ async function bootstrap() {
   app.setGlobalPrefix(config.get<string>('app.apiPrefix') || 'api');
 
   app.enableCors({
-    origin: true,
+    origin: (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });

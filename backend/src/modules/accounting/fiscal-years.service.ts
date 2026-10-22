@@ -1,3 +1,4 @@
+import * as jalaali from 'jalaali-js';
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';

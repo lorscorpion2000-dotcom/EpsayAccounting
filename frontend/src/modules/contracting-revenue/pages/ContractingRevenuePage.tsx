@@ -1,3 +1,4 @@
+import { PersianDatePicker } from '@/components/PersianDatePicker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useReactToPrint } from 'react-to-print';
@@ -164,15 +165,11 @@ export default function ContractingRevenuePage() {
       <div className="rounded border p-3 grid grid-cols-1 md:grid-cols-5 gap-3">
         <div>
           <label className="text-xs block mb-1">از تاریخ</label>
-          <input type="date" value={filters.fromDate}
-            onChange={(e) => setFilters(f => ({ ...f, fromDate: e.target.value }))}
-            className="w-full border rounded px-2 py-1 text-sm" />
+          <PersianDatePicker value={filters.fromDate} onChange={(val) => setFilters(f => ({ ...f, fromDate: val || '' }))} placeholder="از تاریخ" size="sm" />
         </div>
         <div>
           <label className="text-xs block mb-1">تا تاریخ</label>
-          <input type="date" value={filters.toDate}
-            onChange={(e) => setFilters(f => ({ ...f, toDate: e.target.value }))}
-            className="w-full border rounded px-2 py-1 text-sm" />
+          <PersianDatePicker value={filters.toDate} onChange={(val) => setFilters(f => ({ ...f, toDate: val || '' }))} placeholder="تا تاریخ" size="sm" />
         </div>
         <div>
           <label className="text-xs block mb-1">پروژه</label>
