@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateShareDto, UpdateShareDto, AddPartnerWithDilutionDto } from './dto/share.dto';
 import Decimal from 'decimal.js';
@@ -9,7 +9,7 @@ export class SharesService {
 
   async findAll(projectId?: string) {
     return this.prisma.projectPartnerShare.findMany({
-      where: projectId ? { projectId } : undefined,
+      where: projectId ? { projectId, deletedAt: null } : { deletedAt: null },
       include: {
         partner: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
@@ -19,8 +19,8 @@ export class SharesService {
   }
 
   async findOne(id: string) {
-    const share = await this.prisma.projectPartnerShare.findUnique({
-      where: { id },
+    const share = await this.prisma.projectPartnerShare.findFirst({
+      where: { id, deletedAt: null },
       include: {
         partner: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
@@ -34,6 +34,7 @@ export class SharesService {
     const shares = await this.prisma.projectPartnerShare.findMany({
       where: {
         projectId,
+        deletedAt: null,
         id: excludeId ? { not: excludeId } : undefined,
         OR: [
           { effectiveTo: null },
@@ -42,7 +43,7 @@ export class SharesService {
         effectiveFrom: { lte: effectiveFrom },
       },
     });
-    const total = shares.reduce((s, sh) => s + Number(sh.sharePercent), 0);
+    const total = shares.reduce((s: number, sh: any) => s + Number(sh.sharePercent), 0);
     return total;
   }
 
@@ -93,7 +94,10 @@ export class SharesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.projectPartnerShare.delete({ where: { id } });
+    return this.prisma.projectPartnerShare.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   /**
@@ -101,13 +105,15 @@ export class SharesService {
    */
   async addPartnerWithDilution(dto: AddPartnerWithDilutionDto) {
     const effectiveFrom = new Date(dto.effectiveFrom);
+    const previousEffectiveTo = new Date(effectiveFrom.getTime() - 1000);
+
     const contributionUsd = new Decimal(dto.contributionUsd);
     const usdRate = new Decimal(dto.usdRate);
     const currentValuationUsd = new Decimal(dto.currentProjectValuationUsd);
 
     const newValuationUsd = currentValuationUsd.plus(contributionUsd);
-    if (newValuationUsd.isZero()) {
-      throw new BadRequestException('ارزش کل پروژه نمی‌تواند صفر باشد.');
+    if (newValuationUsd.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('ارزش جدید پروژه باید بزرگتر از صفر باشد.');
     }
 
     const newPartnerShareDecimal = contributionUsd
@@ -117,28 +123,35 @@ export class SharesService {
 
     const dilutionFactor = new Decimal(1).minus(newPartnerShareDecimal.dividedBy(100));
 
-    const activeShares = await this.prisma.projectPartnerShare.findMany({
-      where: {
-        projectId: dto.projectId,
-        effectiveTo: null,
-      },
-    });
+    return this.prisma.$transaction(async (tx: any) => {
+      const activeShares = await tx.projectPartnerShare.findMany({
+        where: {
+          projectId: dto.projectId,
+          effectiveTo: null,
+          deletedAt: null,
+        },
+      });
 
-    return this.prisma.$transaction(async (tx) => {
       if (activeShares.length > 0) {
+        const currentSum = activeShares.reduce((s: Decimal, sh: any) => s.plus(new Decimal(sh.sharePercent.toString())), new Decimal(0));
+        if (!currentSum.equals(100)) {
+          throw new BadRequestException(`مجموع سهم‌های فعلی پروژه برابر ۱۰۰٪ نیست (جمع فعلی: ${currentSum.toString()}٪). ابتدا سهم‌های فعلی را اصلاح کنید.`);
+        }
+
         await tx.projectPartnerShare.updateMany({
           where: {
             projectId: dto.projectId,
             effectiveTo: null,
+            deletedAt: null,
           },
           data: {
-            effectiveTo: effectiveFrom,
+            effectiveTo: previousEffectiveTo,
           },
         });
       }
 
       let allocatedTotal = new Decimal(0);
-      const newShareRecords = [];
+      const newShareRecords: any[] = [];
 
       for (const oldShare of activeShares) {
         const oldPercent = new Decimal(oldShare.sharePercent.toString());
@@ -174,7 +187,8 @@ export class SharesService {
 
       const remainder = new Decimal(100).minus(allocatedTotal);
       if (!remainder.isZero() && newShareRecords.length > 0) {
-        newShareRecords[0].sharePercent = newShareRecords[0].sharePercent.plus(remainder);
+        newShareRecords[newShareRecords.length - 1].sharePercent = newShareRecords[newShareRecords.length - 1].sharePercent.plus(remainder);
+        allocatedTotal = allocatedTotal.plus(remainder);
       }
 
       await tx.projectPartnerShare.createMany({
@@ -194,8 +208,10 @@ export class SharesService {
         success: true,
         newValuationUsd: newValuationUsd.toNumber(),
         newPartnerSharePercent: newPartnerShareDecimal.toNumber(),
-        totalSharesPercent: 100.0,
+        totalSharesPercent: allocatedTotal.toNumber(),
       };
     });
   }
 }
+
+

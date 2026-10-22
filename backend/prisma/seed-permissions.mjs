@@ -37,7 +37,8 @@ const PERMS = [
   ['accounting.journals.create', 'ثبت سند حسابداری'],
   ['accounting.journals.update', 'ویرایش سند'],
   ['accounting.journals.reverse', 'ابطال سند'],
-  ['accounting.reports.read', 'مشاهده گزارش‌ها'],
+  ['reports.read', 'مشاهده مرکز جامع گزارش‌ها'],
+  ['accounting.reports.read', 'مشاهده گزارش‌های حسابداری'],
   ['accounting.fiscal-years.manage', 'مدیریت سال‌های مالی'],
 
   // تنخواه

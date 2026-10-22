@@ -60,7 +60,7 @@ import { ScopeModule } from './common/scope/scope.module';
       load: [configuration],
       envFilePath: ['.env.local', '.env'],
     }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100000 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 1000 }]),
     CommonModule,
     UnitsModule,
     RecycleBinModule,

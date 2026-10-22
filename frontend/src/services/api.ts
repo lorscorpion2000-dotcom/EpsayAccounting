@@ -3,7 +3,15 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth.store';
 import { useProjectStore } from '@/store/project.store';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const getDynamicApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname || 'localhost';
+    return 'http://' + host + ':3000/api';
+  }
+  return 'http://localhost:3000/api';
+};
+
+const BASE_URL = getDynamicApiUrl();
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -11,15 +19,12 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Axios instance بدون interceptor برای refresh ───
-// (جلوگیری از loop بی‌نهایت)
 const rawAxios = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request interceptor: پیوست accessToken ───
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().token;
   if (token) {
@@ -32,7 +37,6 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// ─── Refresh token lock (تا درخواست‌های موازی یک بار refresh بزنن) ───
 let refreshPromise: Promise<string | null> | null = null;
 
 async function doRefresh(): Promise<string | null> {
@@ -51,13 +55,17 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
-// ─── Response interceptor ───
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+      toast.error('خطای ارتباط: سرور بک‌اند پاسخگو نیست.');
+      return Promise.reject(new Error('HTML response received from API endpoint'));
+    }
+    return response;
+  },
   async (error: AxiosError<any>) => {
     const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-    // شبکه قطع یا timeout
     if (!error.response) {
       toast.error('ارتباط با سرور برقرار نشد.');
       return Promise.reject(error);
@@ -67,11 +75,9 @@ api.interceptors.response.use(
     const url = original?.url || '';
     const isAuthEndpoint = url.includes('/auth/refresh') || url.includes('/auth/login');
 
-    // ─── تلاش برای refresh روی 401 ───
     if (status === 401 && original && !original._retry && !isAuthEndpoint) {
       original._retry = true;
 
-      // فقط یک درخواست refresh در آن واحد
       if (!refreshPromise) {
         refreshPromise = doRefresh().finally(() => {
           refreshPromise = null;
@@ -84,7 +90,6 @@ api.interceptors.response.use(
         return api(original);
       }
 
-      // refresh fail → logout
       useAuthStore.getState().logout();
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
@@ -92,7 +97,6 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ─── سایر خطاها ───
     if (status >= 500) {
       toast.error('خطای داخلی سرور رخ داد.');
     }

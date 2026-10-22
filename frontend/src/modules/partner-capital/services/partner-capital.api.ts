@@ -190,6 +190,18 @@ export const partnerCapitalApi = {
       const { data } = await api.post<PartnerShare>('/partner-capital/shares', payload);
       return data;
     },
+    addWithDilution: async (payload: {
+      projectId: string;
+      partnerId: string;
+      contributionUsd: number;
+      usdRate: number;
+      currentProjectValuationUsd: number;
+      effectiveFrom: string;
+      notes?: string;
+    }) => {
+      const { data } = await api.post('/partner-capital/shares/add-with-dilution', payload);
+      return data;
+    },
     update: async (id: string, payload: any) => {
       const { data } = await api.patch<PartnerShare>('/partner-capital/shares/' + id, payload);
       return data;

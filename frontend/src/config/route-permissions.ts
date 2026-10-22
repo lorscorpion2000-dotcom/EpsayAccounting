@@ -49,7 +49,12 @@ const RULES: RouteRule[] = [
   // ── گزارش‌ها ──
   { pattern: /^\/tax-reports/,               code: 'tax-reports.read' },
   { pattern: /^\/operational-reports/,       code: 'operational-reports.read' },
-  { pattern: /^\/reports/,                   code: '' }, // آزاد
+  { pattern: /^\/reports\/contracting-revenue/, code: 'reports.read' },
+  { pattern: /^\/reports\/project/,             code: 'reports.read' },
+  { pattern: /^\/reports\/contracting-revenue/, code: 'reports.read' },
+  { pattern: /^\/reports\/project/,             code: 'reports.read' },
+  { pattern: /^\/reports/,                   code: 'reports.read' },
+  { pattern: /^\/wip/,                       code: 'reports.read' }, // آزاد
 
   // ── تنخواه ──
   { pattern: /^\/petty-cash/,                code: 'petty-cash.read' },

@@ -34,7 +34,7 @@ describe('menu-config / findActiveSection', () => {
     // /accounting/* الان زیر financial.subsections.accounting است
     expect(findActiveSection('/accounting/journals')).toBe('financial');
     // /reports/project زیر dashboard.subsections.reports-hub است
-    expect(findActiveSection('/reports/project')).toBe('dashboard');
+    expect(findActiveSection('/reports/project')).toBe('reports');
     // مسیر مستقل: /contracts
     expect(findActiveSection('/contracts')).toBe('contracts');
   });

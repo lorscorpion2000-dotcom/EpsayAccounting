@@ -256,11 +256,7 @@ export function findActiveSection(pathname: string): string {
     return 'contracts';
   }
 
-  if (pathname === '/reports/project' || pathname.startsWith('/reports/project/')) {
-    return 'dashboard';
-  }
-
-  // ۱. اولویت اول: بررسی دقیق تمام آیتم‌های تعریف‌شده در منو (جهت حفظ ثبات منوی تنظیمات)
+  // اولویت اول: بررسی دقیق تمام آیتم‌های تعریف‌شده در منو
   for (const section of MENU) {
     if (section.items) {
       for (const item of section.items) {
@@ -283,7 +279,7 @@ export function findActiveSection(pathname: string): string {
     }
   }
 
-  // ۲. فال‌بک برای مسیرهای فرعی ۳سطحی غیرمستقیم (مانند /payroll/periods یا /accounting/journals)
+  // فال‌بک برای مسیرهای فرعی سه‌سطحی ناشناخته
   if (
     pathname === '/payroll' ||
     pathname.startsWith('/payroll/') ||
@@ -291,6 +287,10 @@ export function findActiveSection(pathname: string): string {
     pathname.startsWith('/accounting/')
   ) {
     return 'financial';
+  }
+
+  if (pathname === '/reports' || pathname.startsWith('/reports/')) {
+    return 'reports';
   }
 
   return '';

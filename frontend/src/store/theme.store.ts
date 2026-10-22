@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getThemeByKey, themeToCssVariables, DEFAULT_THEME_KEY, Theme } from '@/themes/themes';
 import { api } from '@/services/api';
@@ -25,7 +25,7 @@ export const useThemeStore = create<ThemeState>()(
         // Sync to server
         if (syncToServer) {
           api.patch('/auth/preferences', { themePreference: key }).catch(() => {
-            // Silent fail — the theme is still applied locally
+            // Silent fail â€” the theme is still applied locally
           });
         }
       },
@@ -51,3 +51,4 @@ export const useThemeStore = create<ThemeState>()(
     },
   ),
 );
+
