@@ -47,12 +47,18 @@ interface RecomputeItem {
 export class PurchaseInvoicesCrudService {
   constructor(private prisma: PrismaService) {}
 
+  private get prismaWithDeleted() {
+    return this.prisma as unknown as {
+      purchaseInvoice: {
+        findFirst: (args: unknown) => Promise<{ code: string } | null>;
+      };
+    };
+  }
+
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = 'PI-' + year + '-';
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __withDeleted لازم است
-    const last = await (this.prisma as any).purchaseInvoice.findFirst({
+    const last = await this.prismaWithDeleted.purchaseInvoice.findFirst({
       __withDeleted: true,
       where: { code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
@@ -68,8 +74,7 @@ export class PurchaseInvoicesCrudService {
     let candidate = prefix + String(lastNum + 1).padStart(5, '0');
     let tries = 0;
     while (tries < 100) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- __withDeleted لازم است
-      const exists = await (this.prisma as any).purchaseInvoice.findFirst({
+      const exists = await this.prismaWithDeleted.purchaseInvoice.findFirst({
         __withDeleted: true,
         where: { code: candidate },
         select: { code: true },

@@ -22,3 +22,6 @@ _*.mjs
 *.orig
 *.old
 *.tsbuildinfo
+# refactor temp files
+.cleanup-backup/
+.tmp-*.txt

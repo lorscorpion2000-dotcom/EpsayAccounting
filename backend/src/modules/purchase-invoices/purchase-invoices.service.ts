@@ -41,11 +41,11 @@ export class PurchaseInvoicesService {
   approve(id: string, userId?: string) { return this.approveSvc.approve(id, userId); }
 
   // ─── Soft Delete ───
-  softDelete(id: string, userId?: string, reason?: string, meta?: any) {
+  softDelete(id: string, userId?: string, reason?: string, meta?: Record<string, unknown>) {
     return this.softDeleteSvc.softDelete(id, userId, reason, meta);
   }
   restore(id: string, userId?: string) { return this.softDeleteSvc.restore(id, userId); }
-  adminDelete(id: string, userId?: string, reason?: string, meta?: any) {
+  adminDelete(id: string, userId?: string, reason?: string, meta?: Record<string, unknown>) {
     return this.softDeleteSvc.adminDelete(id, userId, reason, meta);
   }
 }
