@@ -462,3 +462,14 @@ table td, table th {
     font-size: 16px !important;
   }
 }
+
+/* ============================================================ */
+/* استاندارد لایه‌بندی z-index برای انتخاب‌گر تاریخ (پرامپت ۶) */
+/* ============================================================ */
+.jc-datepicker,
+.datepicker-container,
+.pwt-datepicker-input-container,
+div[class*="datepicker"],
+div[class*="calendar"] {
+  z-index: 9999 !important;
+}

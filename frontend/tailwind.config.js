@@ -3,6 +3,14 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      zIndex: {
+        'dropdown': '1000',
+        'sticky': '1020',
+        'drawer': '1040',
+        'modal-backdrop': '1050',
+        'modal': '1060',
+        'datepicker': '9999',
+      },
       fontFamily: {
         sans: ["Vazirmatn", "Tahoma", "sans-serif"],
       },

@@ -30,7 +30,7 @@ export const PersianDatePicker = forwardRef<HTMLDivElement, Props>(
     const iconPos = { sm: 'start-2.5', md: 'start-3', lg: 'start-3.5' };
 
     return (
-      <div className="relative w-full" ref={ref}>
+      <div className="relative w-full z-[9999] relative" ref={ref}>
         <DatePicker
           value={dateValue}
           onChange={(date: DateObject | DateObject[] | null) => {
