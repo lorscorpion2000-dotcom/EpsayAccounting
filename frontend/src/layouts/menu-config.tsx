@@ -1,4 +1,5 @@
 import {
+  Home,
   LayoutDashboard,
   Bell,
   CheckSquare,
@@ -68,6 +69,7 @@ export const MENU: MenuSection[] = [
     title: 'داشبورد و کارتابل',
     icon: LayoutDashboard,
     items: [
+      { to: '/home', label: 'خانه', icon: Home },
       { to: '/dashboard', label: 'داشبورد ارشد', icon: LayoutDashboard },
       { to: '/approvals', label: 'کارتابل تأییدات', icon: CheckSquare },
       { to: '/notifications', label: 'اعلان‌ها و یادآوری‌ها', icon: Bell },

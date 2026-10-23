@@ -103,7 +103,7 @@ export default function MainLayout() {
         >
         {/* Logo */}
         <div className="h-16 flex items-center justify-center border-b border-slate-700/50 px-4">
-          <div className="flex items-center gap-2">
+          <NavLink to="/home" className="flex items-center gap-2 hover:opacity-90 transition-opacity" title="خانه">
             <img
               src="/images/logo.png"
               alt="لوگو"
@@ -115,7 +115,7 @@ export default function MainLayout() {
                 <div className="text-[10px] text-slate-400 leading-tight">Epsay Accounting</div>
               </div>
             )}
-          </div>
+          </NavLink>
         </div>
 
         {/* Menu */}
