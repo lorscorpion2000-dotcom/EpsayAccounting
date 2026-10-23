@@ -6,6 +6,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest } from '../../common/types/auth-request';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
 @ApiTags('Expense Categories - دسته‌بندی هزینه‌ها')
@@ -57,7 +58,7 @@ export class ExpenseCategoriesController {
   adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     return this.s.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,

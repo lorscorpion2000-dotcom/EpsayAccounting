@@ -1,11 +1,21 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { ExpenseCostType } from '@prisma/client';
+import { Prisma, ExpenseCostType, ExpenseStatus, AccountDetailType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { generateCode } from '../../shared/utils/code-generator';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+
+type JELine = {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+  partnerId?: string;
+  projectId?: string;
+  costCenterId?: string;
+};
 
 @Injectable()
 export class ExpensesService {
@@ -21,14 +31,15 @@ export class ExpensesService {
   }
 
   async findAll(query?: { projectId?: string; categoryId?: string; status?: string; fromDate?: string; toDate?: string; search?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.ExpenseWhereInput = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.categoryId) where.categoryId = query.categoryId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as ExpenseStatus;
     if (query?.fromDate || query?.toDate) {
-      where.expenseDate = {};
-      if (query.fromDate) where.expenseDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.expenseDate.lte = new Date(query.toDate);
+      where.expenseDate = {
+        ...(query.fromDate ? { gte: new Date(query.fromDate) } : {}),
+        ...(query.toDate ? { lte: new Date(query.toDate) } : {}),
+      };
     }
     if (query?.search) {
       where.OR = [
@@ -72,7 +83,7 @@ export class ExpensesService {
   async create(dto: CreateExpenseDto, userId: string) {
     const code = await this.nextCode();
     const amount = Number(dto.amount);
-    const costType = (dto.costType as any) ?? ExpenseCostType.COMPANY;
+    const costType = (dto.costType ?? ExpenseCostType.COMPANY) as ExpenseCostType;
     if (costType === ExpenseCostType.CLIENT_PASS_THROUGH && !dto.clientId) {
       throw new BadRequestException('برای هزینه کارفرما، انتخاب کارفرما الزامی است');
     }
@@ -90,7 +101,7 @@ export class ExpensesService {
         costCenterId: dto.costCenterId ?? null,
         supplierId: dto.supplierId ?? null,
         clientId: dto.clientId ?? null,
-        costType: (dto.costType as any) ?? ExpenseCostType.COMPANY,
+        costType: (dto.costType ?? ExpenseCostType.COMPANY) as ExpenseCostType,
         amount, taxAmount, totalAmount,
         description: dto.description,
         payFromType: dto.payFromType,
@@ -109,7 +120,7 @@ export class ExpensesService {
     const e = await this.findOne(id);
     if (e.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
 
-    const data: any = {};
+    const data: Prisma.ExpenseUncheckedUpdateInput = {};
     if (dto.expenseDate) data.expenseDate = new Date(dto.expenseDate);
     if (dto.categoryId) data.categoryId = dto.categoryId;
     if (dto.projectId !== undefined) data.projectId = dto.projectId || null;
@@ -146,9 +157,9 @@ export class ExpensesService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.expense.findUnique({
+    const existing = await this.prisma.expense.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('هزینه یافت نشد');
     if (!existing.deletedAt) throw new Error('هزینه حذف نشده است');
@@ -159,10 +170,10 @@ export class ExpensesService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.expense.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.expense.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('هزینه یافت نشد');
     await this.prisma.expense.delete({ where: { id } });
@@ -176,11 +187,11 @@ export class ExpensesService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.expense.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };
@@ -202,7 +213,7 @@ export class ExpensesService {
     });
 
     // F15: build JE + post + set journalEntryId
-    let journal: any = null;
+    let journal: Awaited<ReturnType<ExpensesService['createJE']>> | null = null;
     try {
       journal = await this.createJE(id, userId);
     } catch (err: unknown) {
@@ -264,16 +275,16 @@ export class ExpensesService {
     // CLIENT_PASS_THROUGH: کارفرما بدهکار، تأمین‌کننده بستانکار
     // هیچ جابجایی نقدی رخ نمی‌دهد.
     // ═══════════════════════════════════════════════════════
-    if ((e as any).costType === 'CLIENT_PASS_THROUGH') {
-      if (!(e as any).clientId) {
+    if (e.costType === 'CLIENT_PASS_THROUGH') {
+      if (!e.clientId) {
         throw new Error('برای هزینه کارفرما، انتخاب کارفرما الزامی است');
       }
 
       // حساب واسط پاس‌تروگ اختصاصی کارفرما (زیر 1.1.6)
       const passThroughAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
-        detailType: 'PASS_THROUGH_CLIENT' as any,
-        entityId: (e as any).clientId,
-        entityName: (e as any).client?.name || 'کارفرما',
+        detailType: AccountDetailType.PASS_THROUGH_CLIENT,
+        entityId: e.clientId,
+        entityName: e.client?.name || 'کارفرما',
       });
       if (!passThroughAcc) throw new Error('حساب واسط پاس‌تروگ برای کارفرما ساخته نشد');
 
@@ -281,7 +292,7 @@ export class ExpensesService {
       let creditAccId: string | null = null;
       if (e.supplierId) {
         const supAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
-          detailType: 'SUPPLIER' as any,
+          detailType: AccountDetailType.SUPPLIER,
           entityId: e.supplierId,
           entityName: e.supplier?.name || 'تأمین‌کننده',
         });
@@ -296,14 +307,14 @@ export class ExpensesService {
         creditAccId = fallback.id;
       }
 
-      const lines: any[] = [
+      const lines: JELine[] = [
         {
           accountId: passThroughAcc.id,
           debit: total,
           credit: 0,
           description: 'هزینه کارفرما ' + e.code + ' — ' + e.category.name,
           projectId: e.projectId ?? undefined,
-          partnerId: (e as any).clientId,
+          partnerId: e.clientId ?? undefined,
         },
         {
           accountId: creditAccId,
@@ -338,8 +349,12 @@ export class ExpensesService {
       throw new Error('برای هزینه شرکت، انتخاب حساب پرداخت الزامی است');
     }
 
+    if (!e.expenseAccountId) {
+      throw new Error('حساب هزینه برای ثبت سند الزامی است');
+    }
+
     // VAT account
-    let vatAcc: any = null;
+    let vatAcc: { id: string } | null = null;
     if (tax > 0) {
       vatAcc = await this.prisma.account.findFirst({
         where: { code: '2.1.3.01', isPostable: true, isActive: true },
@@ -351,7 +366,7 @@ export class ExpensesService {
       if (!vatAcc) throw new Error('حساب مالیات خرید (2.1.3.01) پیدا نشد');
     }
 
-    const lines: any[] = [
+    const lines: JELine[] = [
       {
         accountId: e.expenseAccountId,
         debit: amount,
@@ -361,7 +376,7 @@ export class ExpensesService {
         partnerId: e.supplierId ?? undefined,
       },
     ];
-    if (tax > 0) {
+    if (tax > 0 && vatAcc) {
       lines.push({ accountId: vatAcc.id, debit: tax, credit: 0, description: 'مالیات خرید' });
     }
     lines.push({
@@ -390,7 +405,7 @@ export class ExpensesService {
   }
 
   async stats(projectId?: string) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.ExpenseWhereInput = { deletedAt: null };
     if (projectId) where.projectId = projectId;
     const [total, draft, submitted, approved, posted, agg] = await Promise.all([
       this.prisma.expense.count({ where }),

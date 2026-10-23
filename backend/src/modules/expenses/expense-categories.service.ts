@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+
+type CategoryWithAccount = Prisma.ExpenseCategoryGetPayload<{
+  include: { account: { select: { id: true; code: true; name: true } } };
+}>;
+type CategoryNode = CategoryWithAccount & { children: CategoryNode[] };
 
 @Injectable()
 export class ExpenseCategoriesService {
@@ -22,7 +28,7 @@ export class ExpenseCategoriesService {
   }
 
   async findAll(includeInactive = false) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.ExpenseCategoryWhereInput = { deletedAt: null };
     if (!includeInactive) where.isActive = true;
     return this.prisma.expenseCategory.findMany({
       where,
@@ -40,13 +46,15 @@ export class ExpenseCategoriesService {
       include: { account: { select: { id: true, code: true, name: true } } },
       orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
-    const byId = new Map<string, any>();
+    const byId = new Map<string, CategoryNode>();
     all.forEach(c => byId.set(c.id, { ...c, children: [] }));
-    const roots: any[] = [];
+    const roots: CategoryNode[] = [];
     all.forEach(c => {
       const node = byId.get(c.id);
-      if (c.parentId && byId.has(c.parentId)) {
-        byId.get(c.parentId).children.push(node);
+      if (!node) return;
+      const parent = c.parentId ? byId.get(c.parentId) : undefined;
+      if (parent) {
+        parent.children.push(node);
       } else {
         roots.push(node);
       }
@@ -79,7 +87,7 @@ export class ExpenseCategoriesService {
 
   async update(id: string, dto: UpdateCategoryDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.ExpenseCategoryUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.code !== undefined) data.code = dto.code;
     if (dto.parentId !== undefined) data.parentId = dto.parentId || null;
@@ -103,9 +111,9 @@ export class ExpenseCategoriesService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.expenseCategory.findUnique({
+    const existing = await this.prisma.expenseCategory.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('دسته یافت نشد');
     if (!existing.deletedAt) throw new Error('دسته حذف نشده است');
@@ -116,10 +124,10 @@ export class ExpenseCategoriesService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.expenseCategory.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.expenseCategory.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('دسته یافت نشد');
     const childCount = await this.prisma.expenseCategory.count({
@@ -141,11 +149,11 @@ export class ExpenseCategoriesService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.expenseCategory.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };
