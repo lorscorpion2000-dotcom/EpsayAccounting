@@ -120,7 +120,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute end-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+        <div className="absolute end-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-[150]">
           {/* هدر */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
             <div className="flex items-center gap-2">

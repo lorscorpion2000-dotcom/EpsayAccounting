@@ -36,7 +36,7 @@ export default function ThemeSelector() {
 
       {isOpen && (
         <div
-          className="absolute left-0 top-full mt-2 w-[420px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 animate-fade-in overflow-hidden"
+          className="absolute left-0 top-full mt-2 w-[420px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[150] animate-fade-in overflow-hidden"
           dir="rtl"
         >
           {/* Header */}

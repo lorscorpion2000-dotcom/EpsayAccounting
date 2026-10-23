@@ -98,8 +98,8 @@ export default function ProjectSwitcher() {
 
       {open ? (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-1 start-0 z-50 w-72 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden max-h-80 overflow-y-auto">
+          <div className="fixed inset-0 z-[150]" onClick={() => setOpen(false)} />
+          <div className="absolute top-full mt-1 start-0 z-[150] w-72 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden max-h-80 overflow-y-auto">
             {isStaff ? (
               <button
                 onClick={() => {
