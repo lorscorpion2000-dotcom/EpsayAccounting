@@ -133,6 +133,8 @@ const PERMS = [
   // CRUD delete perms — wave 7
   ['adjustment.delete', 'حذف تعدیل'],
   ['materialpricediff.delete', 'حذف اختلاف قیمت'],
+  ['attachment.read', 'مشاهده پیوست'],
+  ['attachment.create', 'ایجاد و آپلود پیوست'],
   ['attachment.delete', 'حذف پیوست'],
   ['capitalaccount.delete', 'حذف حساب سرمایه'],
   ['attendance.delete', 'حذف حضور و غیاب'],

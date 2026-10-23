@@ -64,7 +64,7 @@ const fileFilter = (
 
 @Controller('upload')
 export class UploadController {
-  @RequirePermissions('attachments.create')
+  @RequirePermissions('attachment.create')
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -108,6 +108,7 @@ export class UploadController {
     };
   }
 
+  @RequirePermissions('attachment.create')
   @Post('multi')
   @UseInterceptors(
     FilesInterceptor('files', MAX_FILES_PER_REQUEST, {

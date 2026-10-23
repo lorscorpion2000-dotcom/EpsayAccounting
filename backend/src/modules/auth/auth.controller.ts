@@ -1,12 +1,9 @@
+// backend/src/modules/auth/auth.controller.ts
 import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Body,
-  UseGuards,
-  Req,
+  Controller, Post, Get, Patch, Body, UseGuards, Req, Ip,
+  HttpCode, HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -16,7 +13,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
-import { TwoFactorCodeDto, TwoFactorDisableDto } from './dto/two-factor.dto';
+import { TwoFactorCodeDto, TwoFactorDisableDto, TwoFactorVerifyLoginDto } from './dto/two-factor.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -25,13 +22,33 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'ورود به سامانه' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Req() req: any, @Ip() ip?: string) {
+    return this.authService.login(dto, { ip, ua: req.headers?.['user-agent'] });
+  }
+
+  // ⚠️ NEW: endpoint تأیید کد 2FA بعد از login اولیه (public — قبل از صدور توکن کامل)
+  @Public()
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'تأیید کد دومرحله‌ای (پس از login)' })
+  async verify2FALogin(
+    @Body() dto: TwoFactorVerifyLoginDto,
+    @Req() req: any,
+    @Ip() ip?: string,
+  ) {
+    return this.authService.verify2FALogin(dto.totpToken, dto.code, {
+      ip, ua: req.headers?.['user-agent'],
+    });
   }
 
   @Public()
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'تمدید توکن' })
   async refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
@@ -40,15 +57,13 @@ export class AuthController {
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'اطلاعات کاربر جاری' })
   async getProfile(@Req() req: any) {
-    return this.authService.me(req.user.id);
+    return this.authService.me((req.user?.id || req.id));
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'اطلاعات کاربر جاری (me)' })
   async getMe(@Req() req: any) {
     return this.authService.me(req.user.id);
   }
@@ -56,31 +71,35 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'به‌روزرسانی پروفایل' })
   async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
-    return (this.authService as any).updateProfile(req.user.id, dto);
+    return this.authService.updateProfile(req.user.id, dto);
   }
 
+  // ⚠️ CRITICAL FIX: pass strings to service (not DTO object)
   @Patch('change-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'تغییر کلمه عبور' })
   async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
-    return (this.authService as any).changePassword(req.user.id, dto);
+    return this.authService.changePassword(
+      req.user.id,
+      dto.oldPassword,
+      dto.newPassword,
+    );
   }
 
+  // ⚠️ FIX: pass themePreference string (not DTO)
   @Patch('preferences')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'تنظیمات شخصی کاربر' })
   async updatePreferences(@Req() req: any, @Body() dto: UpdatePreferencesDto) {
-    return (this.authService as any).updatePreferences(req.user.id, dto);
+    return this.authService.updatePreferences(req.user.id, dto.themePreference);
   }
 
   @Get('2fa/status')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'دریافت وضعیت احراز هویت دو مرحله‌ای' })
   async status2fa(@Req() req: any) {
     return this.authService.status2FA(req.user.id);
   }
@@ -88,7 +107,6 @@ export class AuthController {
   @Post('2fa/setup')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'راه‌اندازی احراز هویت دو مرحله‌ای' })
   async setup2fa(@Req() req: any) {
     return this.authService.setup2FA(req.user.id);
   }
@@ -96,23 +114,21 @@ export class AuthController {
   @Post('2fa/enable')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'فعال‌سازی احراز هویت دو مرحله‌ای' })
   async enable2fa(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
     return this.authService.enable2FA(req.user.id, dto.code);
   }
 
-  @Post('2fa/verify')
+  @Post('2fa/verify-authenticated')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'تایید و فعال‌سازی احراز هویت دو مرحله‌ای' })
-  async verify2fa(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
+  @ApiOperation({ summary: 'تأیید کد در حالت احراز هویت‌شده' })
+  async verify2faAuthenticated(@Req() req: any, @Body() dto: TwoFactorCodeDto) {
     return this.authService.enable2FA(req.user.id, dto.code);
   }
 
   @Post('2fa/disable')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'غیرفعال‌سازی احراز هویت دو مرحله‌ای' })
   async disable2fa(@Req() req: any, @Body() dto: TwoFactorDisableDto) {
     return this.authService.disable2FA(req.user.id, dto.password);
   }

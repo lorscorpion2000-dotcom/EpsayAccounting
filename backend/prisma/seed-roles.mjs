@@ -22,8 +22,8 @@ const ROLES = [
       'petty-cash.read', 'petty-cash.create',
       'partner-capital.read',
       'projects.read', 'contracts.read', 'budgets.read',
-      'partners.read', 'partners.create', 'partners.update',
-    ],
+      'partners.read', 'partners.create', 'partners.update',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'warehouse_keeper',
@@ -37,8 +37,8 @@ const ROLES = [
       'warehouse.issues.manage',
       'warehouse.reports.read',
       'procurement.read',
-      'projects.read',
-    ],
+      'projects.read',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'purchaser',
@@ -51,8 +51,8 @@ const ROLES = [
       'warehouse.read',
       'projects.read',
       'partners.read',
-      'approvals.read',
-    ],
+      'approvals.read',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'site_supervisor',
@@ -64,8 +64,8 @@ const ROLES = [
       'projects.read', 'wbs.read',
       'warehouse.read',
       'payroll.attendance.manage', 'payroll.advance.manage',
-      'partners.read',
-    ],
+      'partners.read',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'hr',
@@ -77,8 +77,8 @@ const ROLES = [
       'payroll.attendance.manage', 'payroll.periods.manage',
       'payroll.statements.manage', 'payroll.advance.manage',
       'partners.read', 'partners.create', 'partners.update',
-      'projects.read',
-    ],
+      'projects.read',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'project_manager',
@@ -93,8 +93,8 @@ const ROLES = [
       'partners.read',
       'partner-capital.read',
       'approvals.read', 'approvals.approve', 'approvals.reject',
-      'timeline.checklists.read', 'timeline.checklists.manage',
-    ],
+      'timeline.checklists.read', 'timeline.checklists.manage',,
+      'attachment.read', 'attachment.create',],
   },
   {
     code: 'approver',
@@ -102,8 +102,8 @@ const ROLES = [
     description: 'فقط تأیید یا رد اسناد در کارتابل',
     permissions: [
       'dashboard.read',
-      'approvals.read', 'approvals.approve', 'approvals.reject',
-    ],
+      'approvals.read', 'approvals.approve', 'approvals.reject',,
+      'attachment.read',],
   },
   {
     code: 'viewer',
@@ -117,8 +117,8 @@ const ROLES = [
       'site-ops.read', 'payroll.read', 'partner-capital.read',
       'timeline.permits.read', 'timeline.insurances.read', 'timeline.guarantees.read',
       'timeline.documents.read', 'timeline.checklists.read',
-      'legal-contracts.read', 'sales.units.read', 'sales.contracts.read', 'sales.customers.read',
-    ],
+      'legal-contracts.read', 'sales.units.read', 'sales.contracts.read', 'sales.customers.read',,
+      'attachment.read',],
   },
 ];
 
