@@ -55,8 +55,14 @@ export class Money {
    * بررسی تراز بودن مجموعه بدهکار و بستانکار
    */
   static isBalanced(debits: DecimalValue[], credits: DecimalValue[]): boolean {
-    const totalDr = debits.reduce((sum: Prisma.Decimal, d) => sum.plus(this.toDecimal(d)), new Prisma.Decimal(0));
-    const totalCr = credits.reduce((sum: Prisma.Decimal, c) => sum.plus(this.toDecimal(c)), new Prisma.Decimal(0));
+    const totalDr = debits.reduce<Prisma.Decimal>(
+      (sum, d) => sum.plus(this.toDecimal(d)),
+      new Prisma.Decimal(0)
+    );
+    const totalCr = credits.reduce<Prisma.Decimal>(
+      (sum, c) => sum.plus(this.toDecimal(c)),
+      new Prisma.Decimal(0)
+    );
     return totalDr.toDP(2).equals(totalCr.toDP(2));
   }
 }
