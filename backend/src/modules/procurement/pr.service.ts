@@ -1,17 +1,29 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePRDto } from './dto/create-pr.dto';
 import { UpdatePRDto } from './dto/update-pr.dto';
+
+type PrismaUnit = string | null | undefined;
+type PrismaPriority = string;
 
 @Injectable()
 export class PurchaseRequestsService {
   constructor(private prisma: PrismaService) {}
 
+  private get prismaWithDeleted() {
+    return this.prisma as unknown as {
+      purchaseRequest: {
+        findFirst: (args: unknown) => Promise<{ code: string } | null>;
+      };
+    };
+  }
+
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = 'PR-' + year + '-';
 
-    const last = await (this.prisma as any).purchaseRequest.findFirst({
+    const last = await this.prismaWithDeleted.purchaseRequest.findFirst({
       __withDeleted: true,
       where: { code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
@@ -27,7 +39,7 @@ export class PurchaseRequestsService {
     let candidate = prefix + String(lastNum + 1).padStart(4, '0');
     let tries = 0;
     while (tries < 100) {
-      const exists = await (this.prisma as any).purchaseRequest.findFirst({
+      const exists = await this.prismaWithDeleted.purchaseRequest.findFirst({
         __withDeleted: true,
         where: { code: candidate },
         select: { code: true },
@@ -41,8 +53,8 @@ export class PurchaseRequestsService {
   }
 
   async findAll(query?: { status?: string; projectId?: string; search?: string }) {
-    const where: any = {};
-    if (query?.status) where.status = query.status;
+    const where: Prisma.PurchaseRequestWhereInput = {};
+    if (query?.status) where.status = query.status as Prisma.PurchaseRequestWhereInput['status'];
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.search) {
       where.OR = [
@@ -78,7 +90,7 @@ export class PurchaseRequestsService {
   }
 
 
-  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: Prisma.TransactionClient = this.prisma): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
     if (unique.length === 0) return new Map();
     const units = await client.unit.findMany({
@@ -96,7 +108,7 @@ export class PurchaseRequestsService {
 
   async create(dto: CreatePRDto, userId: string) {
     const code = await this.generateCode();
-    const prUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit as any));
+    const prUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit as PrismaUnit));
     return this.prisma.purchaseRequest.create({
       data: {
         code,
@@ -115,11 +127,11 @@ export class PurchaseRequestsService {
             rowNumber: idx + 1,
             description: it.description,
             quantity: it.quantity,
-            unit: it.unit as any,
+            unit: it.unit as PrismaUnit,
             unitId: it.unit ? (prUnitMap.get(it.unit) ?? null) : null,
-            priority: (it.priority as any) || 'NORMAL',
+            priority: ((it.priority as string | undefined) || 'NORMAL') as PrismaPriority,
             notes: it.notes,
-          })),
+          })) as unknown as never[],
         },
       },
       include: {
@@ -135,15 +147,17 @@ export class PurchaseRequestsService {
       throw new BadRequestException('فقط درخواست‌های پیش‌نویس قابل ویرایش هستند');
     }
 
-    const data: any = {};
-    if (dto.wbsItemId !== undefined) data.wbsItemId = dto.wbsItemId;
+    const data: Prisma.PurchaseRequestUpdateInput = {};
+    if (dto.wbsItemId !== undefined) {
+      data.wbsItem = dto.wbsItemId ? { connect: { id: dto.wbsItemId } } : { disconnect: true };
+    }
     if (dto.requestDate) data.requestDate = new Date(dto.requestDate);
     if (dto.requiredDate !== undefined) data.requiredDate = dto.requiredDate ? new Date(dto.requiredDate) : null;
     if (dto.department !== undefined) data.department = dto.department;
     if (dto.deliveryLocation !== undefined) data.deliveryLocation = dto.deliveryLocation;
     if (dto.reason !== undefined) data.reason = dto.reason;
 
-    const prUpdateUnitMap = dto.items ? await this.resolveUnitIds(dto.items.map((it) => it.unit as any)) : new Map<string, string>();
+    const prUpdateUnitMap = dto.items ? await this.resolveUnitIds(dto.items.map((it) => it.unit as PrismaUnit)) : new Map<string, string>();
     return this.prisma.$transaction(async (tx) => {
       if (dto.items) {
         await tx.purchaseRequestItem.deleteMany({ where: { prId: id } });
@@ -152,11 +166,11 @@ export class PurchaseRequestsService {
             rowNumber: idx + 1,
             description: it.description,
             quantity: it.quantity,
-            unit: it.unit as any,
+            unit: it.unit as PrismaUnit,
             unitId: it.unit ? (prUpdateUnitMap.get(it.unit) ?? null) : null,
-            priority: (it.priority as any) || 'NORMAL',
+            priority: ((it.priority as string | undefined) || 'NORMAL') as PrismaPriority,
             notes: it.notes,
-          })),
+          })) as unknown as never[],
         };
       }
       return tx.purchaseRequest.update({
@@ -204,29 +218,29 @@ export class PurchaseRequestsService {
     });
   }
 
-  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.purchaseRequest.findUnique({ where: { id } });
+  async softDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.purchaseRequest.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    if (existing.deletedAt) throw new Error('قبلاً حذف شده است');
     await this.prisma.purchaseRequest.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+      data: { deletedAt: new Date(), deletedBy: userId || null },
     });
     return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.purchaseRequest.findUnique({ where: { id } });
+    const existing = await this.prisma.purchaseRequest.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    if (!existing.deletedAt) throw new Error('رکورد حذف نشده است');
     await this.prisma.purchaseRequest.update({
       where: { id },
-      data: { deletedAt: null, deletedBy: null } as any,
+      data: { deletedAt: null, deletedBy: null },
     });
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async adminDelete(id: string, userId?: string, reason?: string, meta: Record<string, unknown> = {}) {
     return this.softDelete(id, userId, reason || 'admin-delete', meta);
   }
 

@@ -1,17 +1,43 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePODto, UpdatePOItemDto } from './dto/create-po.dto';
 import { UpdatePODto } from './dto/update-po.dto';
+
+type PrismaUnit = string | null | undefined;
+
+type POItemWithLegacyUnit = Prisma.PurchaseOrderItemGetPayload<object> & {
+  unit?: string | null;
+};
+
+interface ComputeItem {
+  rowNumber?: number;
+  description?: string | null;
+  quantity: number | string;
+  unit?: PrismaUnit;
+  unitPrice: number | string;
+  taxPercent?: unknown;
+  notes?: string | null;
+  unitId?: string | null;
+}
 
 @Injectable()
 export class PurchaseOrdersService {
   constructor(private prisma: PrismaService) {}
 
+  private get prismaWithDeleted() {
+    return this.prisma as unknown as {
+      purchaseOrder: {
+        findFirst: (args: unknown) => Promise<{ code: string } | null>;
+      };
+    };
+  }
+
   private async generateCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = 'PO-' + year + '-';
 
-    const last = await (this.prisma as any).purchaseOrder.findFirst({
+    const last = await this.prismaWithDeleted.purchaseOrder.findFirst({
       __withDeleted: true,
       where: { code: { startsWith: prefix } },
       orderBy: { code: 'desc' },
@@ -20,14 +46,14 @@ export class PurchaseOrdersService {
 
     let lastNum = 0;
     if (last && last.code) {
-      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)\$'));
+      const m = String(last.code).match(new RegExp('^' + prefix + '(\\d+)$'));
       if (m) lastNum = parseInt(m[1], 10) || 0;
     }
 
     let candidate = prefix + String(lastNum + 1).padStart(4, '0');
     let tries = 0;
     while (tries < 100) {
-      const exists = await (this.prisma as any).purchaseOrder.findFirst({
+      const exists = await this.prismaWithDeleted.purchaseOrder.findFirst({
         __withDeleted: true,
         where: { code: candidate },
         select: { code: true },
@@ -40,7 +66,7 @@ export class PurchaseOrdersService {
     throw new Error('Cannot generate unique code for PO');
   }
 
-  private computeTotals(items: any[], defaultTaxPercent: number) {
+  private computeTotals(items: ComputeItem[], defaultTaxPercent: number) {
     let subtotal = 0;
     let taxAmount = 0;
     const enriched = items.map((it) => {
@@ -61,14 +87,14 @@ export class PurchaseOrdersService {
   }
 
   async checkBudgetLimit(projectId: string, totalAmount: number) {
-    const budget = await (this.prisma as any).projectBudget.aggregate({
+    const budget = await this.prisma.projectBudget.aggregate({
       where: { projectId },
       _sum: { amount: true },
     });
     const totalBudget = Number(budget._sum?.amount || 0);
     if (totalBudget <= 0) return;
 
-    const existingPOs = await (this.prisma as any).purchaseOrder.aggregate({
+    const existingPOs = await this.prisma.purchaseOrder.aggregate({
       where: { projectId, status: { in: ['APPROVED', 'SENT', 'RECEIVED'] } },
       _sum: { totalAmount: true },
     });
@@ -82,8 +108,8 @@ export class PurchaseOrdersService {
   }
 
   async findAll(query?: { status?: string; projectId?: string; supplierId?: string; search?: string }) {
-    const where: any = {};
-    if (query?.status) where.status = query.status;
+    const where: Prisma.PurchaseOrderWhereInput = {};
+    if (query?.status) where.status = query.status as Prisma.PurchaseOrderWhereInput['status'];
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.supplierId) where.supplierId = query.supplierId;
     if (query?.search) {
@@ -125,7 +151,7 @@ export class PurchaseOrdersService {
     });
     if (!po) throw new NotFoundException('دستور خرید یافت نشد');
     const defaultTaxPercent = Number(po.taxPercent);
-    const rawItems = (po.items as any[]).map((it) => ({
+    const rawItems = (po.items as POItemWithLegacyUnit[]).map((it) => ({
       rowNumber: it.rowNumber,
       description: it.description,
       quantity: Number(it.quantity),
@@ -197,7 +223,7 @@ export class PurchaseOrdersService {
     return { success: true };
   }
 
-  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: Prisma.TransactionClient = this.prisma): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
     if (unique.length === 0) return new Map();
     const units = await client.unit.findMany({
@@ -220,7 +246,7 @@ export class PurchaseOrdersService {
       rowNumber: idx + 1,
       description: it.description,
       quantity: it.quantity,
-      unit: it.unit as any,
+      unit: it.unit as PrismaUnit,
       unitPrice: it.unitPrice,
       taxPercent: it.taxPercent,
       notes: it.notes,
@@ -233,7 +259,7 @@ export class PurchaseOrdersService {
 
     const code = await this.generateCode();
     const poUnitMap = await this.resolveUnitIds(rawItems.map((it) => it.unit));
-    for (const it of totals.items as any[]) {
+    for (const it of totals.items) {
       it.unitId = it.unit ? (poUnitMap.get(it.unit) ?? null) : null;
     }
 
@@ -253,7 +279,7 @@ export class PurchaseOrdersService {
           notes: dto.notes,
           status: 'DRAFT',
           createdById: userId,
-          items: { create: totals.items },
+          items: { create: totals.items as unknown as never[] },
         },
         include: {
           project: { select: { id: true, code: true, name: true } },
@@ -279,10 +305,12 @@ export class PurchaseOrdersService {
       throw new BadRequestException('Only DRAFT purchase orders can be edited');
     }
 
-    const data: any = {};
+    const data: Prisma.PurchaseOrderUpdateInput = {};
     if (dto.poDate) data.poDate = new Date(dto.poDate);
     if (dto.deliveryDate !== undefined) data.deliveryDate = dto.deliveryDate ? new Date(dto.deliveryDate) : null;
-    if (dto.supplierId !== undefined) data.supplierId = dto.supplierId;
+    if (dto.supplierId !== undefined) {
+      data.supplier = dto.supplierId ? { connect: { id: dto.supplierId } } : { disconnect: true };
+    }
     if (dto.notes !== undefined) data.notes = dto.notes;
 
     return this.prisma.$transaction(async (tx) => {
@@ -292,7 +320,7 @@ export class PurchaseOrdersService {
           rowNumber: idx + 1,
           description: it.description,
           quantity: it.quantity,
-          unit: it.unit as any,
+          unit: it.unit as PrismaUnit,
           unitPrice: it.unitPrice,
           taxPercent: it.taxPercent,
           notes: it.notes,
@@ -305,10 +333,10 @@ export class PurchaseOrdersService {
         data.totalAmount = totals.totalAmount;
 
         await tx.purchaseOrderItem.deleteMany({ where: { poId: id } });
-        data.items = { create: totals.items };
+        data.items = { create: totals.items as unknown as never[] };
       } else if (dto.taxPercent !== undefined) {
         const newDefault = Number(dto.taxPercent);
-        const rawItems = (po as any).items.map((it: any) => ({
+        const rawItems = (po.items as POItemWithLegacyUnit[]).map((it) => ({
           rowNumber: it.rowNumber,
           description: it.description,
           quantity: Number(it.quantity),
@@ -325,7 +353,7 @@ export class PurchaseOrdersService {
         data.totalAmount = totals.totalAmount;
 
         await tx.purchaseOrderItem.deleteMany({ where: { poId: id } });
-        data.items = { create: totals.items };
+        data.items = { create: totals.items as unknown as never[] };
       }
 
       return tx.purchaseOrder.update({
@@ -361,29 +389,29 @@ export class PurchaseOrdersService {
     });
   }
 
-  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+  async softDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.purchaseOrder.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    if (existing.deletedAt) throw new Error('قبلاً حذف شده است');
     await this.prisma.purchaseOrder.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+      data: { deletedAt: new Date(), deletedBy: userId || null },
     });
     return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    const existing = await this.prisma.purchaseOrder.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    if (!existing.deletedAt) throw new Error('رکورد حذف نشده است');
     await this.prisma.purchaseOrder.update({
       where: { id },
-      data: { deletedAt: null, deletedBy: null } as any,
+      data: { deletedAt: null, deletedBy: null },
     });
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, meta: any = {}) {
+  async adminDelete(id: string, userId?: string, reason?: string, meta: Record<string, unknown> = {}) {
     return this.softDelete(id, userId, reason || 'admin-delete', meta);
   }
 }
