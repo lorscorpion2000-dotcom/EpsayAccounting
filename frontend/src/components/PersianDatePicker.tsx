@@ -54,7 +54,7 @@ export const PersianDatePicker = forwardRef<HTMLDivElement, Props>(
           editable={false}
           /* 🔑 حل مشکل قطع شدن در modal */
           portal
-          zIndex={99999}
+          zIndex={100}
           /* 🎨 بزرگ‌تر کردن تقویم */
           style={{ fontSize: size === 'lg' ? '15px' : size === 'sm' ? '12px' : '13px' }}
           className="rmdp-custom"

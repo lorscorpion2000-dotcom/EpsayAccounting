@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -428,7 +428,7 @@ table td, table th {
 }
 
 .rmdp-container {
-  z-index: 99999 !important;
+  z-index: 1;
 }
 
 .rmdp-shadow, .rmdp-ep-shadow {

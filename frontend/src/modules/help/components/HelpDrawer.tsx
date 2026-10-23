@@ -15,14 +15,14 @@ export default function HelpDrawer({ isOpen, onClose, help }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40 no-print"
+        className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[200] no-print"
         onClick={onClose}
       ></div>
 
       {/* Drawer */}
       <div
         className={clsx(
-          'fixed top-0 left-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col no-print',
+          'fixed top-0 left-0 h-full w-full max-w-lg bg-white shadow-2xl z-[200] flex flex-col no-print',
           'animate-slide-in',
         )}
         dir="rtl"
