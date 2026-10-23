@@ -1,10 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, AccountDetailType, AccountLevel, AccountNature, PartnerType } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
 import { UpdateSIItemDto } from './dto/create-sales-invoice.dto';
 import { FiscalYearsService } from '../accounting/fiscal-years.service';
 import { generateCode } from '../../shared/utils/code-generator';
+
+interface ComputeItem {
+  totalPrice?: unknown;
+  quantity?: unknown;
+  unitPrice?: unknown;
+}
+
+type JELine = {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+  projectId?: string | null;
+};
 
 @Injectable()
 export class SalesInvoicesService {
@@ -18,7 +33,7 @@ export class SalesInvoicesService {
     return generateCode(this.prisma, 'salesInvoice', 'code', 'SI-' + year + '-', { pad: 5 });
   }
 
-  private computeTotals(items: any[], taxPercent: number, discountAmount: number) {
+  private computeTotals(items: ComputeItem[], taxPercent: number, discountAmount: number) {
     const subtotal = items.reduce((s, it) => {
       const t = it.totalPrice != null ? Number(it.totalPrice) : Number(it.quantity) * Number(it.unitPrice);
       return s + t;
@@ -30,10 +45,10 @@ export class SalesInvoicesService {
   }
 
   async findAll(query?: { customerId?: string; projectId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.SalesInvoiceWhereInput = {};
     if (query?.customerId) where.customerId = query.customerId;
     if (query?.projectId)  where.projectId  = query.projectId;
-    if (query?.status)     where.status     = query.status;
+    if (query?.status)     where.status     = query.status as Prisma.SalesInvoiceWhereInput['status'];
     return this.prisma.salesInvoice.findMany({
       where,
       include: {
@@ -75,7 +90,7 @@ export class SalesInvoicesService {
     });
     if (!inv) throw new NotFoundException('فاکتور فروش یافت نشد');
     const totals = this.computeTotals(
-      inv.items as any[],
+      inv.items,
       Number(inv.taxPercent),
       Number(inv.discountAmount),
     );
@@ -143,7 +158,7 @@ export class SalesInvoicesService {
   }
 
 
-  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+  private async resolveUnitIds(codes: (string | null | undefined)[], client: Prisma.TransactionClient = this.prisma): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
     if (unique.length === 0) return new Map();
     const units = await client.unit.findMany({
@@ -202,7 +217,7 @@ export class SalesInvoicesService {
   async update(id: string, dto: UpdateSalesInvoiceDto) {
     const inv = await this.findOne(id);
     if (inv.status !== 'DRAFT') throw new BadRequestException('فقط DRAFT قابل ویرایش است');
-    const data: any = {};
+    const data: Prisma.SalesInvoiceUncheckedUpdateInput = {};
     if (dto.invoiceNumber !== undefined) data.invoiceNumber = dto.invoiceNumber;
     if (dto.invoiceDate !== undefined)   data.invoiceDate = new Date(dto.invoiceDate);
     if (dto.dueDate !== undefined)       data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
@@ -225,7 +240,7 @@ export class SalesInvoicesService {
     // اگر Partner با همین نام و موبایل هست، استفاده کن
     const existing = await this.prisma.partner.findFirst({
       where: {
-        type: 'CLIENT' as any,
+        type: PartnerType.CLIENT,
         OR: [
           { nationalId: cust.nationalId ?? undefined },
           { phone: cust.mobilePhone ?? undefined },
@@ -243,7 +258,7 @@ export class SalesInvoicesService {
       data: {
         code,
         name: cust.fullName,
-        type: 'CLIENT' as any,
+        type: PartnerType.CLIENT,
         nationalId: cust.nationalId ?? null,
         phone: cust.mobilePhone ?? null,
         email: cust.email ?? null,
@@ -282,12 +297,12 @@ export class SalesInvoicesService {
       data: {
         code: nextCode,
         name: partner.name,
-        level: 'DETAIL' as any,
-        nature: 'DEBIT' as any,
+        level: AccountLevel.DETAIL,
+        nature: AccountNature.DEBIT,
         parentId: parent.id,
         isPostable: true,
         isActive: true,
-        detailType: 'CUSTOMER' as any,
+        detailType: AccountDetailType.CUSTOMER,
         detailId: partner.id,
       },
     });
@@ -313,7 +328,7 @@ export class SalesInvoicesService {
     const customerAcc = await this.resolveCustomerDetail(partnerId);
 
     // 2) حساب درآمد: از mapping یا اولین ردیف با accountId، وگرنه 4.2.1
-    const itemWithAcc = inv.items?.find((it: any) => it.accountId);
+    const itemWithAcc = inv.items?.find((it) => it.accountId);
     let revenueAcc;
     if (itemWithAcc?.accountId) {
       revenueAcc = await this.prisma.account.findUnique({ where: { id: itemWithAcc.accountId } });
@@ -334,7 +349,7 @@ export class SalesInvoicesService {
     const netRevenue = Number(inv.subtotal) - Number(inv.discountAmount);
     const taxAmount  = Number(inv.taxAmount);
 
-    const lines: any[] = [
+    const lines: JELine[] = [
       { accountId: customerAcc.id, debit: Number(inv.totalAmount), description: 'طلب از ' + inv.customer.fullName, projectId: inv.projectId },
       { accountId: revenueAcc.id,  credit: netRevenue, description: 'درآمد فروش ' + inv.code, projectId: inv.projectId },
     ];

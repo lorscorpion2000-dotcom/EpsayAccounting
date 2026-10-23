@@ -5,6 +5,7 @@ import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest } from '../../common/types/auth-request';
 
 @ApiTags('Sales Receipts - دریافت از مشتری')
 @ApiBearerAuth()
@@ -38,7 +39,7 @@ export class SalesReceiptsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.service.adminDelete(id, user.id, body?.reason, {
@@ -49,7 +50,7 @@ export class SalesReceiptsController {
 
   @Patch(':id/restore')
   @RequirePermissions('salesreceipt.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.service.restore(id, user.id);
   }
