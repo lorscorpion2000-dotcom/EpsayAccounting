@@ -10,6 +10,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { ChequeDirection, ChequeStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthUser, AuthRequest } from '../../common/types/auth-request';
 
 @ApiTags('Cheques - چک‌ها')
 @ApiBearerAuth()
@@ -58,7 +59,7 @@ export class ChequesController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
@@ -93,7 +94,7 @@ export class ChequesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
@@ -110,7 +111,7 @@ export class ChequesController {
 
   @Patch(':id/restore')
   @RequirePermissions('bank.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.softDelete.restore({
       model: 'cheque',

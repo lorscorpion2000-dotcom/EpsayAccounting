@@ -13,9 +13,9 @@ const WEAK_SECRETS = [
 const MIN_SECRET_LEN = 32;
 
 function fail(msg: string): never {
-  // eslint-disable-next-line no-console
+   
   console.error('\n❌ ENV VALIDATION FAILED:');
-  // eslint-disable-next-line no-console
+   
   console.error('   ' + msg + '\n');
   process.exit(1);
 }
@@ -50,6 +50,6 @@ export function validateEnv(): void {
     fail(`NODE_ENV نامعتبر: ${env}`);
   }
 
-  // eslint-disable-next-line no-console
+   
   console.log('✅ ENV validation passed');
 }

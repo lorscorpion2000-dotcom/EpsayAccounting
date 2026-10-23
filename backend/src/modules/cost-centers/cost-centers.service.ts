@@ -2,6 +2,16 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateCostCenterDto } from './dto/create-cost-center.dto';
 import { UpdateCostCenterDto } from './dto/update-cost-center.dto';
+import { Prisma } from '@prisma/client';
+
+type CostCenterWithRelations = Prisma.CostCenterGetPayload<{
+  include: {
+    project: { select: { id: true; code: true; name: true } };
+    _count: { select: { journalLines: true } };
+  };
+}>;
+
+type CostCenterTreeNode = CostCenterWithRelations & { children: CostCenterTreeNode[] };
 
 @Injectable()
 export class CostCentersService {
@@ -14,7 +24,7 @@ export class CostCentersService {
   }
 
   async findAll(query?: { projectId?: string; active?: boolean; parentId?: string }) {
-    const where: any = {};
+    const where: Prisma.CostCenterWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.active !== undefined) where.isActive = query.active;
     if (query?.parentId !== undefined) {
@@ -39,8 +49,8 @@ export class CostCentersService {
       },
       orderBy: { code: 'asc' },
     });
-    const byId = new Map<string, any>();
-    const roots: any[] = [];
+    const byId = new Map<string, CostCenterTreeNode>();
+    const roots: CostCenterTreeNode[] = [];
     for (const n of all) byId.set(n.id, { ...n, children: [] });
     for (const n of all) {
       const node = byId.get(n.id)!;
@@ -120,7 +130,7 @@ export class CostCentersService {
       if (isDesc) throw new BadRequestException('والد انتخابی نمی‌تواند زیرمجموعه‌ی این مرکز باشد');
     }
 
-    const data: any = {};
+    const data: Prisma.CostCenterUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.parentId !== undefined) data.parentId = dto.parentId;

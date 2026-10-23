@@ -8,6 +8,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthRequest } from '../../common/types/auth-request';
 
 @ApiTags('Roles - نقش‌ها و مجوزها')
 @ApiBearerAuth()
@@ -61,7 +62,7 @@ export class RolesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
@@ -75,7 +76,7 @@ export class RolesController {
 
   @Patch(':id/restore')
   @RequirePermissions('roles.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.softDelete.restore({
       model: 'role',

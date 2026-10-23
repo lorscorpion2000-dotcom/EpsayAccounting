@@ -2,6 +2,11 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { Prisma } from '@prisma/client';
+
+type RoleWithPermissions = Prisma.RoleGetPayload<{
+  include: { permissions: { include: { permission: true } } };
+}>;
 
 @Injectable()
 export class RolesService {
@@ -13,7 +18,7 @@ export class RolesService {
     },
   };
 
-  private shape(role: any) {
+  private shape(role: RoleWithPermissions) {
     return {
       id: role.id,
       code: role.code,
@@ -22,7 +27,7 @@ export class RolesService {
       isSystem: role.isSystem,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
-      permissions: role.permissions.map((rp: any) => rp.permission),
+      permissions: role.permissions.map((rp) => rp.permission),
     };
   }
 

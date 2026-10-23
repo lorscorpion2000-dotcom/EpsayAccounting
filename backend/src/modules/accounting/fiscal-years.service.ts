@@ -46,7 +46,11 @@ export class FiscalYearsService {
     }
 
     if (dto.isCurrent) {
-      }
+      await this.prisma.fiscalYear.updateMany({
+        where: { isCurrent: true },
+        data: { isCurrent: false },
+      });
+    }
     return this.prisma.fiscalYear.create({
       data: {
         code: dto.code,

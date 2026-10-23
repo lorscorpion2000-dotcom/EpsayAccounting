@@ -5,6 +5,7 @@ import { JournalsService } from '../accounting/journals.service';
 import { CreateChequeDto } from './dto/create-cheque.dto';
 import { UpdateChequeDto } from './dto/update-cheque.dto';
 import { generateCode } from '../../shared/utils/code-generator';
+import { ChequeDirection, ChequeStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChequesService {
@@ -20,14 +21,14 @@ export class ChequesService {
   }
 
   async findAll(query?: {
-    direction?: string;
-    status?: string;
+    direction?: ChequeDirection;
+    status?: ChequeStatus;
     partnerId?: string;
     bankAccountId?: string;
     fromDueDate?: string;
     toDueDate?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.ChequeWhereInput = {};
     if (query?.direction) where.direction = query.direction;
     if (query?.status) where.status = query.status;
     if (query?.partnerId) where.partnerId = query.partnerId;
@@ -127,7 +128,7 @@ export class ChequesService {
     if (existing.status !== 'PENDING') {
       throw new BadRequestException('فقط چک‌های در جریان قابل ویرایش هستند');
     }
-    const data: any = {};
+    const data: Prisma.ChequeUncheckedUpdateInput = {};
     if (dto.serial !== undefined) data.serial = dto.serial;
     if (dto.amount !== undefined) data.amount = dto.amount;
     if (dto.issueDate !== undefined) data.issueDate = new Date(dto.issueDate);

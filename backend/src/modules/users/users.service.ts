@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { validatePassword } from '../../common/validators/password.validator';
@@ -91,7 +92,7 @@ export class UsersService {
 
     const { password, roleIds, ...rest } = dto;
 
-    const data: any = { ...rest };
+    const data: Prisma.UserUncheckedUpdateInput = { ...rest };
     if (password) {
       const current = await this.prisma.user.findUnique({ where: { id }, select: { username: true } });
       const pwErrors = validatePassword(password, current?.username);

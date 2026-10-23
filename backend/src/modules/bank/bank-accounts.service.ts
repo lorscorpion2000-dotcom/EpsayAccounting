@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AccountDetailType } from '@prisma/client';
+import { AccountDetailType, BankAccountType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
@@ -19,7 +19,7 @@ export class BankAccountsService {
   }
 
   async findAll(query?: { active?: boolean }) {
-    const where: any = {};
+    const where: Prisma.BankAccountWhereInput = {};
     if (query?.active !== undefined) where.isActive = query.active;
     return this.prisma.bankAccount.findMany({
       where,
@@ -45,16 +45,17 @@ export class BankAccountsService {
 
   async create(dto: CreateBankAccountDto) {
     const code = await this.generateCode();
-    const type = (dto as any).type || 'BANK';
+    const type: BankAccountType =
+      dto.type === 'CASH_REGISTER' ? BankAccountType.CASH_REGISTER : BankAccountType.BANK;
     const detailType = type === 'CASH_REGISTER'
       ? AccountDetailType.CASH_REGISTER
       : AccountDetailType.BANK;
 
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const account = await tx.bankAccount.create({
         data: {
           code,
-          type: type as any,
+          type,
           name: dto.name,
           bankName: dto.bankName,
           branchName: dto.branchName,
@@ -92,7 +93,7 @@ export class BankAccountsService {
 
   async update(id: string, dto: UpdateBankAccountDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.BankAccountUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.bankName !== undefined) data.bankName = dto.bankName;
     if (dto.branchName !== undefined) data.branchName = dto.branchName;
@@ -101,7 +102,7 @@ export class BankAccountsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
 
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const account = await tx.bankAccount.update({
         where: { id },
         data,
@@ -134,7 +135,7 @@ export class BankAccountsService {
     if (chequeCount > 0) {
       throw new BadRequestException('این حساب بانکی دارای چک است و قابل حذف نیست');
     }
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const detail = await tx.account.findFirst({
         where: { detailType: AccountDetailType.BANK, detailId: id },
       });

@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UnitsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(query?: { active?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.UnitWhereInput = {};
     if (query?.active === 'true') where.isActive = true;
     if (query?.active === 'false') where.isActive = false;
     if (query?.search) {
@@ -49,7 +50,7 @@ export class UnitsService {
 
   async update(id: string, dto: { name?: string; symbol?: string; sortOrder?: number; isActive?: boolean }) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.UnitUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
     if (dto.symbol !== undefined) data.symbol = dto.symbol?.trim() || null;
     if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;

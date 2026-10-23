@@ -6,6 +6,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { CreateUnitDto, UpdateUnitDto } from './dto/unit.dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthRequest } from '../../common/types/auth-request';
 
 @ApiTags('Units - واحدهای اندازه‌گیری')
 @ApiBearerAuth()
@@ -38,7 +39,7 @@ export class UnitsController {
 
   @Delete(':id')
   @RequirePermissions('settings.delete')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthRequest) {
     return this.svc.remove(id, req.user?.id);
   }
 
@@ -51,7 +52,7 @@ export class UnitsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
@@ -65,7 +66,7 @@ export class UnitsController {
 
   @Patch(':id/restore')
   @RequirePermissions('settings.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.softDelete.restore({
       model: 'unit',
