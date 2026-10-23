@@ -1,3 +1,4 @@
+import { RequirePermissions } from '../decorators/permissions.decorator';
 import {
   Controller,
   Post,
@@ -63,6 +64,7 @@ const fileFilter = (
 
 @Controller('upload')
 export class UploadController {
+  @RequirePermissions('attachments.create')
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
