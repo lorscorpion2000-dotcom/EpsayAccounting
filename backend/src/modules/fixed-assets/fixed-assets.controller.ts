@@ -9,6 +9,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest } from '../../common/types/auth-request';
 import { FixedAssetStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
@@ -83,7 +84,7 @@ export class FixedAssetsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
@@ -100,7 +101,7 @@ export class FixedAssetsController {
 
   @Patch(':id/restore')
   @RequirePermissions('accounting.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.softDelete.restore({
       model: 'fixedAsset',

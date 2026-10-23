@@ -1,10 +1,24 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { Prisma, FixedAssetStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { CreateFixedAssetDto } from './dto/create-fixed-asset.dto';
 import { UpdateFixedAssetDto } from './dto/update-fixed-asset.dto';
+import { DisposeFixedAssetDto } from './dto/dispose-fixed-asset.dto';
 import { generateCode } from '../../shared/utils/code-generator';
+
+type DepreciationResult =
+  | { assetId: string; code: string; skipped: 'already' | 'fully' }
+  | { assetId: string; code: string; amount: number; jeCode: string; bookValueAfter: number; status: FixedAssetStatus }
+  | { assetId: string; code: string; error: string };
+
+type ProjectedDepreciation = {
+  index: number;
+  amount: number;
+  accumulated: number;
+  bookValue: number;
+};
 
 @Injectable()
 export class FixedAssetsService {
@@ -25,8 +39,8 @@ export class FixedAssetsService {
   }
 
   async findAll(query?: { status?: string; projectId?: string; active?: string }) {
-    const where: any = { deletedAt: null };
-    if (query?.status) where.status = query.status;
+    const where: Prisma.FixedAssetWhereInput = { deletedAt: null };
+    if (query?.status) where.status = query.status as FixedAssetStatus;
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.fixedAsset.findMany({
       where,
@@ -120,7 +134,7 @@ export class FixedAssetsService {
   }
   async update(id: string, dto: UpdateFixedAssetDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.FixedAssetUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.projectId !== undefined) data.projectId = dto.projectId;
@@ -142,9 +156,9 @@ export class FixedAssetsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.fixedAsset.findUnique({
+    const existing = await this.prisma.fixedAsset.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('دارایی یافت نشد');
     if (!existing.deletedAt) throw new BadRequestException('دارایی حذف نشده است');
@@ -155,10 +169,10 @@ export class FixedAssetsService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.fixedAsset.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.fixedAsset.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('دارایی یافت نشد');
 
@@ -182,11 +196,11 @@ export class FixedAssetsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.fixedAsset.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };
@@ -197,7 +211,7 @@ export class FixedAssetsService {
     const assets = await this.prisma.fixedAsset.findMany({
       where: { status: 'ACTIVE' },
     });
-    const results: any[] = [];
+    const results: DepreciationResult[] = [];
 
     for (const a of assets) {
       const existing = await this.prisma.depreciationEntry.findUnique({
@@ -252,7 +266,7 @@ export class FixedAssetsService {
           data: { journalEntryId: je.id },
         });
 
-        const newStatus = bvAfter <= residual + 0.01 ? 'FULLY_DEPRECIATED' : 'ACTIVE';
+        const newStatus: FixedAssetStatus = bvAfter <= residual + 0.01 ? 'FULLY_DEPRECIATED' : 'ACTIVE';
         await this.prisma.fixedAsset.update({
           where: { id: a.id },
           data: {
@@ -263,9 +277,10 @@ export class FixedAssetsService {
         });
 
         results.push({ assetId: a.id, code: a.code, amount, jeCode: je.code, bookValueAfter: bvAfter, status: newStatus });
-      } catch (e: any) {
+      } catch (e: unknown) {
         await this.prisma.depreciationEntry.delete({ where: { id: entry.id } }).catch(() => {});
-        results.push({ assetId: a.id, code: a.code, error: e?.message ?? String(e) });
+        const message = e instanceof Error ? e.message : String(e);
+        results.push({ assetId: a.id, code: a.code, error: message });
       }
     }
     return results;
@@ -281,14 +296,14 @@ export class FixedAssetsService {
     const monthly  = Number(a.monthlyDepreciation);
     const life     = a.usefulLifeMonths;
 
-    const recorded = ((a as any).depreciationEntries ?? []).slice().sort(
-      (x: any, y: any) =>
+    const recorded = a.depreciationEntries.slice().sort(
+      (x, y) =>
         (y.periodYear * 12 + y.periodMonth) - (x.periodYear * 12 + x.periodMonth)
     );
     const recordedCount   = recorded.length;
     const accAfterRec     = Number(a.accumulatedDepreciation);
 
-    const projected: any[] = [];
+    const projected: ProjectedDepreciation[] = [];
     let acc = accAfterRec;
     const remainingMonths = Math.max(life - recordedCount, 0);
     for (let i = 0; i < remainingMonths; i++) {
@@ -325,11 +340,12 @@ export class FixedAssetsService {
    * گزارش کنارگذاری: دارایی‌های DISPOSED در بازه
    */
   async getDisposals(from?: string, to?: string) {
-    const where: any = { status: 'DISPOSED' };
+    const where: Prisma.FixedAssetWhereInput = { status: 'DISPOSED' };
     if (from || to) {
-      where.disposalDate = {};
-      if (from) where.disposalDate.gte = new Date(from);
-      if (to)   where.disposalDate.lte = new Date(to);
+      where.disposalDate = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(to) } : {}),
+      };
     }
     const assets = await this.prisma.fixedAsset.findMany({
       where,
@@ -345,9 +361,13 @@ export class FixedAssetsService {
     return { assets, totalProceeds, totalBookValue, count: assets.length };
   }
 
-  async dispose(id: string, dto: any, _userId?: string) {
+  async dispose(id: string, dto: DisposeFixedAssetDto, _userId?: string) {
     const a = await this.findOne(id);
     if (a.status === 'DISPOSED') throw new BadRequestException('این دارایی قبلاً کنار گذاشته شده است');
+    const dtoExt = dto as DisposeFixedAssetDto & {
+      proceedsAccountId?: string;
+      gainLossAccountId?: string;
+    };
     const proceeds = Number(dto.disposalProceeds ?? 0);
 
     const updated = await this.prisma.fixedAsset.update({
@@ -360,7 +380,7 @@ export class FixedAssetsService {
     });
 
     // JE کنارگذاری — اختیاری؛ اگر حساب‌های مورد نیاز داده شده باشند
-    if (dto.proceedsAccountId && dto.gainLossAccountId) {
+    if (dtoExt.proceedsAccountId && dtoExt.gainLossAccountId) {
       // debit:  proceedsAccount (وجه دریافتی)
       // debit:  accumulatedDeprecAccount (بستن استهلاک انباشته)
       // credit: assetAccount (بستن بهای تمام‌شده)
