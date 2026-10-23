@@ -289,15 +289,14 @@ export class SubcontractorStatementsService {
     try {
       journal = await this.createApprovalJE(id, userId);
     } catch (e: any) {
-      this.prisma.$executeRawUnsafe(
-        'INSERT INTO notifications (id, type, severity, title, message, entity, entity_id, created_at, updated_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), NOW()) ON CONFLICT DO NOTHING',
-        'JE_FAILED',
-        'CRITICAL',
-        'خطا در سند خودکار صورت‌وضعیت پیمانکار',
-        'برای صورت‌وضعیت ' + id + ': ' + (e?.message || 'خطای نامشخص'),
-        'SubcontractorStatement',
-        id,
-      ).catch(() => {});
+      // ROLLBACK (F12/F13): تأیید بدون سند نباید باقی بماند
+      await this.prisma.subcontractorStatement.update({
+        where: { id },
+        data: { status: 'SUBMITTED', approvedById: null, approvedAt: null },
+      }).catch(() => {});
+      throw new BadRequestException(
+        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + (e?.message || 'خطای نامشخص'),
+      );
     }
 
     return { ...updated, journal };

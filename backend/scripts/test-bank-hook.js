@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 const BASE       = process.env.API_BASE   || 'http://localhost:3000';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'Admin@1404';
+const ADMIN_PASS = process.env.ADMIN_PASS || '';
 
 const PREFIXES = ['', '/api'];
 let API_PREFIX = '';

@@ -239,7 +239,7 @@ async function main() {
   console.log('=======================================');
   console.log('  آماده ورود');
   console.log('  نام کاربری: admin');
-  console.log('  رمز عبور:   Admin@1234');
+  console.log('  رمز عبور:   ');
   console.log('=======================================');
 }
 

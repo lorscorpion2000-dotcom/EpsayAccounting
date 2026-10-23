@@ -122,15 +122,16 @@ export class AccountingEngineService {
       throw new BadRequestException('سند باید حداقل دو خط داشته باشد');
     }
 
-    let totalDebit = 0;
-    let totalCredit = 0;
+    // استفاده از Decimal برای دقت مالی کامل (float drift حذف می‌شود)
+    let totalDebit = new Prisma.Decimal(0);
+    let totalCredit = new Prisma.Decimal(0);
     for (const l of payload.lines) {
-      totalDebit += Number(l.debit || 0);
-      totalCredit += Number(l.credit || 0);
+      totalDebit = totalDebit.plus(new Prisma.Decimal(l.debit ?? 0));
+      totalCredit = totalCredit.plus(new Prisma.Decimal(l.credit ?? 0));
     }
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+    if (!totalDebit.toDP(2).equals(totalCredit.toDP(2))) {
       throw new BadRequestException(
-        'سند تراز نیست: Dr=' + totalDebit + ' Cr=' + totalCredit,
+        'سند تراز نیست: Dr=' + totalDebit.toFixed(2) + ' Cr=' + totalCredit.toFixed(2),
       );
     }
 

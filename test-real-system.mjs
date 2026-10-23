@@ -66,7 +66,7 @@ async function runRealTests() {
   // ۲. تست واقعی احراز هویت و دریافت توکن
   let token = null;
   try {
-    const res = await request('/auth/login', 'POST', { username: 'admin', password: 'Admin@1234' });
+    const res = await request('/auth/login', 'POST', { username: 'admin', password: '' });
     if (res.status === 200 || res.status === 201) {
       token = res.body.accessToken;
       if (token && res.body.user) {

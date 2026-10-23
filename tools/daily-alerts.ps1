@@ -48,7 +48,7 @@ function Send-Telegram {
 # ═══ Get Token ═══
 function Get-AuthToken {
     # ورود به سیستم با کاربر admin
-    $body = @{ username = 'admin'; password = 'Admin@1404' } | ConvertTo-Json
+    $body = @{ username = 'admin'; password = '' } | ConvertTo-Json
     try {
         $res = Invoke-RestMethod -Uri "$ApiBase/auth/login" -Method Post `
             -ContentType 'application/json' -Body $body -TimeoutSec 10 -ErrorAction Stop

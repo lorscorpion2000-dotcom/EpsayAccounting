@@ -46,11 +46,7 @@ export class FiscalYearsService {
     }
 
     if (dto.isCurrent) {
-      await this.prisma.fiscalYear.updateMany({
-        where: { isCurrent: true },
-        data: { isCurrent: false },
-      });
-    }
+      }
     return this.prisma.fiscalYear.create({
       data: {
         code: dto.code,
@@ -67,10 +63,6 @@ export class FiscalYearsService {
     if (fy.status !== 'OPEN') {
       throw new BadRequestException('فقط سال مالی باز می‌تواند جاری شود');
     }
-    await this.prisma.fiscalYear.updateMany({
-      where: { isCurrent: true },
-      data: { isCurrent: false },
-    });
     return this.prisma.fiscalYear.update({
       where: { id },
       data: { isCurrent: true },
@@ -110,8 +102,8 @@ export class FiscalYearsService {
       throw new BadRequestException('ابتدا ' + draftCount + ' سند پیش‌نویس را ثبت یا ابطال کنید');
     }
 
-    // FIX #27: فقط خودِ این سال را می‌بندیم — isCurrent سایر سال‌ها دست‌نخورده می‌ماند.
-    // قبلاً updateMany({where:{isCurrent:true}}) پرچم سال جاری را از بین می‌برد.
+    // ⚠️ فقط این سال بسته می‌شود؛ isCurrent سایر سال‌ها دست‌نخورده.
+    // قبلاً updateMany({where:{isCurrent:true}}) پرچم سال جاری را پاک می‌کرد.
     return this.prisma.fiscalYear.update({
       where: { id },
       data: { status: 'CLOSED', isCurrent: false },

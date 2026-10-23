@@ -10,10 +10,10 @@ const PATHS = [
 ];
 
 const BODIES = [
-  { username: 'admin', password: 'Admin@1404' },
-  { email:    'admin', password: 'Admin@1404' },
+  { username: 'admin', password: '' },
+  { email:    'admin', password: '' },
   { username: 'admin', password: 'admin' },
-  { username: 'Admin', password: 'Admin@1404' }
+  { username: 'Admin', password: '' }
 ];
 
 async function tryOne(path, body) {

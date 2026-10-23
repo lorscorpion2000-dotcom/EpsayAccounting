@@ -1,7 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { randomInt } from 'node:crypto';
 
 const prisma = new PrismaClient();
+
+function generatePassword() {
+  const sets = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#$%^&*'];
+  const all = sets.join('');
+  const chars = sets.map((s) => s[randomInt(s.length)]);
+  while (chars.length < 16) chars.push(all[randomInt(all.length)]);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 async function main() {
   console.log('═══ بازسازی admin ═══\n');
@@ -16,14 +29,21 @@ async function main() {
     console.log('ℹ نقش admin موجود');
   }
 
-  const password = 'Admin@1234';
-  const hash = await bcrypt.hash(password, 10);
+  const generated = !process.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD || generatePassword();
+  const hash = await bcrypt.hash(password, 12);
 
   let admin = await prisma.user.findUnique({ where: { username: 'admin' } });
   if (admin) {
     await prisma.user.update({
       where: { id: admin.id },
-      data: { passwordHash: hash, isActive: true },
+      data: {
+        passwordHash: hash,
+        isActive: true,
+        mustChangePassword: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
     console.log('✓ رمز admin بازنشانی شد');
   } else {
@@ -34,6 +54,7 @@ async function main() {
         fullName: 'مدیر سیستم',
         email: 'admin@epsay.local',
         isActive: true,
+        mustChangePassword: true,
       },
     });
     console.log('✓ کاربر admin ساخته شد');
@@ -52,7 +73,9 @@ async function main() {
   console.log('\nمجوز کل: ' + perms + ' | برای admin: ' + rolePerms);
   console.log('\n═══════════════════════════════════════');
   console.log('  کاربر: admin');
-  console.log('  رمز:   Admin@1234');
+  console.log(generated
+    ? '  رمز موقت: ' + password + '  (در اولین ورود باید تغییر کند)'
+    : '  رمز: مقدار ADMIN_PASSWORD (در اولین ورود باید تغییر کند)');
   console.log('═══════════════════════════════════════');
 }
 

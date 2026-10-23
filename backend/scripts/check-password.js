@@ -7,7 +7,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const USERNAME = process.env.TARGET_USER  || 'admin';
-const PASSWORD = process.env.NEW_PASSWORD || 'Admin@1404';
+const PASSWORD = process.env.NEW_PASSWORD || '';
 
 function loadLibs() {
   const out = {};

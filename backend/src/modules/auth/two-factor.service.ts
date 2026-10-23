@@ -1,16 +1,17 @@
+// backend/src/modules/auth/two-factor.service.ts
 import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { randomInt } from 'node:crypto';
 import * as QRCode from 'qrcode';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'node:crypto';
 import * as otplib from 'otplib';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
-// otplib v13 compatibility
 const _otp: any = otplib as any;
 
 function isPromise(x: any): x is Promise<any> {
@@ -23,8 +24,7 @@ function otpGenerateSecret(): string {
       const s = _otp.generateSecret();
       if (typeof s === 'string') return s;
     }
-  } catch {}
-  // fallback: 20 bytes -> base32
+  } catch { /* fallback */ }
   const b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const bytes = crypto.randomBytes(20);
   let out = '';
@@ -32,14 +32,32 @@ function otpGenerateSecret(): string {
   return out;
 }
 
+// ⚠️ CRITICAL: پشتیبانی از خروجی boolean (نسخه قدیم) و { valid } (نسخه‌های جدید)
 async function otpVerify(token: string, secret: string): Promise<boolean> {
   const clean = String(token || '').replace(/\s/g, '');
   if (!clean || !secret) return false;
+
   try {
+    // API جدید (authenticator)
+    if (_otp.authenticator && typeof _otp.authenticator.verify === 'function') {
+      const r = _otp.authenticator.verify({ token: clean, secret });
+      const resolved = isPromise(r) ? await r : r;
+      if (typeof resolved === 'boolean') return resolved;
+      if (resolved && typeof resolved === 'object' && typeof (resolved as any).valid === 'boolean') {
+        return (resolved as any).valid === true;
+      }
+      return false;
+    }
+
+    // API قدیمی
     if (typeof _otp.verify === 'function') {
       const r = _otp.verify({ token: clean, secret });
-      if (isPromise(r)) return await r;
-      return !!r;
+      const resolved = isPromise(r) ? await r : r;
+      if (typeof resolved === 'boolean') return resolved;
+      if (resolved && typeof resolved === 'object' && typeof (resolved as any).valid === 'boolean') {
+        return (resolved as any).valid === true;
+      }
+      return false;
     }
   } catch {
     return false;
@@ -49,22 +67,21 @@ async function otpVerify(token: string, secret: string): Promise<boolean> {
 
 function otpKeyuri(username: string, issuer: string, secret: string): string {
   try {
+    if (_otp.authenticator && typeof _otp.authenticator.keyuri === 'function') {
+      const uri = _otp.authenticator.keyuri(username, issuer, secret);
+      if (typeof uri === 'string') return uri;
+    }
     if (typeof _otp.generateURI === 'function') {
       const uri = _otp.generateURI({
-        secret,
-        label: username,
-        issuer,
-        algorithm: 'sha1',
-        digits: 6,
-        period: 30,
+        secret, label: username, issuer,
+        algorithm: 'sha1', digits: 6, period: 30,
       });
       if (typeof uri === 'string') return uri;
     }
-  } catch {}
+  } catch { /* fallback */ }
   const enc = encodeURIComponent;
   return (
-    'otpauth://totp/' +
-    enc(issuer) + ':' + enc(username) +
+    'otpauth://totp/' + enc(issuer) + ':' + enc(username) +
     '?secret=' + secret +
     '&issuer=' + enc(issuer) +
     '&algorithm=SHA1&digits=6&period=30'
@@ -102,15 +119,13 @@ export class TwoFactorService {
     return otpVerify(code, secret);
   }
 
+  // ⚠️ رفع: استفاده از randomInt به‌جای Math.random
   generateRecoveryCodes(count = 8): string[] {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const codes: string[] = [];
     for (let i = 0; i < count; i++) {
-      let c = '';
-      for (let j = 0; j < 10; j++) {
-        c += chars[Math.floor(Math.random() * chars.length)];
-      }
-      codes.push(c.slice(0, 5) + '-' + c.slice(5));
+      const chunk1 = randomInt(0x10000).toString(16).padStart(4, '0').toUpperCase();
+      const chunk2 = randomInt(0x10000).toString(16).padStart(4, '0').toUpperCase();
+      codes.push(`${chunk1}-${chunk2}`);
     }
     return codes;
   }
@@ -118,7 +133,7 @@ export class TwoFactorService {
   async hashRecoveryCodes(codes: string[]) {
     return Promise.all(
       codes.map(async (c) => ({
-        hash: await bcrypt.hash(c, 10),
+        hash: await bcrypt.hash(c.replace('-', ''), 10),
         used: false,
         usedAt: null,
       })),
@@ -130,16 +145,14 @@ export class TwoFactorService {
     inputCode: string,
   ): Promise<{ ok: boolean; newCodes: any[] | null }> {
     if (!Array.isArray(storedCodes)) return { ok: false, newCodes: null };
-    const normalized = String(inputCode).trim().toUpperCase();
+    const normalized = String(inputCode).trim().toUpperCase().replace('-', '');
     for (let i = 0; i < storedCodes.length; i++) {
       const entry = storedCodes[i];
       if (!entry || entry.used) continue;
       const match = await bcrypt.compare(normalized, entry.hash);
       if (match) {
         const updated = storedCodes.map((e, idx) =>
-          idx === i
-            ? { ...e, used: true, usedAt: new Date().toISOString() }
-            : e,
+          idx === i ? { ...e, used: true, usedAt: new Date().toISOString() } : e,
         );
         return { ok: true, newCodes: updated };
       }
@@ -156,17 +169,11 @@ export class TwoFactorService {
 
   verifyTotpPendingToken(token: string): { sub: string } {
     try {
-      const payload = this.jwt.verify(token, {
-        secret: this.totpPendingSecret,
-      }) as any;
-      if (payload.type !== 'totp-pending') {
-        throw new Error('bad type');
-      }
+      const payload = this.jwt.verify(token, { secret: this.totpPendingSecret }) as any;
+      if (payload.type !== 'totp-pending') throw new Error('bad type');
       return { sub: payload.sub };
     } catch {
-      throw new UnauthorizedException(
-        'توکن دو مرحله‌ای نامعتبر یا منقضی شده است',
-      );
+      throw new UnauthorizedException('توکن دو مرحله‌ای نامعتبر یا منقضی شده است');
     }
   }
 }

@@ -186,6 +186,17 @@ export class JournalsService {
     await this.validateAccounts(dto.lines);
 
     const entryDate = new Date(dto.entryDate);
+    // تاریخ سند باید در بازهٔ سال مالی باشد
+    const fyMeta = await this.prisma.fiscalYear.findUnique({
+      where: { id: dto.fiscalYearId },
+      select: { startDate: true, endDate: true, name: true },
+    });
+    if (!fyMeta) throw new NotFoundException('سال مالی یافت نشد');
+    if (entryDate < new Date(fyMeta.startDate) || entryDate > new Date(fyMeta.endDate)) {
+      throw new BadRequestException(
+        'تاریخ سند (' + dto.entryDate + ') در محدوده سال مالی «' + fyMeta.name + '» نیست',
+      );
+    }
     await this.ensureFiscalYearOpen(dto.fiscalYearId, entryDate);
 
     const runInTx = async (tx: Prisma.TransactionClient) => {

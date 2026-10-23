@@ -6,7 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const TARGET_USER  = process.env.TARGET_USER  || 'amini';
-const NEW_PASSWORD = process.env.NEW_PASSWORD || 'Admin@1404';
+const NEW_PASSWORD = process.env.NEW_PASSWORD || '';
 
 const PWD_CANDS = ['password','passwordhash','password_hash','hashedpassword','hashed_password'];
 

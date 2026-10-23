@@ -72,6 +72,7 @@ jobs:
       - run: npm ci
       - run: npm run lint --if-present
       - run: npx prisma generate
+      - run: npx prisma migrate deploy
       - run: npx tsc --noEmit
       - run: npm run build
       - run: npm test --if-present

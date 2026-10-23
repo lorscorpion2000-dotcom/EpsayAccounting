@@ -377,7 +377,14 @@ export class WorkerStatementsService {
     try {
       journal = await this.createApprovalJE(id, userId);
     } catch (e: any) {
-      console.error('[WorkerStatement] JE failed:', e?.message);
+      // ROLLBACK (F12/F13): تأیید بدون سند نباید باقی بماند
+      await this.prisma.workerStatement.update({
+        where: { id },
+        data: { status: 'SUBMITTED', approvedById: null, approvedAt: null },
+      }).catch(() => {});
+      throw new BadRequestException(
+        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + (e?.message || 'خطای نامشخص'),
+      );
     }
 
     return { ...updated, journal };

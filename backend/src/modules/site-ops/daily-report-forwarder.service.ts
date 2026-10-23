@@ -136,7 +136,9 @@ export class DailyReportForwarderService {
     await this.prisma.dailyReportSection.update({
       where: { id: section.id },
       data: {
-        status: failed > 0 && success === 0 ? 'FAILED' : 'FORWARDED',
+        // هر ردیف ناموفق یعنی بخش کامل نشده؛ در غیر این‌صورت
+        // در صندوق «ارسال‌های ناموفق» دیده نمی‌شد
+        status: failed > 0 ? 'FAILED' : 'FORWARDED',
         forwardedAt: new Date(),
       },
     });

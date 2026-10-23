@@ -21,6 +21,12 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const reflector = app.get(Reflector);
 
+  // پشت reverse proxy (IIS/nginx) برای IP واقعی در rate-limit و audit
+  if (process.env.TRUST_PROXY) {
+    const raw = process.env.TRUST_PROXY;
+    app.set('trust proxy', /^\d+$/.test(raw) ? Number(raw) : raw);
+  }
+
   app.use(cookieParser());
 
   app.use(
