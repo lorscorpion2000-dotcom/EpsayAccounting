@@ -5,6 +5,7 @@ import { CreatePettyCashAccountDto } from './dto/create-account.dto';
 import { UpdatePettyCashAccountDto } from './dto/update-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest } from '../../common/types/auth-request';
 
 @ApiTags('Petty Cash Accounts - حساب‌های تنخواه')
 @ApiBearerAuth()
@@ -44,7 +45,7 @@ export class PettyCashAccountsController {
 
   @Delete(':id')
   @RequirePermissions('petty-cash.delete')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthRequest) {
     return this.service.remove(id, req.user?.id);
   }
 
@@ -66,10 +67,9 @@ export class PettyCashAccountsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
-    const user = req.user || {};
-    return this.service.adminDelete(id, user.id, body?.reason, {
+    return this.service.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
     });
@@ -77,9 +77,8 @@ export class PettyCashAccountsController {
 
   @Patch(':id/restore')
   @RequirePermissions('capitalaccount.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
-    return this.service.restore(id, user.id);
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.service.restore(id, req.user?.id);
   }
 
 }

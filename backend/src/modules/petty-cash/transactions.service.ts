@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma, PettyCashTxType, PettyCashTxStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePettyCashTransactionDto } from './dto/create-transaction.dto';
 import { UpdatePettyCashTransactionDto } from './dto/update-transaction.dto';
@@ -24,19 +25,20 @@ export class PettyCashTransactionsService {
 
   async findAll(query?: {
     accountId?: string;
-    type?: string;
-    status?: string;
+    type?: PettyCashTxType;
+    status?: PettyCashTxStatus;
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.PettyCashTransactionWhereInput = {};
     if (query?.accountId) where.accountId = query.accountId;
     if (query?.type) where.type = query.type;
     if (query?.status) where.status = query.status;
     if (query?.fromDate || query?.toDate) {
-      where.txDate = {};
-      if (query.fromDate) where.txDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.txDate.lte = new Date(query.toDate);
+      where.txDate = {
+        ...(query.fromDate ? { gte: new Date(query.fromDate) } : {}),
+        ...(query.toDate ? { lte: new Date(query.toDate) } : {}),
+      };
     }
 
     return this.prisma.pettyCashTransaction.findMany({
@@ -120,7 +122,7 @@ export class PettyCashTransactionsService {
         data: {
           accountId: dto.accountId,
           code,
-          type: dto.type as any,
+          type: dto.type as PettyCashTxType,
           status: 'DRAFT',
           txDate: new Date(dto.txDate),
           amount: dto.amount,
@@ -157,7 +159,7 @@ export class PettyCashTransactionsService {
       throw new BadRequestException('فقط تراکنش‌های پیش‌نویس قابل ویرایش هستند');
     }
 
-    const data: any = {};
+    const data: Prisma.PettyCashTransactionUncheckedUpdateInput = {};
     if (dto.txDate) data.txDate = new Date(dto.txDate);
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.recipient !== undefined) data.recipient = dto.recipient;
@@ -320,39 +322,39 @@ export class PettyCashTransactionsService {
     });
   }
 
-  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.pettyCashTransaction.findUnique({ where: { id } });
+  async softDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.pettyCashTransaction.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    if (existing.deletedAt) throw new Error('قبلاً حذف شده است');
 
     await this.prisma.pettyCashTransaction.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+      data: { deletedAt: new Date(), deletedBy: userId || null },
     });
 
     return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.pettyCashTransaction.findUnique({
+    const existing = await this.prisma.pettyCashTransaction.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    if (!existing.deletedAt) throw new Error('رکورد حذف نشده است');
 
     await this.prisma.pettyCashTransaction.update({
       where: { id },
-      data: { deletedAt: null, deletedBy: null } as any,
+      data: { deletedAt: null, deletedBy: null },
     });
 
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.pettyCashTransaction.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.pettyCashTransaction.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('رکورد یافت نشد');
     await this.prisma.pettyCashTransaction.delete({ where: { id } });
@@ -366,11 +368,11 @@ export class PettyCashTransactionsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.pettyCashTransaction.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };

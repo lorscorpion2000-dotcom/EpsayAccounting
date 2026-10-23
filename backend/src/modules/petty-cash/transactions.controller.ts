@@ -7,6 +7,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest } from '../../common/types/auth-request';
 import { PettyCashTxStatus, PettyCashTxType } from '@prisma/client';
 
 @ApiTags('Petty Cash Transactions - تراکنش‌های تنخواه')
@@ -92,10 +93,9 @@ export class PettyCashTransactionsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
-    const user = req.user || {};
-    return this.service.adminDelete(id, user.id, body?.reason, {
+    return this.service.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
     });
@@ -103,9 +103,8 @@ export class PettyCashTransactionsController {
 
   @Patch(':id/restore')
   @RequirePermissions('pettycashtransaction.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
-    return this.service.restore(id, user.id);
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.service.restore(id, req.user?.id);
   }
 
 }

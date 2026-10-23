@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AccountDetailType } from '@prisma/client';
+import { AccountDetailType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreatePettyCashAccountDto } from './dto/create-account.dto';
@@ -19,7 +19,7 @@ export class PettyCashAccountsService {
   }
 
   async findAll(query?: { holderId?: string; projectId?: string; active?: boolean }) {
-    const where: any = {};
+    const where: Prisma.PettyCashAccountWhereInput = {};
     if (query?.holderId) where.holderId = query.holderId;
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.active !== undefined) where.isActive = query.active;
@@ -54,7 +54,7 @@ export class PettyCashAccountsService {
 
   async create(dto: CreatePettyCashAccountDto) {
     const code = await this.generateCode();
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const account = await tx.pettyCashAccount.create({
         data: {
           code,
@@ -93,7 +93,7 @@ export class PettyCashAccountsService {
 
   async update(id: string, dto: UpdatePettyCashAccountDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.PettyCashAccountUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.holderId !== undefined) data.holderId = dto.holderId;
     if (dto.projectId !== undefined) data.projectId = dto.projectId;
@@ -102,7 +102,7 @@ export class PettyCashAccountsService {
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.description !== undefined) data.description = dto.description;
 
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const account = await tx.pettyCashAccount.update({
         where: { id },
         data,
@@ -177,39 +177,39 @@ export class PettyCashAccountsService {
     return Number(result._sum.amount || 0);
   }
 
-  async softDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
+  async softDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.pettyCashAccount.findUnique({ where: { id } });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if ((existing as any).deletedAt) throw new Error('قبلاً حذف شده است');
+    if (existing.deletedAt) throw new Error('قبلاً حذف شده است');
 
     await this.prisma.pettyCashAccount.update({
       where: { id },
-      data: { deletedAt: new Date(), deletedBy: userId || null } as any,
+      data: { deletedAt: new Date(), deletedBy: userId || null },
     });
 
     return { ok: true, id, softDeleted: true, reason: reason || null, deletedBy: userId || null };
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.pettyCashAccount.findUnique({
+    const existing = await this.prisma.pettyCashAccount.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('رکورد یافت نشد');
-    if (!(existing as any).deletedAt) throw new Error('رکورد حذف نشده است');
+    if (!existing.deletedAt) throw new Error('رکورد حذف نشده است');
 
     await this.prisma.pettyCashAccount.update({
       where: { id },
-      data: { deletedAt: null, deletedBy: null } as any,
+      data: { deletedAt: null, deletedBy: null },
     });
 
     return { ok: true, id, restored: true, by: userId || null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.pettyCashAccount.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.pettyCashAccount.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new Error('رکورد یافت نشد');
     await this.prisma.pettyCashAccount.delete({ where: { id } });
@@ -223,11 +223,11 @@ export class PettyCashAccountsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.pettyCashAccount.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };
