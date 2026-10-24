@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../../accounting/engine/accounting-engine.service';
 import { CreateMaintenanceDto } from '../dto/equipment.dto';
@@ -29,14 +30,15 @@ export class EquipmentMaintenanceService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.EquipmentMaintenanceWhereInput = {};
     if (query?.equipmentId) where.equipmentId = query.equipmentId;
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
+    if (query?.type) where.type = query.type as Prisma.EquipmentMaintenanceWhereInput['type'];
     if (query?.fromDate || query?.toDate) {
-      where.maintenanceDate = {};
-      if (query.fromDate) where.maintenanceDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.maintenanceDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query?.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query?.toDate) dateFilter.lte = new Date(query.toDate);
+      where.maintenanceDate = dateFilter;
     }
     return this.prisma.equipmentMaintenance.findMany({
       where,
@@ -70,11 +72,11 @@ export class EquipmentMaintenanceService {
         data: {
           code,
           equipmentId: dto.equipmentId,
-          type: dto.type as any,
+          type: dto.type as unknown as Prisma.EquipmentMaintenanceUncheckedCreateInput['type'],
           maintenanceDate: new Date(dto.maintenanceDate),
           description: dto.description,
           cost,
-          parts: dto.parts,
+          parts: dto.parts as Prisma.InputJsonValue | undefined,
           vendor: dto.vendor,
           invoiceNumber: dto.invoiceNumber,
           projectId: dto.projectId,

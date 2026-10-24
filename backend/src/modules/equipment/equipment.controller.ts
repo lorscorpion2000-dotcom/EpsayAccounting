@@ -12,6 +12,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { EquipmentLogStatus, EquipmentOwnership, EquipmentStatus, MaintenanceType } from '@prisma/client';;
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest, AuthUserPayload } from '../auth/auth.controller';
 
 @ApiTags('Equipment - ماشین‌آلات و تجهیزات')
 @ApiBearerAuth()
@@ -61,7 +62,7 @@ export class EquipmentController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUserPayload,
   ) {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
@@ -160,9 +161,9 @@ export class EquipmentController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'equipment',
       id,
@@ -177,8 +178,8 @@ export class EquipmentController {
 
   @Patch(':id/restore')
   @RequirePermissions('equipment.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'equipment',
       id,

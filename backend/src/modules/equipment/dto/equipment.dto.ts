@@ -1,4 +1,4 @@
-﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min,
 } from 'class-validator';
@@ -208,7 +208,7 @@ export class CreateMaintenanceDto {
 
   @ApiPropertyOptional({ type: [Object] })
   @IsOptional()
-  parts?: any;
+  parts?: unknown;
 
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200)
   vendor?: string;
