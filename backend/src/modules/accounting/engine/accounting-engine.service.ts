@@ -1,9 +1,27 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Account } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { JournalsService } from '../journals.service';
 import { FiscalYearsService } from '../fiscal-years.service';
 import { PostEventPayload } from './dto/post-event.dto';
+
+interface JournalCreateInput {
+  fiscalYearId: string;
+  entryDate: string;
+  description: string;
+  reference?: string;
+  lines: Array<{
+    accountId: string;
+    debit: number;
+    credit: number;
+    description?: string;
+    partnerId?: string;
+    projectId?: string;
+    costCenterId?: string;
+    sortOrder?: number;
+  }>;
+}
 
 @Injectable()
 export class AccountingEngineService {
@@ -43,27 +61,27 @@ export class AccountingEngineService {
     const entryDate = new Date(payload.entryDate);
     const fy = await this.fiscalYears.assertPeriodOpen(entryDate, tx);
 
-    const dto: any = {
+    const dto: JournalCreateInput = {
       fiscalYearId: fy.id,
       entryDate: entryDate.toISOString().slice(0, 10),
       description: payload.description ?? mapping.title,
-      reference: payload.reference,
+      reference: payload.reference ?? undefined,
       lines: [
         {
           accountId: debitAcc.id,
-          debit: payload.amount,
+          debit: Number(payload.amount),
           credit: 0,
-          description: payload.description,
-          partnerId: payload.partnerId,
-          projectId: payload.projectId,
+          description: payload.description ?? undefined,
+          partnerId: payload.partnerId ?? undefined,
+          projectId: payload.projectId ?? undefined,
         },
         {
           accountId: creditAcc.id,
           debit: 0,
-          credit: payload.amount,
-          description: payload.description,
-          partnerId: payload.partnerId,
-          projectId: payload.projectId,
+          credit: Number(payload.amount),
+          description: payload.description ?? undefined,
+          partnerId: payload.partnerId ?? undefined,
+          projectId: payload.projectId ?? undefined,
         },
       ],
     };
@@ -149,11 +167,11 @@ export class AccountingEngineService {
     const entryDate = new Date(payload.entryDate);
     const fy = await this.fiscalYears.assertPeriodOpen(entryDate, tx);
 
-    const dto: any = {
+    const dto: JournalCreateInput = {
       fiscalYearId: fy.id,
       entryDate: entryDate.toISOString().slice(0, 10),
-      description: payload.description,
-      reference: payload.reference,
+      description: payload.description ?? undefined,
+      reference: payload.reference ?? undefined,
       lines: payload.lines.map((l, i) => ({
         accountId: l.accountId,
         debit: Number(l.debit || 0),
@@ -187,8 +205,9 @@ export class AccountingEngineService {
         const posted = await this.journals.post(entry.id, payload.userId);
         this.logger.log('[' + sourceType + '] Auto-posted ' + posted.code);
         return posted;
-      } catch (e: any) {
-        this.logger.warn('[' + sourceType + '] Auto-post failed for ' + entry.code + ': ' + e?.message);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn('[' + sourceType + '] Auto-post failed for ' + entry.code + ': ' + msg);
         return entry;
       }
     }
@@ -215,7 +234,7 @@ export class AccountingEngineService {
   }
 
   private async resolveAccount(
-    base: any,
+    base: Account,
     ctx: PostEventPayload,
     explicitDetailId?: string,
   ) {
