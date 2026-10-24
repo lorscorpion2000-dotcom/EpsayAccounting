@@ -1,11 +1,39 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePayrollPeriodDto } from './dto/payroll-period.dto';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 
+type AccountRef = { id: string; code: string; name: string };
+
+type PayrollJELine = {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+  partnerId?: string;
+  projectId?: string;
+};
+
+type PayrollAccounts = {
+  expense: AccountRef;
+  employerInsExpense: AccountRef;
+  insurancePayable: AccountRef;
+  taxPayable: AccountRef;
+  advanceAsset: AccountRef;
+  netPayable: AccountRef;
+};
+
+type PayrollRecordWithRelations = Prisma.PayrollRecordGetPayload<{
+  include: {
+    employee: { select: { id: true; code: true; name: true } };
+    employeeProfile: true;
+  };
+}>;
+
 @Injectable()
 export class PayrollPeriodsService {
-  private accountCache = new Map<string, any>();
+  private accountCache = new Map<string, AccountRef>();
 
   constructor(
     private prisma: PrismaService,
@@ -17,9 +45,9 @@ export class PayrollPeriodsService {
   }
 
   async findAll(query?: { year?: number; status?: string; projectId?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.PayrollPeriodWhereInput = { deletedAt: null };
     if (query?.year) where.year = query.year;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.PayrollPeriodWhereInput['status'];
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.payrollPeriod.findMany({
       where,
@@ -86,15 +114,17 @@ export class PayrollPeriodsService {
     return Math.round(n * 100) / 100;
   }
 
-  private async getAccountByCode(code: string) {
-    if (this.accountCache.has(code)) return this.accountCache.get(code);
+  private async getAccountByCode(code: string): Promise<AccountRef> {
+    const cached = this.accountCache.get(code);
+    if (cached) return cached;
     const acc = await this.prisma.account.findUnique({ where: { code } });
     if (!acc) throw new BadRequestException('حساب ' + code + ' یافت نشد');
     if (!acc.isPostable || !acc.isActive) {
       throw new BadRequestException('حساب ' + code + ' قابل ثبت نیست');
     }
-    this.accountCache.set(code, acc);
-    return acc;
+    const ref: AccountRef = { id: acc.id, code: acc.code, name: acc.name };
+    this.accountCache.set(code, ref);
+    return ref;
   }
 
   private async getEmployerInsurancePercent(entryDate: Date): Promise<number> {
@@ -109,7 +139,7 @@ export class PayrollPeriodsService {
     return setting ? Number(setting.insuranceEmployerPercent) || 23 : 23;
   }
 
-  private async resolvePayrollAccounts(isFieldWorker: boolean) {
+  private async resolvePayrollAccounts(isFieldWorker: boolean): Promise<PayrollAccounts> {
     const expenseCode = isFieldWorker ? '5.1.2' : '5.2.1';
     const employerInsExpenseCode = isFieldWorker ? '5.1.9' : '5.2.4';
     return {
@@ -122,7 +152,7 @@ export class PayrollPeriodsService {
     };
   }
 
-  private buildPayrollLines(rec: any, accounts: any, erPct: number) {
+  private buildPayrollLines(rec: PayrollRecordWithRelations, accounts: PayrollAccounts, erPct: number) {
     const empName   = rec.employee?.name ?? '';
     const partnerId = rec.employeeId;
     const projectId = rec.employeeProfile?.projectId || undefined;
@@ -137,7 +167,7 @@ export class PayrollPeriodsService {
     // net را از اجزا بازمحاسبه می‌کنیم تا تعادل ۱۰۰٪ تضمین شود
     const net = this.r2(gross - empIns - tax - adv - other);
 
-    const lines: any[] = [
+    const lines: PayrollJELine[] = [
       {
         accountId: accounts.expense.id,
         debit: gross,
@@ -208,7 +238,7 @@ export class PayrollPeriodsService {
     const created: Array<{ recordId: string; entryId: string; code: string }> = [];
     const erPct = await this.getEmployerInsurancePercent(p.endDate);
 
-    for (const rec of p.records as any[]) {
+    for (const rec of p.records as unknown as PayrollRecordWithRelations[]) {
       const isFieldWorker = !!rec.employeeProfile?.projectId;
       const sourceType = isFieldWorker ? 'PAYROLL_ACCRUAL_FIELD' : 'PAYROLL_ACCRUAL';
 
@@ -234,7 +264,7 @@ export class PayrollPeriodsService {
         lines: built.lines,
         userId,
         autoPost: false,
-      } as any);
+      });
 
       created.push({ recordId: rec.id, entryId: entry.id, code: entry.code });
     }

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateWorkLogDto } from './dto/work-log.dto';
 
@@ -12,7 +13,7 @@ export class WorkLogsService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.DailyWorkLogWhereInput = {};
     if (query?.employeeId) where.employeeId = query.employeeId;
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.fromDate || query?.toDate) {
@@ -50,7 +51,7 @@ export class WorkLogsService {
         overtimeHours: dto.overtimeHours ?? 0,
         holidayHours: dto.holidayHours ?? 0,
         description: dto.description,
-        status: (dto.status as any) || 'PRESENT',
+        status: (dto.status as Prisma.DailyWorkLogUncheckedCreateInput['status']) || 'PRESENT',
         createdById: userId,
       },
     });
@@ -58,14 +59,14 @@ export class WorkLogsService {
 
   async update(id: string, dto: Partial<CreateWorkLogDto>) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.DailyWorkLogUncheckedUpdateInput = {};
     if (dto.projectId !== undefined) data.projectId = dto.projectId;
     if (dto.wbsItemId !== undefined) data.wbsItemId = dto.wbsItemId;
     if (dto.regularHours !== undefined) data.regularHours = dto.regularHours;
     if (dto.overtimeHours !== undefined) data.overtimeHours = dto.overtimeHours;
     if (dto.holidayHours !== undefined) data.holidayHours = dto.holidayHours;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.status !== undefined) data.status = dto.status as Prisma.DailyWorkLogUncheckedUpdateInput['status'];
     return this.prisma.dailyWorkLog.update({ where: { id }, data });
   }
 

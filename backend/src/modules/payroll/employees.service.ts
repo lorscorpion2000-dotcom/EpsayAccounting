@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AccountDetailType } from '@prisma/client';
+import { AccountDetailType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { CreateEmployeeDto } from './dto/employee.dto';
@@ -19,9 +19,9 @@ export class EmployeesService {
   }
 
   async findAll(query?: { active?: boolean; type?: string; search?: string; department?: string }) {
-    const where: any = {};
+    const where: Prisma.EmployeeProfileWhereInput = {};
     if (query?.active !== undefined) where.isActive = query.active;
-    if (query?.type) where.employeeType = query.type;
+    if (query?.type) where.employeeType = query.type as Prisma.EmployeeProfileWhereInput['employeeType'];
     if (query?.department) where.department = query.department;
     if (query?.search) {
       where.OR = [
@@ -72,7 +72,7 @@ export class EmployeesService {
       data: {
         partnerId: dto.partnerId,
         employeeCode: code,
-        employeeType: dto.employeeType as any,
+        employeeType: dto.employeeType as Prisma.EmployeeProfileUncheckedCreateInput['employeeType'],
         position: dto.position,
         department: dto.department,
         hireDate: dto.hireDate ? new Date(dto.hireDate) : null,
@@ -89,7 +89,7 @@ export class EmployeesService {
         insuranceNumber: dto.insuranceNumber,
         insuranceStart: dto.insuranceStart ? new Date(dto.insuranceStart) : null,
         hasInsurance: dto.hasInsurance ?? false,
-        maritalStatus: (dto.maritalStatus as any) || 'SINGLE',
+        maritalStatus: (dto.maritalStatus as Prisma.EmployeeProfileUncheckedCreateInput['maritalStatus']) || 'SINGLE',
         childrenCount: dto.childrenCount ?? 0,
         nationalId: dto.nationalId,
         birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
@@ -113,7 +113,7 @@ export class EmployeesService {
     }
 
     // Sync partner fields on create
-    const partnerUpdate: any = {};
+    const partnerUpdate: Prisma.PartnerUncheckedUpdateInput = {};
     if (dto.fatherName !== undefined) partnerUpdate.fatherName = dto.fatherName;
     if (dto.postalCode !== undefined) partnerUpdate.postalCode = dto.postalCode;
     if (dto.phone !== undefined) partnerUpdate.phone = dto.phone;
@@ -129,7 +129,7 @@ export class EmployeesService {
     // Auto-sync related contract parties
     try {
       await this.syncRelatedParties(created.id);
-    } catch (e) {
+    } catch {
       // silent fail — sync should not break create
     }
 
@@ -140,11 +140,11 @@ export class EmployeesService {
     await this.findOne(id);
 
     // 1) Build employeeProfile data
-    const data: any = {};
+    const data: Prisma.EmployeeProfileUncheckedUpdateInput = {};
     if (dto.projectId !== undefined) {
       data.projectId = (dto.projectId && String(dto.projectId).trim()) ? dto.projectId : null;
     }
-    if (dto.employeeType !== undefined) data.employeeType = dto.employeeType;
+    if (dto.employeeType !== undefined) data.employeeType = dto.employeeType as Prisma.EmployeeProfileUncheckedUpdateInput['employeeType'];
     if (dto.position !== undefined) data.position = dto.position;
     if (dto.department !== undefined) data.department = dto.department;
     if (dto.hireDate !== undefined) data.hireDate = dto.hireDate ? new Date(dto.hireDate) : null;
@@ -161,7 +161,7 @@ export class EmployeesService {
     if (dto.insuranceNumber !== undefined) data.insuranceNumber = dto.insuranceNumber;
     if (dto.insuranceStart !== undefined) data.insuranceStart = dto.insuranceStart ? new Date(dto.insuranceStart) : null;
     if (dto.hasInsurance !== undefined) data.hasInsurance = dto.hasInsurance;
-    if (dto.maritalStatus !== undefined) data.maritalStatus = dto.maritalStatus;
+    if (dto.maritalStatus !== undefined) data.maritalStatus = dto.maritalStatus as Prisma.EmployeeProfileUncheckedUpdateInput['maritalStatus'];
     if (dto.childrenCount !== undefined) data.childrenCount = dto.childrenCount;
     if (dto.nationalId !== undefined) data.nationalId = dto.nationalId;
     if (dto.birthDate !== undefined) data.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
@@ -184,7 +184,7 @@ export class EmployeesService {
     });
 
     if (emp) {
-      const partnerUpdate: any = {};
+      const partnerUpdate: Prisma.PartnerUncheckedUpdateInput = {};
       if (dto.fatherName !== undefined) partnerUpdate.fatherName = dto.fatherName;
       if (dto.postalCode !== undefined) partnerUpdate.postalCode = dto.postalCode;
       if (dto.phone !== undefined) partnerUpdate.phone = dto.phone;
@@ -220,8 +220,8 @@ export class EmployeesService {
     try {
       const syncResult = await this.syncRelatedParties(id);
       console.log('[syncRelatedParties] result: ' + JSON.stringify(syncResult));
-    } catch (e: any) {
-      console.error('[syncRelatedParties] error:', e?.message || e);
+    } catch (e: unknown) {
+      console.error('[syncRelatedParties] error:', (e as { message?: unknown }).message || e);
     }
 
     // 6) Return fresh record
@@ -251,11 +251,11 @@ export class EmployeesService {
 
     // force (admin) — چک ارجاعها
     const refs = await this.countEmployeeRefs(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s, n) => s + Number(n || 0), 0);
 
     if (total > 0) {
       const details = Object.entries(refs)
-        .filter(([, v]: any) => Number(v) > 0)
+        .filter(([, v]) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
       throw new BadRequestException({
@@ -273,11 +273,11 @@ export class EmployeesService {
     const p = this.prisma;
     const [payrollRecords, attendances, workLogs, leaveRequests, advanceRequests, statements] = await Promise.all([
       p.payrollRecord.count({ where: { employeeProfileId: id } }),
-      (p as any).attendance.count({ where: { employeeProfileId: id } }).catch(() => 0),
-      (p as any).dailyWorkLog.count({ where: { employeeProfileId: id } }).catch(() => 0),
-      (p as any).leaveRequest.count({ where: { employeeProfileId: id } }).catch(() => 0),
-      (p as any).advanceRequest.count({ where: { employeeProfileId: id } }).catch(() => 0),
-      (p as any).workerStatement?.count({ where: { employeeId: id } }).catch(() => 0) || Promise.resolve(0),
+      p.attendance.count({ where: { employeeProfileId: id } as never }).catch(() => 0),
+      p.dailyWorkLog.count({ where: { employeeProfileId: id } as never }).catch(() => 0),
+      p.leaveRequest.count({ where: { employeeProfileId: id } as never }).catch(() => 0),
+      p.advanceRequest.count({ where: { employeeProfileId: id } as never }).catch(() => 0),
+      p.workerStatement.count({ where: { employeeId: id } as never }).catch(() => 0),
     ]);
     return { payrollRecords, attendances, workLogs, leaveRequests, advanceRequests, statements };
   }
@@ -340,7 +340,7 @@ export class EmployeesService {
       job: emp.position || null,
       education: emp.education || null,
       birthDate: emp.birthDate || null,
-      maritalStatus: (emp.maritalStatus as any) || null,
+      maritalStatus: emp.maritalStatus,
       childrenCount: emp.childrenCount || null,
       // Note: nationalId is NOT updated — it's the matching key and is already correct
     };
@@ -353,7 +353,7 @@ export class EmployeesService {
           data: updateData,
         });
         synced++;
-      } catch (e) {
+      } catch {
         // ignore individual failures
       }
     }

@@ -1,4 +1,5 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { PayrollTaxService } from './payroll-tax.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -8,6 +9,36 @@ import {
   CreateWorkerStatementDto,
   PreviewWorkerStatementDto,
 } from './dto/worker-statement.dto';
+
+function errMsg(e: unknown, fallback = 'خطای نامشخص'): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === 'object' && e && 'message' in e) {
+    const m = (e as { message?: unknown }).message;
+    if (typeof m === 'string' && m) return m;
+  }
+  return fallback;
+}
+
+type JELine = {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+  partnerId?: string;
+  projectId?: string;
+  costCenterId?: string;
+};
+
+type LegalContractItemWithLegacyUnit = Prisma.LegalContractItemGetPayload<object> & {
+  unit?: string | null;
+};
+
+type LegalContractWithItems = Omit<
+  Prisma.LegalContractGetPayload<{ include: { items: true } }>,
+  'items'
+> & {
+  items: LegalContractItemWithLegacyUnit[];
+};
 
 @Injectable()
 export class WorkerStatementsService {
@@ -23,10 +54,10 @@ export class WorkerStatementsService {
   }
 
   async findAll(query?: { projectId?: string; partnerId?: string; status?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.WorkerStatementWhereInput = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.partnerId) where.partnerId = query.partnerId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.WorkerStatementWhereInput['status'];
     return this.prisma.workerStatement.findMany({
       where,
       include: {
@@ -100,8 +131,8 @@ export class WorkerStatementsService {
     });
 
     // ─── آیتم‌های قرارداد (اگر انتخاب شده) ───
-    let contractItems: any[] = [];
-    let contract: any = null;
+    let contractItems: LegalContractWithItems['items'] = [];
+    let contract: LegalContractWithItems | null = null;
     if (dto.contractId) {
       contract = await this.prisma.legalContract.findUnique({
         where: { id: dto.contractId },
@@ -293,7 +324,7 @@ export class WorkerStatementsService {
     if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
 
     return this.prisma.$transaction(async (tx) => {
-      const data: any = {};
+      const data: Prisma.WorkerStatementUncheckedUpdateInput = {};
       if (dto.contractId !== undefined) data.contractId = dto.contractId || null;
       if (dto.projectId !== undefined) data.projectId = dto.projectId || null;
       if (dto.statementNumber !== undefined) data.statementNumber = dto.statementNumber;
@@ -373,17 +404,17 @@ export class WorkerStatementsService {
     });
 
     // ═══ سند خودکار ═══
-    let journal: any = null;
+    let journal: Awaited<ReturnType<WorkerStatementsService['createApprovalJE']>> | null = null;
     try {
       journal = await this.createApprovalJE(id, userId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       // ROLLBACK (F12/F13): تأیید بدون سند نباید باقی بماند
       await this.prisma.workerStatement.update({
         where: { id },
         data: { status: 'SUBMITTED', approvedById: null, approvedAt: null },
       }).catch(() => {});
       throw new BadRequestException(
-        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + (e?.message || 'خطای نامشخص'),
+        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + errMsg(e),
       );
     }
 
@@ -398,7 +429,7 @@ export class WorkerStatementsService {
    * Cr: مالیات و عوارض (2.1.3)
    */
   private async createApprovalJE(statementId: string, userId: string) {
-    const s: any = await this.findOne(statementId);
+    const s = await this.findOne(statementId);
 
     const existing = await this.prisma.journalEntry.findFirst({
       where: { sourceType: 'WORKER_STATEMENT', sourceId: statementId },
@@ -429,14 +460,14 @@ export class WorkerStatementsService {
     const tax = Number(s.totalTax);
     const net = Number(s.netPayable);
 
-    const lines: any[] = [];
+    const lines: JELine[] = [];
 
     lines.push({
       accountId: salaryAcc.id,
       debit: total,
       credit: 0,
       description: 'صورت‌وضعیت پرسنل ' + s.code + ' — ' + (s.partner?.name || ''),
-      projectId: s.projectId,
+      projectId: s.projectId ?? undefined,
       partnerId: s.partnerId,
     });
 
@@ -446,7 +477,7 @@ export class WorkerStatementsService {
         debit: 0,
         credit: net,
         description: 'خالص قابل پرداخت به پرسنل',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
         partnerId: s.partnerId,
       });
     }
@@ -456,7 +487,7 @@ export class WorkerStatementsService {
         debit: 0,
         credit: ins,
         description: 'بیمه سهم کارگر (' + s.insurancePercent + '٪)',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
       });
     }
     if (tax > 0) {
@@ -465,7 +496,7 @@ export class WorkerStatementsService {
         debit: 0,
         credit: tax,
         description: 'مالیات حقوق',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
       });
     }
 

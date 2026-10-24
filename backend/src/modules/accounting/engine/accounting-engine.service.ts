@@ -115,6 +115,7 @@ export class AccountingEngineService {
         costCenterId?: string;
       }>;
       userId?: string;
+      autoPost?: boolean;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -172,7 +173,7 @@ export class AccountingEngineService {
 
     // ═══ auto-post: سند خودکار مستقیماً قطعی می‌شود ═══
     // B3.b: multi-line auto-post in tx
-    const autoPost = (payload as any).autoPost !== false;
+    const autoPost = payload.autoPost !== false;
     if (autoPost && payload.userId) {
       if (tx) {
         const posted = await tx.journalEntry.update({

@@ -3,6 +3,24 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { endOfLocalDay } from '../../common/utils/date.util';
 import { toLocalDateString } from '../../common/utils/date.util';
 
+type DayInfo = {
+  day: number;
+  date: string;
+  dayOfWeek: number;
+  dayOfWeekName: string;
+  isHoliday: boolean;
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  workHours: number;
+  overtimeHours: number;
+  holidayHours: number;
+  notes: string | null;
+  wbsItemId: string | null;
+  projectId: string | null;
+  leaveType: string | null;
+};
+
 const PERSIAN_MONTHS = [
   'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
   'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
@@ -99,7 +117,7 @@ export class EmployeeCardService {
     });
 
     // ساخت تقویم ماه
-    const days: any[] = [];
+    const days: DayInfo[] = [];
     const totalDaysInMonth = this.getDaysInMonth(year, month);
 
     for (let d = 1; d <= totalDaysInMonth; d++) {

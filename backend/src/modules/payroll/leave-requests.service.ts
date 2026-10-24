@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateLeaveRequestDto } from './dto/leave-request.dto';
 
@@ -13,9 +14,9 @@ export class LeaveRequestsService {
   }
 
   async findAll(query?: { employeeId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.LeaveRequestWhereInput = {};
     if (query?.employeeId) where.employeeId = query.employeeId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.LeaveRequestWhereInput['status'];
     return this.prisma.leaveRequest.findMany({
       where,
       include: {
@@ -40,7 +41,7 @@ export class LeaveRequestsService {
       data: {
         code,
         employeeId: dto.employeeId,
-        leaveType: dto.leaveType as any,
+        leaveType: dto.leaveType as Prisma.LeaveRequestUncheckedCreateInput['leaveType'],
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         days: dto.days,

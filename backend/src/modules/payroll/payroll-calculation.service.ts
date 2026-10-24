@@ -1,5 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+
+type EmployeeWithPartner = Prisma.EmployeeProfileGetPayload<{
+  include: { partner: true };
+}>;
+
+type TaxSettingWithBrackets = Prisma.PayrollTaxSettingGetPayload<{
+  include: { brackets: true };
+}>;
 
 @Injectable()
 export class PayrollCalculationService {
@@ -37,7 +46,7 @@ export class PayrollCalculationService {
 
     for (const emp of employees) {
       rowNumber++;
-      const calc = await this.calculateEmployee(emp as any, period.startDate, period.endDate);
+      const calc = await this.calculateEmployee(emp, period.startDate, period.endDate);
 
       await this.prisma.payrollRecord.create({
         data: {
@@ -96,7 +105,7 @@ export class PayrollCalculationService {
   /**
    * محاسبه حقوق یک پرسنل
    */
-  private async calculateEmployee(emp: any, startDate: Date, endDate: Date) {
+  private async calculateEmployee(emp: EmployeeWithPartner, startDate: Date, endDate: Date) {
     // دریافت کارکرد
     const workLogs = await this.prisma.dailyWorkLog.findMany({
       where: {
@@ -255,7 +264,7 @@ export class PayrollCalculationService {
     });
   }
 
-  private computeTotals(record: any) {
+  private computeTotals(record: Prisma.PayrollRecordGetPayload<object>) {
     const gross =
       Number(record.baseSalary) +
       Number(record.housingAllow) +
@@ -292,7 +301,7 @@ export class PayrollCalculationService {
     await this.prisma.payrollRecord.deleteMany({ where: { periodId } });
 
     // پرسنل فعال (فیلتر بر اساس پروژه دوره اگر مشخص باشد)
-    const where: any = { isActive: true };
+    const where: Prisma.EmployeeProfileWhereInput = { isActive: true };
     if (period.projectId) where.projectId = period.projectId;
 
     const employees = await this.prisma.employeeProfile.findMany({
@@ -302,7 +311,7 @@ export class PayrollCalculationService {
     });
 
     // جدول مالیات فعال
-    let taxSetting: any = null;
+    let taxSetting: TaxSettingWithBrackets | null = null;
     try {
       taxSetting = await this.prisma.payrollTaxSetting.findFirst({
         where: { isActive: true },
@@ -328,7 +337,7 @@ export class PayrollCalculationService {
           employeeId: emp.partnerId,
           attendanceDate: { gte: period.startDate, lte: period.endDate },
           deletedAt: null,
-        } as any,
+        },
       });
 
       // خلاصه وضعیت‌ها

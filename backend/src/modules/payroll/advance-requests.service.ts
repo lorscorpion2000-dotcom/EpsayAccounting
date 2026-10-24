@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateAdvanceRequestDto } from './dto/advance-request.dto';
 
@@ -13,9 +14,9 @@ export class AdvanceRequestsService {
   }
 
   async findAll(query?: { employeeId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.AdvanceRequestWhereInput = {};
     if (query?.employeeId) where.employeeId = query.employeeId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.AdvanceRequestWhereInput['status'];
     return this.prisma.advanceRequest.findMany({
       where,
       include: {

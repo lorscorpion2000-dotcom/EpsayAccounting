@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateTaxSettingDto, UpdateTaxSettingDto } from './dto/payroll-tax.dto';
 
@@ -65,7 +66,7 @@ export class PayrollTaxService {
     if (!existing) throw new NotFoundException('تنظیمات یافت نشد');
 
     return this.prisma.$transaction(async (tx) => {
-      const data: any = {};
+      const data: Prisma.PayrollTaxSettingUpdateInput = {};
       if (dto.title !== undefined) data.title = dto.title;
       if (dto.monthlyExemption !== undefined) data.monthlyExemption = dto.monthlyExemption;
       if (dto.insuranceEmployeePercent !== undefined) data.insuranceEmployeePercent = dto.insuranceEmployeePercent;
@@ -133,7 +134,14 @@ export class PayrollTaxService {
 
     let remaining = grossSalary;
     let totalTax = 0;
-    const details: any[] = [];
+    const details: Array<{
+      order: number;
+      from: number;
+      to: number | null;
+      rate: number;
+      portion: number;
+      tax: number;
+    }> = [];
 
     for (const b of setting.brackets) {
       if (remaining <= 0) break;

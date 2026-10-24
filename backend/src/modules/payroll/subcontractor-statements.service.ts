@@ -1,9 +1,29 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.dto';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
 import { resolvePartnerDetailAccount, resolveDefaultDetailAccount } from '../../shared/utils/account-detail-resolver';
 import { generateCode } from '../../shared/utils/code-generator';
+
+function errMsg(e: unknown, fallback = 'خطای نامشخص'): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === 'object' && e && 'message' in e) {
+    const m = (e as { message?: unknown }).message;
+    if (typeof m === 'string' && m) return m;
+  }
+  return fallback;
+}
+
+type JELine = {
+  accountId: string;
+  debit?: number;
+  credit?: number;
+  description?: string;
+  partnerId?: string;
+  projectId?: string;
+  costCenterId?: string;
+};
 
 @Injectable()
 export class SubcontractorStatementsService {
@@ -19,10 +39,10 @@ export class SubcontractorStatementsService {
   }
 
   async findAll(query?: { projectId?: string; contractorId?: string; status?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.SubcontractorStatementWhereInput = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
     if (query?.contractorId) where.contractorId = query.contractorId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.SubcontractorStatementWhereInput['status'];
     return this.prisma.subcontractorStatement.findMany({
       where,
       include: {
@@ -162,7 +182,7 @@ export class SubcontractorStatementsService {
       throw new BadRequestException('فقط پیش‌نویس یا ارسال‌شده قابل ویرایش است. برای ویرایش صورت‌وضعیت تاییدشده، نیاز به دسترسی مدیر دارید.');
 
     return this.prisma.$transaction(async (tx) => {
-      const data: any = {};
+      const data: Prisma.SubcontractorStatementUncheckedUpdateInput = {};
       if (dto.contractorId) data.contractorId = dto.contractorId;
       if (dto.contractId !== undefined) data.contractId = dto.contractId || null;
       if (dto.projectId) data.projectId = dto.projectId;
@@ -174,7 +194,7 @@ export class SubcontractorStatementsService {
       if (dto.items) {
         await tx.subcontractorStatementItem.deleteMany({ where: { statementId: id } });
 
-        const fullDto = { ...s, ...dto, items: dto.items } as any;
+        const fullDto = { ...s, ...dto, items: dto.items } as unknown as CreateSubcontractorStatementDto;
         const totals = this.computeTotals(fullDto);
         const scUpdateUnitMap = await this.resolveUnitIds(dto.items.map((it) => it.unit));
 
@@ -220,9 +240,9 @@ export class SubcontractorStatementsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.subcontractorStatement.findUnique({
+    const existing = await this.prisma.subcontractorStatement.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
     if (!existing.deletedAt) throw new Error('صورت‌وضعیت حذف نشده است');
@@ -233,10 +253,10 @@ export class SubcontractorStatementsService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.subcontractorStatement.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: Record<string, unknown> = {}) {
+    const existing = await this.prisma.subcontractorStatement.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
+      ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
     });
     if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
     if (existing.status !== 'DRAFT') {
@@ -256,11 +276,11 @@ export class SubcontractorStatementsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
       this.prisma.subcontractorStatement.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
+        ...({ __withDeleted: true } as unknown as { __withDeleted: never }),
       }),
     ]);
     return { items, total, take, skip };
@@ -285,17 +305,17 @@ export class SubcontractorStatementsService {
     });
 
     // ═══ سند خودکار ═══
-    let journal: any = null;
+    let journal: Awaited<ReturnType<SubcontractorStatementsService['createApprovalJE']>> | null = null;
     try {
       journal = await this.createApprovalJE(id, userId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       // ROLLBACK (F12/F13): تأیید بدون سند نباید باقی بماند
       await this.prisma.subcontractorStatement.update({
         where: { id },
         data: { status: 'SUBMITTED', approvedById: null, approvedAt: null },
       }).catch(() => {});
       throw new BadRequestException(
-        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + (e?.message || 'خطای نامشخص'),
+        'تأیید انجام نشد چون ثبت سند حسابداری ناموفق بود: ' + errMsg(e),
       );
     }
 
@@ -336,7 +356,7 @@ export class SubcontractorStatementsService {
     const other = Number(s.otherDeduction || 0);
     const net = Number(s.netPayable);
 
-    const lines: any[] = [];
+    const lines: JELine[] = [];
 
     // Dr: هزینه
     lines.push({
@@ -344,7 +364,7 @@ export class SubcontractorStatementsService {
       debit: total,
       credit: 0,
       description: 'صورت‌وضعیت ' + s.code + ' — ' + (s.contractor?.name || ''),
-      projectId: s.projectId,
+      projectId: s.projectId ?? undefined,
       partnerId: s.contractorId,
     });
 
@@ -355,7 +375,7 @@ export class SubcontractorStatementsService {
         debit: 0,
         credit: net,
         description: 'خالص قابل پرداخت',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
         partnerId: s.contractorId,
       });
     }
@@ -367,7 +387,7 @@ export class SubcontractorStatementsService {
         debit: 0,
         credit: ins,
         description: 'بیمه سهم پیمانکار (' + s.insurancePercent + '٪)',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
       });
     }
 
@@ -378,7 +398,7 @@ export class SubcontractorStatementsService {
         debit: 0,
         credit: tax,
         description: 'مالیات تکلیفی (' + s.taxPercent + '٪)',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
       });
     }
 
@@ -389,7 +409,7 @@ export class SubcontractorStatementsService {
         debit: 0,
         credit: ret,
         description: 'حسن انجام کار (' + s.retentionPercent + '٪)',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
       });
     }
 
@@ -400,7 +420,7 @@ export class SubcontractorStatementsService {
         debit: 0,
         credit: prepayDep + other,
         description: 'کسر پیش‌پرداخت و سایر کسورات',
-        projectId: s.projectId,
+        projectId: s.projectId ?? undefined,
         partnerId: s.contractorId,
       });
     }

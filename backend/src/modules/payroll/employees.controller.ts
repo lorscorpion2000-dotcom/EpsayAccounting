@@ -8,6 +8,7 @@ import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest, AuthUser } from '../../common/types/auth-request';
 import { EmployeeType } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 
@@ -79,7 +80,7 @@ export class EmployeesController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
@@ -96,7 +97,7 @@ export class EmployeesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
     const user = req.user || {};
     return this.softDelete.adminDelete({
@@ -113,7 +114,7 @@ export class EmployeesController {
 
   @Patch(':id/restore')
   @RequirePermissions('payroll.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthRequest) {
     const user = req.user || {};
     return this.softDelete.restore({
       model: 'employeeProfile',

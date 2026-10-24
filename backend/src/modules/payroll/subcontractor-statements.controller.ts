@@ -5,6 +5,7 @@ import { CreateSubcontractorStatementDto } from './dto/subcontractor-statement.d
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
+import type { AuthRequest, AuthUser } from '../../common/types/auth-request';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { StatementStatus } from '@prisma/client';
 
@@ -48,7 +49,7 @@ export class SubcontractorStatementsController {
     @Param('id') id: string,
     @Body() dto: Partial<CreateSubcontractorStatementDto>,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
@@ -73,7 +74,7 @@ export class SubcontractorStatementsController {
 
   @Delete(':id/admin')
   @RequirePermissions('payroll.update')
-  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: AuthRequest) {
     return this.s.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
