@@ -1,4 +1,5 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -17,8 +18,8 @@ export class ProjectsService {
    * دریافت لیست پروژه‌ها همراه با اعمال محدودیت دسترسی کاربر (Project RBAC)
    */
   async findAll(query?: { status?: string; search?: string }, userId?: string) {
-    const where: any = { isActive: true };
-    if (query?.status) where.status = query.status;
+    const where: Prisma.ProjectWhereInput = { isActive: true };
+    if (query?.status) where.status = query.status as Prisma.ProjectWhereInput['status'];
     if (query?.search) {
       where.OR = [
         { name: { contains: query.search, mode: 'insensitive' } },
@@ -32,7 +33,7 @@ export class ProjectsService {
         where: { id: userId },
         include: { roles: { include: { role: true } } },
       });
-      const isSuperAdmin = user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+      const isSuperAdmin = user?.roles.some((ur) => ur.role.code === 'super_admin');
 
       if (!isSuperAdmin) {
         const assignedProjects = await this.prisma.userProject.findMany({
@@ -73,7 +74,7 @@ export class ProjectsService {
         where: { id: userId },
         include: { roles: { include: { role: true } } },
       });
-      const isSuperAdmin = user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+      const isSuperAdmin = user?.roles.some((ur) => ur.role.code === 'super_admin');
       if (!isSuperAdmin) {
         const hasAccess = await this.prisma.userProject.findFirst({
           where: { userId, projectId: id },
@@ -93,9 +94,9 @@ export class ProjectsService {
       data: {
         code,
         name: dto.name,
-        type: dto.type as any,
-        status: dto.status as any,
-        usage: dto.usage as any,
+        type: dto.type as unknown as Prisma.ProjectUncheckedCreateInput['type'],
+        status: dto.status as unknown as Prisma.ProjectUncheckedCreateInput['status'],
+        usage: dto.usage as unknown as Prisma.ProjectUncheckedCreateInput['usage'],
         clientId: dto.clientId,
         consultantId: dto.consultantId,
         purchasingOfficerId: dto.purchasingOfficerId || null,
@@ -115,11 +116,11 @@ export class ProjectsService {
 
   async update(id: string, dto: UpdateProjectDto) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.ProjectUncheckedUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
-    if (dto.type !== undefined) data.type = dto.type;
-    if (dto.status !== undefined) data.status = dto.status;
-    if (dto.usage !== undefined) data.usage = dto.usage;
+    if (dto.type !== undefined) data.type = dto.type as unknown as Prisma.ProjectUncheckedUpdateInput['type'];
+    if (dto.status !== undefined) data.status = dto.status as unknown as Prisma.ProjectUncheckedUpdateInput['status'];
+    if (dto.usage !== undefined) data.usage = dto.usage as unknown as Prisma.ProjectUncheckedUpdateInput['usage'];
     if (dto.clientId !== undefined) data.clientId = dto.clientId;
     if (dto.consultantId !== undefined) data.consultantId = dto.consultantId;
     if (dto.purchasingOfficerId !== undefined) data.purchasingOfficerId = dto.purchasingOfficerId;
@@ -153,11 +154,11 @@ export class ProjectsService {
     }
 
     const refs = await this.countReferences(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s: number, n) => s + Number(n || 0), 0);
 
     if (total > 0) {
       const details = Object.entries(refs)
-        .filter(([, v]: any) => Number(v) > 0)
+        .filter(([, v]) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
       throw new BadRequestException({
