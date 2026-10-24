@@ -75,7 +75,7 @@ export async function cashFlowSummary(prisma: PrismaService, projectId: string, 
   const byMonth: Record<string, { in: number; out: number }> = {};
   for (const l of lines) {
     if (!cashCodes(l.account.code)) continue;
-    const d = new Date((l as any).journalEntry?.entryDate || new Date());
+    const d = new Date((l as unknown as { journalEntry?: { entryDate: Date | string } }).journalEntry?.entryDate || new Date());
     const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     if (!byMonth[key]) byMonth[key] = { in: 0, out: 0 };
     const debit = Number(l.debit);
