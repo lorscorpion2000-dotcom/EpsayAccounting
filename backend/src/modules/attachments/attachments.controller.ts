@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
 import { CreateAttachmentBatchDto } from './dto/attachment.dto';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Attachments - پیوست‌ها')
 @ApiBearerAuth()
@@ -40,9 +41,9 @@ export class AttachmentsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.svc.adminDelete(id, user.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
@@ -51,8 +52,8 @@ export class AttachmentsController {
 
   @Patch(':id/restore')
   @RequirePermissions('attachment.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.svc.restore(id, user.id);
   }
 
