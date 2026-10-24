@@ -1,5 +1,13 @@
 import type { PrismaService } from '../../../../shared/prisma/prisma.service';
 
+export interface ConsumptionItem {
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  quantity: number;
+  value: number;
+}
+
 export async function warehouseSummary(prisma: PrismaService, projectId: string, from: Date, to: Date) {
   const [receipts, issues, movements] = await Promise.all([
     prisma.goodsReceipt.findMany({
@@ -19,7 +27,7 @@ export async function warehouseSummary(prisma: PrismaService, projectId: string,
   const totalIn = receipts.reduce((s, r) => s + Number(r.totalValue), 0);
   const totalOut = issues.reduce((s, i) => s + Number(i.totalValue), 0);
 
-  const consumption: Record<string, any> = {};
+  const consumption: Record<string, ConsumptionItem> = {};
   for (const m of movements) {
     if (m.type !== 'OUT' && m.type !== 'TRANSFER_OUT') continue;
     const key = m.itemId;
@@ -39,7 +47,7 @@ export async function warehouseSummary(prisma: PrismaService, projectId: string,
     totalIn: Math.round(totalIn * 100) / 100,
     totalOut: Math.round(totalOut * 100) / 100,
     consumption: Object.values(consumption)
-      .sort((a: any, b: any) => b.value - a.value)
+      .sort((a, b) => b.value - a.value)
       .slice(0, 30),
   };
 }

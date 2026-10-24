@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import type { Account } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -29,7 +31,7 @@ export class AdvancedLedgerService {
     const toDate = new Date(params.toDate);
 
     // ═══ حساب‌ها ═══
-    let accounts: any[] = [];
+    let accounts: Account[] = [];
     if (params.accountId) {
       const acc = await this.prisma.account.findUnique({ where: { id: params.accountId } });
       if (!acc) throw new BadRequestException('حساب یافت نشد');
@@ -54,7 +56,7 @@ export class AdvancedLedgerService {
     const accountIds = accounts.map((a) => a.id);
 
     // ═══ فیلتر مشترک ═══
-    const commonWhere: any = {
+    const commonWhere: Prisma.JournalLineWhereInput = {
       accountId: { in: accountIds },
       journalEntry: { status: 'POSTED', deletedAt: null },
     };
@@ -66,7 +68,7 @@ export class AdvancedLedgerService {
     const openingLines = await this.prisma.journalLine.findMany({
       where: {
         ...commonWhere,
-        journalEntry: { ...commonWhere.journalEntry, entryDate: { lt: fromDate } },
+        journalEntry: { ...(commonWhere.journalEntry as Prisma.JournalEntryWhereInput), entryDate: { lt: fromDate } },
       },
       select: { accountId: true, debit: true, credit: true },
     });
@@ -94,7 +96,7 @@ export class AdvancedLedgerService {
     const lines = await this.prisma.journalLine.findMany({
       where: {
         ...commonWhere,
-        journalEntry: { ...commonWhere.journalEntry, entryDate: { gte: fromDate, lte: toDate } },
+        journalEntry: { ...(commonWhere.journalEntry as Prisma.JournalEntryWhereInput), entryDate: { gte: fromDate, lte: toDate } },
       },
       include: {
         account: { select: { id: true, code: true, name: true, nature: true } },
@@ -129,7 +131,7 @@ export class AdvancedLedgerService {
         id: l.id,
         entryId: l.journalEntry.id,
         entryCode: l.journalEntry.code,
-        entryNumber: (l.journalEntry as any).entryNumber,
+        entryNumber: l.journalEntry.entryNumber,
         entryDate: l.journalEntry.entryDate,
         accountId: l.accountId,
         accountCode: l.account.code,
@@ -176,10 +178,10 @@ export class AdvancedLedgerService {
     };
   }
 
-  private async getAccountTree(rootId: string): Promise<any[]> {
+  private async getAccountTree(rootId: string): Promise<Account[]> {
     const all = await this.prisma.account.findMany();
     const map = new Map(all.map((a) => [a.id, a]));
-    const result: any[] = [];
+    const result: Account[] = [];
     const visit = (id: string) => {
       const acc = map.get(id);
       if (!acc) return;
@@ -198,7 +200,7 @@ export class AdvancedLedgerService {
     const fromDate = new Date(params.fromDate);
     const toDate = new Date(params.toDate);
 
-    const where: any = {
+    const where: Prisma.JournalLineWhereInput = {
       journalEntry: { status: 'POSTED', entryDate: { gte: fromDate, lte: toDate } },
       account: { code: { in: ['4', '5'] } }, // via startsWith below
     };
@@ -217,7 +219,7 @@ export class AdvancedLedgerService {
       },
     });
 
-    const byAccount: Record<string, any> = {};
+    const byAccount: Record<string, { code: string; name: string; debit: number; credit: number; isRevenue: boolean }> = {};
     for (const l of lines) {
       const code = l.account.code;
       if (!byAccount[code]) {
@@ -232,14 +234,14 @@ export class AdvancedLedgerService {
     }
 
     const revenues = Object.values(byAccount)
-      .filter((a: any) => a.isRevenue)
-      .map((a: any) => ({ ...a, amount: a.credit - a.debit }));
+      .filter((a) => a.isRevenue)
+      .map((a) => ({ ...a, amount: a.credit - a.debit }));
     const expenses = Object.values(byAccount)
-      .filter((a: any) => !a.isRevenue)
-      .map((a: any) => ({ ...a, amount: a.debit - a.credit }));
+      .filter((a) => !a.isRevenue)
+      .map((a) => ({ ...a, amount: a.debit - a.credit }));
 
-    const totalRevenue = revenues.reduce((s: number, r: any) => s + r.amount, 0);
-    const totalExpense = expenses.reduce((s: number, r: any) => s + r.amount, 0);
+    const totalRevenue = revenues.reduce((s, r) => s + r.amount, 0);
+    const totalExpense = expenses.reduce((s, r) => s + r.amount, 0);
     const profit = totalRevenue - totalExpense;
 
     return {

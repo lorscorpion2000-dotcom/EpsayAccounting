@@ -116,12 +116,12 @@ export class APAgingDetailService {
       sup.bucket[bucket] += remaining;
       sup.invoices.push(row);
 
-      const tKey = bucket === 'CURRENT' ? 'current'
+      const tKey: 'current' | 'd1_30' | 'd31_60' | 'd61_90' | 'over90' = bucket === 'CURRENT' ? 'current'
         : bucket === 'D1_30'  ? 'd1_30'
         : bucket === 'D31_60' ? 'd31_60'
         : bucket === 'D61_90' ? 'd61_90'
         : 'over90';
-      (totals as any)[tKey] += remaining;
+      totals[tKey] += remaining;
       totals.total += remaining;
     }
 

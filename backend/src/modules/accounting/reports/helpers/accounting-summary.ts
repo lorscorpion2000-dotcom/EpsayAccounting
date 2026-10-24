@@ -1,5 +1,13 @@
 import type { PrismaService } from '../../../../shared/prisma/prisma.service';
 
+interface AccountSummaryAccumulator {
+  code: string;
+  name: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
 export async function accountingSummary(prisma: PrismaService, projectId: string, from: Date, to: Date) {
   const lines = await prisma.journalLine.findMany({
     where: {
@@ -9,7 +17,7 @@ export async function accountingSummary(prisma: PrismaService, projectId: string
     include: { account: { select: { code: true, name: true, nature: true } } },
   });
 
-  const byAccount: Record<string, any> = {};
+  const byAccount: Record<string, AccountSummaryAccumulator> = {};
   let totalDebit = 0, totalCredit = 0;
   const byNature: Record<string, number> = { DEBIT: 0, CREDIT: 0 };
 
@@ -30,17 +38,17 @@ export async function accountingSummary(prisma: PrismaService, projectId: string
       + (Number(l.debit) - Number(l.credit)) * nat;
   }
 
-  const revenues = Object.values(byAccount).filter((a: any) => a.code.startsWith('4'));
-  const expenses = Object.values(byAccount).filter((a: any) => a.code.startsWith('6') || a.code.startsWith('7'));
-  const totalRevenue = revenues.reduce((s: number, a: any) => s + (a.credit - a.debit), 0);
-  const totalExpense = expenses.reduce((s: number, a: any) => s + (a.debit - a.credit), 0);
+  const revenues = Object.values(byAccount).filter((a) => a.code.startsWith('4'));
+  const expenses = Object.values(byAccount).filter((a) => a.code.startsWith('6') || a.code.startsWith('7'));
+  const totalRevenue = revenues.reduce((s, a) => s + (a.credit - a.debit), 0);
+  const totalExpense = expenses.reduce((s, a) => s + (a.debit - a.credit), 0);
 
   return {
     totalDebit, totalCredit,
     entryCount: new Set(lines.map((l) => l.journalEntryId)).size,
     accounts: Object.values(byAccount)
-      .map((a: any) => ({ ...a, balance: a.debit - a.credit }))
-      .sort((a: any, b: any) => Math.abs(b.balance) - Math.abs(a.balance))
+      .map((a) => ({ ...a, balance: a.debit - a.credit }))
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
       .slice(0, 50),
     profitLoss: {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
