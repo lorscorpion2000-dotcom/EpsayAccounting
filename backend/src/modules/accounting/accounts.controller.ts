@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req,
+  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UnauthorizedException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
@@ -9,6 +9,17 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  email?: string;
+  name?: string;
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
+type AdminUser = Parameters<SoftDeleteService['adminDelete']>[0]['user'];
 
 @ApiTags('Accounts - کدینگ حساب‌ها')
 @ApiBearerAuth()
@@ -76,7 +87,7 @@ export class AccountsController {
 
   @Delete(':id')
   @RequirePermissions('accounting.delete')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.remove(id, req.user?.id);
   }
 
@@ -85,27 +96,29 @@ export class AccountsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'account',
       id,
       user,
       reason: body?.reason || '',
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('accounting.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'account',
       id,
       user,
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 }
