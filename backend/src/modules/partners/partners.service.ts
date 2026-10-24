@@ -23,7 +23,7 @@ export class PartnersService {
     return this.prisma.partner.findMany({
       where: {
         isActive: true,
-        ...(type ? { type: type as any } : {}),
+        ...(type ? { type: type as Prisma.PartnerWhereInput['type'] } : {}),
         ...(q
           ? {
               OR: [
@@ -82,7 +82,7 @@ export class PartnersService {
 
   async create(dto: CreatePartnerDto) {
     const code = await this.generateCode();
-    const partnerType = (dto.type as any) || 'OTHER';
+    const partnerType = (dto.type as unknown as Prisma.PartnerUncheckedCreateInput['type']) || 'OTHER';
 
     // ─── در یک تراکنش: هم Partner، هم حساب تفصیلی ───
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -109,7 +109,7 @@ export class PartnersService {
       const detailType = PARTNER_TYPE_TO_DETAIL[partnerType];
       if (detailType) {
         try {
-          await this.detailAccounts.ensureDetailAccount(tx as any, {
+          await this.detailAccounts.ensureDetailAccount(tx as unknown as Parameters<DetailAccountsService['ensureDetailAccount']>[0], {
             detailType,
             entityId: partner.id,
             entityName: partner.name,
@@ -132,7 +132,7 @@ export class PartnersService {
         where: { id },
         data: {
           name: dto.name,
-          type: dto.type as any,
+          type: dto.type as unknown as Prisma.PartnerUncheckedUpdateInput['type'],
           nationalId: dto.nationalId,
           fatherName: dto.fatherName,
           aliasName: dto.aliasName,
@@ -149,7 +149,7 @@ export class PartnersService {
 
       // اگه تفضیل قبلاً ساخته شده، اسمش رو هم آپدیت کن
       const existingDetail = await tx.account.findFirst({
-        where: { detailId: id } as any,
+        where: { detailId: id } as unknown as Prisma.AccountWhereInput,
       });
       if (existingDetail && dto.name && existingDetail.name !== dto.name) {
         await tx.account.update({
@@ -172,11 +172,11 @@ export class PartnersService {
 
     // force: بررسی وابستگیها قبل از حذف واقعی
     const refs = await this.countReferences(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s: number, n) => s + Number(n || 0), 0);
 
     if (total > 0) {
       const details = Object.entries(refs)
-        .filter(([, v]: any) => Number(v) > 0)
+        .filter(([, v]) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
       throw new BadRequestException({
@@ -190,7 +190,7 @@ export class PartnersService {
     // حذف کامل (بدون ارجاع)
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // حذف تفضیل حساب مرتبط
-      await tx.account.deleteMany({ where: { detailId: id } as any });
+      await tx.account.deleteMany({ where: { detailId: id } as unknown as Prisma.AccountWhereInput });
       // حذف شخص
       await tx.partner.delete({ where: { id } });
       return { success: true, hardDeleted: true };
@@ -205,7 +205,7 @@ export class PartnersService {
         data: { isActive: false, deletedAt: new Date() },
       });
       const detailAccount = await tx.account.findFirst({
-        where: { detailId: id } as any,
+        where: { detailId: id } as unknown as Prisma.AccountWhereInput,
       });
       if (detailAccount) {
         await tx.account.update({

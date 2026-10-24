@@ -9,6 +9,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { PartnerType } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest, AuthUserPayload } from '../auth/auth.controller';
 
 @ApiTags('Partners - اشخاص')
 @ApiBearerAuth()
@@ -48,7 +49,7 @@ export class PartnersController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUserPayload,
   ) {
     const roles = (user?.roles || []) as string[];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
@@ -65,9 +66,9 @@ export class PartnersController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'partner',
       id,
@@ -82,8 +83,8 @@ export class PartnersController {
 
   @Patch(':id/restore')
   @RequirePermissions('partners.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'partner',
       id,
