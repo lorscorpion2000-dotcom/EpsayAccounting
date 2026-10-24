@@ -6,6 +6,7 @@ import { ClientStatementCrudService } from './services/client-statement-crud.ser
 import { ClientStatementItemsService } from './services/client-statement-items.service';
 import { ClientStatementWorkflowService } from './services/client-statement-workflow.service';
 import { ClientStatementPostService } from './services/client-statement-post.service';
+import type { DeleteMeta } from '../../common/services/soft-delete.service';
 
 /**
  * Facade برای سازگاری با controller.
@@ -32,7 +33,7 @@ export class ClientStatementService {
   update(id: string, dto: UpdateCSDto) { return this.crud.update(id, dto); }
   remove(id: string, userId?: string) { return this.crud.remove(id, userId); }
   restore(id: string, userId?: string) { return this.crud.restore(id, userId); }
-  adminDelete(id: string, userId?: string, reason?: string, meta?: any) {
+  adminDelete(id: string, userId?: string, reason?: string, meta?: DeleteMeta) {
     return this.crud.adminDelete(id, userId, reason, meta);
   }
   listDeleted(take = 100, skip = 0) { return this.crud.listDeleted(take, skip); }

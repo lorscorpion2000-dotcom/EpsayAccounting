@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
-import { ImportCSItemsDto } from '../dto/client-statement.dto';
+import { ClientStatementCategory } from '@prisma/client';
+import { ImportCSItemsDto, UpdateCSItemDto } from '../dto/client-statement.dto';
 import { ClientStatementCrudService } from './client-statement-crud.service';
 
 @Injectable()
@@ -38,7 +39,7 @@ export class ClientStatementItemsService {
     const startRow = s.items.length;
     const items = dto.items.map((it, idx) => ({
       statementId: id,
-      category: dto.category as any,
+      category: dto.category as unknown as ClientStatementCategory,
       rowNumber: startRow + idx + 1,
       priceListCode: it.priceListCode,
       description: it.description,
@@ -58,7 +59,7 @@ export class ClientStatementItemsService {
     return { inserted: result.count };
   }
 
-  async updateItem(itemId: string, dto: any) {
+  async updateItem(itemId: string, dto: UpdateCSItemDto) {
     const it = await this.prisma.clientStatementItem.findUnique({ where: { id: itemId } });
     if (!it) throw new NotFoundException('ردیف یافت نشد');
     const s = await this.prisma.clientStatement.findUnique({ where: { id: it.statementId } });

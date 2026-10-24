@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { FiscalYearsService } from '../../accounting/fiscal-years.service';
 import { DetailAccountsService } from '../../accounting/detail-accounts.service';
@@ -52,14 +53,14 @@ export class ClientStatementPostService {
     // بستن هزینه‌های کارفرما مرتبط با این پروژه و کارفرما
     // ═══════════════════════════════════════════════════════
     const clientId = s.project?.clientId || null;
-    let passThroughExpenses: any[] = [];
+    let passThroughExpenses: { id: string; totalAmount: Prisma.Decimal; code: string }[] = [];
     let passThroughAmount = 0;
-    let passThroughAcc: any = null;
+    let passThroughAcc: { id: string } | null = null;
 
     if (clientId) {
       // حساب واسط اختصاصی این کارفرما
       passThroughAcc = await this.detailAccounts.ensureDetailAccount(this.prisma, {
-        detailType: 'PASS_THROUGH_CLIENT' as any,
+        detailType: 'PASS_THROUGH_CLIENT' as unknown as Parameters<DetailAccountsService['ensureDetailAccount']>[1]['detailType'],
         entityId: clientId,
         entityName: s.project?.client?.name || 'کارفرما',
       });
@@ -95,7 +96,7 @@ export class ClientStatementPostService {
       const entryNumber = fyUpdate.nextEntryNumber - 1;
       const entryCode = 'JV-' + fyUpdate.code + '-' + String(entryNumber).padStart(5, '0');
 
-      const lines: any[] = [];
+      const lines: Prisma.JournalLineUncheckedCreateWithoutJournalEntryInput[] = [];
       let sortOrder = 1;
 
       // Dr: دریافتنی از کارفرما (شامل هزینه کارفرما)
