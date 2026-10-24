@@ -72,7 +72,7 @@ export class BudgetVsActualService {
       wbsItemId: b.wbsItemId,
       wbsCode: b.wbsItem?.code ?? null,
       wbsTitle: b.wbsItem?.title ?? null,
-      wbsLevel: (b.wbsItem as any)?.level ?? null,
+      wbsLevel: b.wbsItem?.level ?? null,
       amount: Number(b.amount),
       approvedAt: b.approvedAt.toISOString(),
       isLocked: b.isLocked,

@@ -1,4 +1,20 @@
 import type { PrismaService } from '../../../../shared/prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
+
+export interface AgingDetail {
+  code: string;
+  partner?: string;
+  supplier?: string;
+  date: Date;
+  remaining: number;
+  bucket: string;
+}
+
+export interface LatestSnapshot {
+  wbsItemId: string;
+  progressPct: Prisma.Decimal | null;
+  snapshotDate: Date;
+}
 
 export async function kpiSummary(prisma: PrismaService, projectId: string, from: Date, to: Date) {
   const [budgets, journalLines, workerStmts, subStmts] = await Promise.all([
@@ -145,8 +161,8 @@ export async function agingSummary(prisma: PrismaService, projectId: string) {
 
   const arBuckets = { ...buckets };
   const apBuckets = { ...buckets };
-  const arDetails: any[] = [];
-  const apDetails: any[] = [];
+  const arDetails: AgingDetail[] = [];
+  const apDetails: AgingDetail[] = [];
   let arTotal = 0, apTotal = 0;
 
   for (const si of salesInvoices) {
@@ -187,7 +203,7 @@ export async function progressVsCostSummary(prisma: PrismaService, projectId: st
     include: { wbsItem: { select: { id: true, code: true, title: true, totalPrice: true, weight: true } } },
   });
 
-  const latest: Record<string, any> = {};
+  const latest: Record<string, LatestSnapshot> = {};
   for (const s of snapshots) {
     if (!latest[s.wbsItemId]) latest[s.wbsItemId] = s;
   }
@@ -213,17 +229,17 @@ export async function progressVsCostSummary(prisma: PrismaService, projectId: st
   }).catch(() => []);
 
   const costByWbs: Record<string, number> = {};
-  for (const it of piItems as any[]) {
+  for (const it of piItems) {
     if (!it.wbsItemId) continue;
     costByWbs[it.wbsItemId] = (costByWbs[it.wbsItemId] || 0) + Number(it.totalPrice || 0);
   }
-  for (const it of giItems as any[]) {
+  for (const it of giItems) {
     const wbsId = it.issue?.wbsItemId;
     if (!wbsId) continue;
     costByWbs[wbsId] = (costByWbs[wbsId] || 0) + Number(it.totalCost || 0);
   }
 
-  const rows = wbsItems.map((w: any) => {
+  const rows = wbsItems.map((w) => {
     const snap = latest[w.id];
     const progress = snap?.progressPct ? Number(snap.progressPct) : 0;
     const budget = Number(w.totalPrice || 0);
