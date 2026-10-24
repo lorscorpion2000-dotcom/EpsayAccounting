@@ -3,16 +3,24 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AuditService } from '../../modules/audit/audit.service';
 
-interface AdminUser {
+export interface AdminUser {
   id: string;
   username?: string;
   fullName?: string;
 }
 
-interface DeleteMeta {
+export interface DeleteMeta {
   ipAddress?: string;
   userAgent?: string;
 }
+
+type PrismaDelegate = {
+  findUnique(args: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+  findMany(args: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+  update(args: Record<string, unknown>): Promise<Record<string, unknown>>;
+  delete(args: Record<string, unknown>): Promise<Record<string, unknown>>;
+  count(args?: Record<string, unknown>): Promise<number>;
+};
 
 /**
  * سرویس مشترک Soft Delete / Restore / Hard Delete
@@ -32,8 +40,8 @@ export class SoftDeleteService {
     private audit: AuditService,
   ) {}
 
-  private getClient(model: string): any {
-    const client = (this.prisma as any)[model];
+  private getClient(model: string): PrismaDelegate {
+    const client = (this.prisma as unknown as Record<string, PrismaDelegate | undefined>)[model];
     if (!client) {
       throw new NotFoundException('مدل ' + model + ' در Prisma یافت نشد');
     }
@@ -68,9 +76,9 @@ export class SoftDeleteService {
     // تلاش برای حذف دائمی
     try {
       await client.delete({ where: { id: params.id } });
-    } catch (e: any) {
-      const code = e?.code;
-      const msg = String(e?.message || '');
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      const msg = e instanceof Error ? e.message : String(e);
 
       if (code === 'P2003' || msg.includes('Foreign key constraint') || code === 'P2014') {
         const deps = await this.findDependencies(params.model, params.id);
@@ -130,7 +138,7 @@ export class SoftDeleteService {
     });
     if (!existing) throw new NotFoundException('رکورد یافت نشد');
 
-    if ((existing as any).deletedAt) {
+    if (existing.deletedAt) {
       return { ok: true, id: params.id, alreadyDeleted: true };
     }
 
@@ -139,7 +147,7 @@ export class SoftDeleteService {
       data: {
         deletedAt: new Date(),
         deletedBy: params.user?.id ?? null,
-      } as any,
+      },
     });
 
     try {
@@ -165,7 +173,7 @@ export class SoftDeleteService {
     modelName: string,
     id: string,
   ): Promise<Array<{ model: string; label: string; count: number }>> {
-    const prisma = this.prisma as any;
+    const prisma = this.prisma as unknown as Record<string, PrismaDelegate | undefined>;
     const dmmf = Prisma.dmmf.datamodel;
 
     // پیدا کردن مدل در DMMF (case-insensitive)
@@ -184,7 +192,7 @@ export class SoftDeleteService {
         if (field.type !== targetModel.name) continue;
         if (!field.relationFromFields || field.relationFromFields.length === 0) continue;
 
-        const where: any = {};
+        const where: Record<string, string> = {};
         for (const f of field.relationFromFields) where[f] = id;
 
         const clientName = other.name.charAt(0).toLowerCase() + other.name.slice(1);
@@ -306,7 +314,7 @@ export class SoftDeleteService {
     }
 
     // F24: partner restore fix — isActive را هم true کن
-    const updateData: any = { deletedAt: null, deletedBy: null };
+    const updateData: Record<string, unknown> = { deletedAt: null, deletedBy: null };
     if (params.model === 'partner') {
       updateData.isActive = true;
     }
