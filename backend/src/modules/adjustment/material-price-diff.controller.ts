@@ -7,6 +7,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { AdjustmentStatus } from '@prisma/client';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Material Price Diff - مابه‌التفاوت مصالح')
 @ApiBearerAuth()
@@ -50,7 +51,7 @@ export class MaterialPriceDiffController {
 
   @Delete(':id')
   @RequirePermissions('adjustment.manage')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.remove(id, req.user?.id);
   }
 
@@ -69,9 +70,9 @@ export class MaterialPriceDiffController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.service.adminDelete(id, user.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
@@ -80,8 +81,8 @@ export class MaterialPriceDiffController {
 
   @Patch(':id/restore')
   @RequirePermissions('adjustment.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.service.restore(id, user.id);
   }
 

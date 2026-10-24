@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import type { DeleteMeta } from '../../common/services/soft-delete.service';
 import { CreateIndexDto, UpdateIndexDto } from './dto/adjustment.dto';
 
 @Injectable()
@@ -19,7 +21,7 @@ export class AdjustmentIndexService {
   }
 
   async list(query?: { year?: number; category?: string; isActive?: boolean }) {
-    const where: any = {};
+    const where: Prisma.AdjustmentIndexWhereInput = {};
     if (query?.year) where.year = query.year;
     if (query?.category) where.category = query.category;
     if (query?.isActive !== undefined) where.isActive = query.isActive;
@@ -64,7 +66,7 @@ export class AdjustmentIndexService {
 
   async update(id: string, dto: UpdateIndexDto) {
     await this.get(id);
-    const data: any = { ...dto };
+    const data = { ...dto } as unknown as Prisma.AdjustmentIndexUncheckedUpdateInput;
     return this.prisma.adjustmentIndex.update({ where: { id }, data });
   }
 
@@ -77,10 +79,10 @@ export class AdjustmentIndexService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.adjustmentIndex.findUnique({
+    const existing = await this.prisma.adjustmentIndex.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.AdjustmentIndexFindUniqueArgs);
     if (!existing) throw new NotFoundException('شاخص یافت نشد');
     if (!existing.deletedAt) throw new Error('شاخص حذف نشده است');
     await this.prisma.adjustmentIndex.update({
@@ -90,7 +92,7 @@ export class AdjustmentIndexService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: DeleteMeta = {}) {
     await this.get(id);
     await this.prisma.adjustmentIndex.delete({ where: { id } });
     return { ok: true, hardDeleted: true, id, by: userId ?? null, reason: reason ?? null };
@@ -103,12 +105,12 @@ export class AdjustmentIndexService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.AdjustmentIndexFindManyArgs),
       this.prisma.adjustmentIndex.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.AdjustmentIndexCountArgs),
     ]);
     return { items, total, take, skip };
   }

@@ -5,6 +5,7 @@ import { CreateIndexDto, UpdateIndexDto } from './dto/adjustment.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Adjustment Index - شاخص‌های تعدیل')
 @ApiBearerAuth()
@@ -46,7 +47,7 @@ export class AdjustmentIndexController {
 
   @Delete(':id')
   @RequirePermissions('adjustment.manage')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.remove(id, req.user?.id);
   }
 
@@ -65,7 +66,7 @@ export class AdjustmentIndexController {
   adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.service.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
@@ -75,7 +76,7 @@ export class AdjustmentIndexController {
 
   @Patch(':id/restore')
   @RequirePermissions('adjustment.manage')
-  restore(@Param('id') id: string, @Req() req: any) {
+  restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.restore(id, req.user?.id);
   }
 }
