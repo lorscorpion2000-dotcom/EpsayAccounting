@@ -1,6 +1,7 @@
 import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from '../warehouse/stock.service';
 import {
@@ -27,10 +28,10 @@ export class WarehouseTransferService {
   }
 
   async list(query?: { fromWarehouseId?: string; toWarehouseId?: string; status?: string; projectId?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.WarehouseTransferWhereInput = { deletedAt: null };
     if (query?.fromWarehouseId) where.fromWarehouseId = query.fromWarehouseId;
     if (query?.toWarehouseId) where.toWarehouseId = query.toWarehouseId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.WarehouseTransferWhereInput['status'];
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.warehouseTransfer.findMany({
       where,
@@ -70,7 +71,7 @@ export class WarehouseTransferService {
     const code = await this.nextCode();
 
     // آیتم‌ها + بهای میانگین فعلی
-    const items: any[] = [];
+    const items: Prisma.WarehouseTransferItemUncheckedCreateWithoutTransferInput[] = [];
     let totalValue = 0;
 
     for (let i = 0; i < (dto.items || []).length; i++) {
@@ -108,7 +109,7 @@ export class WarehouseTransferService {
         notes: dto.notes,
         totalValue,
         createdById: userId,
-        items: { create: items as any },
+        items: { create: items },
       },
       include: {
         fromWarehouse: { select: { id: true, code: true, name: true } },
@@ -122,7 +123,7 @@ export class WarehouseTransferService {
     const t = await this.get(id);
     if (t.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
 
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if (dto.transferDate) data.transferDate = new Date(dto.transferDate);
     if (dto.driverName !== undefined) data.driverName = dto.driverName;
     if (dto.vehiclePlate !== undefined) data.vehiclePlate = dto.vehiclePlate;
@@ -133,7 +134,7 @@ export class WarehouseTransferService {
       if (dto.items) {
         await tx.warehouseTransferItem.deleteMany({ where: { transferId: id } });
         let totalValue = 0;
-        const items: any[] = [];
+        const items: Prisma.WarehouseTransferItemCreateManyInput[] = [];
         for (let i = 0; i < dto.items.length; i++) {
           const it = dto.items[i];
           const stock = await tx.stock.findUnique({
@@ -159,7 +160,7 @@ export class WarehouseTransferService {
         data.totalValue = totalValue;
         await tx.warehouseTransferItem.createMany({ data: items });
       }
-      return tx.warehouseTransfer.update({ where: { id }, data });
+      return tx.warehouseTransfer.update({ where: { id }, data: data as unknown as Prisma.WarehouseTransferUncheckedUpdateInput });
     });
   }
 

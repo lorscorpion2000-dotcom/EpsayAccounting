@@ -9,6 +9,7 @@ import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { InventoryCountStatus } from '@prisma/client';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Inventory Count - انبارگردانی')
 @ApiBearerAuth()
@@ -72,11 +73,11 @@ export class InventoryCountController {
 
   @Delete(':id/admin')
   @RequirePermissions('inventory-count.manage')
-  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: AuthenticatedRequest) {
     return this.softDelete.adminDelete({
       model: 'inventoryCount',
       id,
-      user: req.user || {},
+      user: req.user!,
       reason: body?.reason || '',
       meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
     });
@@ -84,11 +85,11 @@ export class InventoryCountController {
 
   @Patch(':id/restore')
   @RequirePermissions('inventory-count.manage')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.softDelete.restore({
       model: 'inventoryCount',
       id,
-      user: req.user || {},
+      user: req.user!,
       meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
     });
   }

@@ -10,6 +10,7 @@ import {
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { WarehouseTransferStatus } from '@prisma/client';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Warehouse Transfer - انتقال بین کارگاه‌ها')
 @ApiBearerAuth()
@@ -70,11 +71,11 @@ export class WarehouseTransferController {
   // Admin Delete / Restore
   @Delete(':id/admin')
   @RequirePermissions('warehouse-transfer.manage')
-  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+  async adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: AuthenticatedRequest) {
     return this.softDelete.adminDelete({
       model: 'warehouseTransfer',
       id,
-      user: req.user || {},
+      user: req.user!,
       reason: body?.reason || '',
       meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
     });
@@ -82,11 +83,11 @@ export class WarehouseTransferController {
 
   @Patch(':id/restore')
   @RequirePermissions('warehouse-transfer.manage')
-  async restore(@Param('id') id: string, @Req() req: any) {
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.softDelete.restore({
       model: 'warehouseTransfer',
       id,
-      user: req.user || {},
+      user: req.user!,
       meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
     });
   }

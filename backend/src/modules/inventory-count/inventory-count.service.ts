@@ -1,6 +1,7 @@
 import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from '../warehouse/stock.service';
 import { CreateInvCountDto, SetItemsDto } from './dto/inventory-count.dto';
@@ -25,14 +26,15 @@ export class InventoryCountService {
   }
 
   async list(query?: { warehouseId?: string; status?: string; fromDate?: string; toDate?: string }) {
-    const where: any = {};
+    const where: Prisma.InventoryCountWhereInput = {};
     where.deletedAt = null;
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.InventoryCountWhereInput['status'];
     if (query?.fromDate || query?.toDate) {
-      where.countDate = {};
-      if (query.fromDate) where.countDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.countDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      where.countDate = dateFilter;
     }
     return this.prisma.inventoryCount.findMany({
       where,
@@ -125,7 +127,7 @@ export class InventoryCountService {
         status: 'DRAFT',
         notes: dto.notes,
         createdById: userId,
-        items: { create: items as any },
+        items: { create: items as unknown as Prisma.InventoryCountItemUncheckedCreateWithoutCountInput[] },
       },
       include: {
         warehouse: { select: { id: true, code: true, name: true } },

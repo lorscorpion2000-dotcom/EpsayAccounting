@@ -3,6 +3,20 @@ export type RecycleEntity = string;
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
+interface RecycleRow {
+  id: string;
+  deletedAt?: Date | null;
+  deletedBy?: string | null;
+  createdAt?: Date | null;
+  [key: string]: unknown;
+}
+
+interface RecycleDelegate {
+  findMany: (args: Record<string, unknown>) => Promise<RecycleRow[]>;
+  count: (args: Record<string, unknown>) => Promise<number>;
+  update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown>;
+}
+
 interface EntityDef {
   key: string;
   model: string;
@@ -10,7 +24,7 @@ interface EntityDef {
   codeField?: string;
   titleField?: string;
   amountField?: string;
-  linkFn?: (r: any) => string;
+  linkFn?: (r: RecycleRow) => string;
 }
 
 const ENTITIES: EntityDef[] = [
@@ -109,7 +123,7 @@ export class RecycleBinService {
 
     for (const def of targets) {
       try {
-        const client: any = (this.prisma as any)[def.model];
+        const client = (this.prisma as unknown as Record<string, RecycleDelegate | undefined>)[def.model];
         if (!client || typeof client.findMany !== 'function') continue;
 
         const rows = await client.findMany({
@@ -124,8 +138,8 @@ export class RecycleBinService {
             id: r.id,
             entity: def.key,
             entityLabel: def.label,
-            code: def.codeField ? r[def.codeField] : null,
-            title: def.titleField ? r[def.titleField] : null,
+            code: def.codeField ? (r[def.codeField] as string | null) : null,
+            title: def.titleField ? (r[def.titleField] as string | null) : null,
             amount: def.amountField ? Number(r[def.amountField] || 0) : null,
             deletedAt: r.deletedAt?.toISOString?.() || null,
             deletedBy: r.deletedBy || null,
@@ -148,7 +162,7 @@ export class RecycleBinService {
 
     for (const def of ENTITIES) {
       try {
-        const client: any = (this.prisma as any)[def.model];
+        const client = (this.prisma as unknown as Record<string, RecycleDelegate | undefined>)[def.model];
         if (!client || typeof client.count !== 'function') { result[def.key] = 0; continue; }
         const c = await client.count({ __withDeleted: true, where: { deletedAt: { not: null } } });
         result[def.key] = c;
@@ -165,10 +179,10 @@ export class RecycleBinService {
     const def = ENTITY_BY_KEY.get(entity);
     if (!def) throw new NotFoundException('نوع موجودیت نامعتبر: ' + entity);
 
-    const client: any = (this.prisma as any)[def.model];
+    const client = (this.prisma as unknown as Record<string, RecycleDelegate | undefined>)[def.model];
     if (!client) throw new NotFoundException('مدل پیدا نشد: ' + def.model);
 
-    const updateData: any = { deletedAt: null };
+    const updateData: Record<string, unknown> = { deletedAt: null };
     if (def.model === 'journalEntry') {
       updateData.deletedById = null;
     } else {

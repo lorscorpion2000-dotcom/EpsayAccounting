@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RecycleBinService, RecycleEntity } from './recycle-bin.service';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Recycle Bin - سوابق حذف')
 @ApiBearerAuth()
@@ -32,7 +33,7 @@ export class RecycleBinController {
 
   @Post(':entity/:id/restore')
   @RequirePermissions('accounting.manage')
-  restore(@Param('entity') entity: string, @Param('id') id: string, @Req() _req: any) {
+  restore(@Param('entity') entity: string, @Param('id') id: string, @Req() _req: AuthenticatedRequest) {
     return this.svc.restore(entity as RecycleEntity, id);
   }
 }
