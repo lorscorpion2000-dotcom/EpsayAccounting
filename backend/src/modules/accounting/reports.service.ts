@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import type { AccountLevel, AccountNature } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+
+type TrialBalanceAccum = { accountId: string; accountCode: string; accountName: string; accountLevel: AccountLevel; nature: AccountNature; debit: number; credit: number };
+type ProfitLossAccum = { accountId: string; code: string; name: string; level: AccountLevel; debit: number; credit: number };
+type BalanceSheetAccum = { accountId: string; code: string; name: string; level: AccountLevel; nature: AccountNature; debit: number; credit: number };
+type AgingPartnerAccum = { partnerId: string; partnerCode: string; partnerName: string; balance: number; current: number; days31_60: number; days61_90: number; days91_180: number; days180plus: number };
+type DetailedTBAccum = { accountId: string; accountCode: string; accountName: string; openingDebit: number; openingCredit: number; periodDebit: number; periodCredit: number };
 
 @Injectable()
 export class ReportsService {
@@ -9,26 +17,27 @@ export class ReportsService {
    * تراز آزمایشی ۴ ستونی
    */
   async trialBalance(query: { fiscalYearId: string; fromDate?: string; toDate?: string }) {
-    const where: any = {
-      journalEntry: {
-        fiscalYearId: query.fiscalYearId,
-        status: { in: ['POSTED', 'REVERSED'] },
-        deletedAt: null,
-      },
+    const jeFilter: Prisma.JournalEntryWhereInput = {
+      fiscalYearId: query.fiscalYearId,
+      status: { in: ['POSTED', 'REVERSED'] },
+      deletedAt: null,
     };
 
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+
+    const where: Prisma.JournalLineWhereInput = { journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
       include: { account: true },
     });
 
-    const byAccount = new Map<string, any>();
+    const byAccount = new Map<string, TrialBalanceAccum>();
     for (const line of lines) {
       const acc = line.account;
       if (!byAccount.has(acc.id)) {
@@ -42,7 +51,7 @@ export class ReportsService {
           credit: 0,
         });
       }
-      const row = byAccount.get(acc.id);
+      const row = byAccount.get(acc.id)!;
       row.debit += Number(line.debit);
       row.credit += Number(line.credit);
     }
@@ -88,16 +97,16 @@ export class ReportsService {
     });
     if (!account) return { account: null, rows: [], totals: null };
 
-    const where: any = {
-      accountId: query.accountId,
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] } },
-    };
+    const jeFilter: Prisma.JournalEntryWhereInput = { status: { in: ['POSTED', 'REVERSED'] } };
 
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+
+    const where: Prisma.JournalLineWhereInput = { accountId: query.accountId, journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
@@ -144,16 +153,17 @@ export class ReportsService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {
+    const where: Prisma.JournalEntryWhereInput = {
       fiscalYearId: query.fiscalYearId,
       status: { in: ['POSTED', 'REVERSED'] },
       deletedAt: null,
     };
 
     if (query.fromDate || query.toDate) {
-      where.entryDate = {};
-      if (query.fromDate) where.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      where.entryDate = dateFilter;
     }
 
     return this.prisma.journalEntry.findMany({
@@ -181,16 +191,15 @@ export class ReportsService {
     });
     if (!partner) return { partner: null, rows: [], totals: null };
 
-    const where: any = {
-      partnerId: query.partnerId,
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
-    };
-    if (query.fiscalYearId) where.journalEntry.fiscalYearId = query.fiscalYearId;
+    const jeFilter: Prisma.JournalEntryWhereInput = { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null };
+    if (query.fiscalYearId) jeFilter.fiscalYearId = query.fiscalYearId;
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+    const where: Prisma.JournalLineWhereInput = { partnerId: query.partnerId, journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
@@ -249,16 +258,15 @@ export class ReportsService {
     });
     if (!project) return { project: null, rows: [], totals: null };
 
-    const where: any = {
-      projectId: query.projectId,
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null },
-    };
-    if (query.fiscalYearId) where.journalEntry.fiscalYearId = query.fiscalYearId;
+    const jeFilter: Prisma.JournalEntryWhereInput = { status: { in: ['POSTED', 'REVERSED'] }, deletedAt: null };
+    if (query.fiscalYearId) jeFilter.fiscalYearId = query.fiscalYearId;
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+    const where: Prisma.JournalLineWhereInput = { projectId: query.projectId, journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
@@ -310,11 +318,8 @@ export class ReportsService {
     // نوع حساب: AR = دارایی دریافتنی AP = بدهی پرداختنی
     const codePrefix = query.type === 'AR' ? '1.1.2' : '2.1.1';
 
-    const where: any = {
-      journalEntry: { status: { in: ['POSTED', 'REVERSED'] } },
-      partnerId: { not: null },
-    };
-    if (query.fiscalYearId) where.journalEntry.fiscalYearId = query.fiscalYearId;
+    const jeFilter: Prisma.JournalEntryWhereInput = { status: { in: ['POSTED', 'REVERSED'] } };
+    if (query.fiscalYearId) jeFilter.fiscalYearId = query.fiscalYearId;
 
     // فیلتر بر اساس حساب: کد با prefix شروع شود
     const accounts = await this.prisma.account.findMany({
@@ -324,8 +329,12 @@ export class ReportsService {
     const accountIds = accounts.map((a) => a.id);
     if (accountIds.length === 0) return { rows: [], totals: null, asOfDate: asOf };
 
-    where.accountId = { in: accountIds };
-    where.journalEntry.entryDate = { lte: asOf };
+    jeFilter.entryDate = { lte: asOf };
+    const where: Prisma.JournalLineWhereInput = {
+      journalEntry: jeFilter,
+      partnerId: { not: null },
+      accountId: { in: accountIds },
+    };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
@@ -336,7 +345,7 @@ export class ReportsService {
     });
 
     // گروهبندی بر اساس partner
-    const byPartner = new Map<string, any>();
+    const byPartner = new Map<string, AgingPartnerAccum>();
     for (const l of lines) {
       const pid = l.partnerId!;
       if (!byPartner.has(pid)) {
@@ -352,7 +361,7 @@ export class ReportsService {
           days180plus: 0,
         });
       }
-      const row = byPartner.get(pid);
+      const row = byPartner.get(pid)!;
       const days = Math.floor((asOf.getTime() - new Date(l.journalEntry.entryDate).getTime()) / (1000 * 60 * 60 * 24));
       const amount = Number(l.debit) - Number(l.credit);
       row.balance += amount;
@@ -402,18 +411,20 @@ export class ReportsService {
   // ۵) سود و زیان (P&L)
   // ═══════════════════════════════════════════════════════════════
   async profitLoss(query: { fiscalYearId: string; fromDate?: string; toDate?: string }) {
-    const where: any = {
-      journalEntry: {
-        fiscalYearId: query.fiscalYearId,
-        status: { in: ['POSTED', 'REVERSED'] },
-        deletedAt: null,
-      },
+    const jeFilter: Prisma.JournalEntryWhereInput = {
+      fiscalYearId: query.fiscalYearId,
+      status: { in: ['POSTED', 'REVERSED'] },
+      deletedAt: null,
     };
+
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+
+    const where: Prisma.JournalLineWhereInput = { journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
@@ -421,7 +432,7 @@ export class ReportsService {
     });
 
     // گروهبندی توسط حساب
-    const byAccount = new Map<string, any>();
+    const byAccount = new Map<string, ProfitLossAccum>();
     for (const l of lines) {
       const acc = l.account;
       const first = acc.code.charAt(0);
@@ -437,7 +448,7 @@ export class ReportsService {
           credit: 0,
         });
       }
-      const row = byAccount.get(acc.id);
+      const row = byAccount.get(acc.id)!;
       row.debit += Number(l.debit);
       row.credit += Number(l.credit);
     }
@@ -485,23 +496,22 @@ export class ReportsService {
   // ۶) ترازنامه (Balance Sheet)
   // ═══════════════════════════════════════════════════════════════
   async balanceSheet(query: { fiscalYearId: string; asOfDate?: string }) {
-    const where: any = {
-      journalEntry: {
-        fiscalYearId: query.fiscalYearId,
-        status: { in: ['POSTED', 'REVERSED'] },
-        deletedAt: null,
-      },
+    const jeFilter: Prisma.JournalEntryWhereInput = {
+      fiscalYearId: query.fiscalYearId,
+      status: { in: ['POSTED', 'REVERSED'] },
+      deletedAt: null,
     };
     if (query.asOfDate) {
-      where.journalEntry.entryDate = { lte: new Date(query.asOfDate) };
+      jeFilter.entryDate = { lte: new Date(query.asOfDate) };
     }
+    const where: Prisma.JournalLineWhereInput = { journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
       include: { account: { select: { id: true, code: true, name: true, level: true, nature: true } } },
     });
 
-    const byAccount = new Map<string, any>();
+    const byAccount = new Map<string, BalanceSheetAccum>();
     for (const l of lines) {
       const acc = l.account;
       const first = acc.code.charAt(0);
@@ -518,7 +528,7 @@ export class ReportsService {
           credit: 0,
         });
       }
-      const row = byAccount.get(acc.id);
+      const row = byAccount.get(acc.id)!;
       row.debit += Number(l.debit);
       row.credit += Number(l.credit);
     }
@@ -621,25 +631,27 @@ export class ReportsService {
     }
 
     // گردش دوره
-    const where: any = {
-      journalEntry: {
-        fiscalYearId: query.fiscalYearId,
-        status: { in: ['POSTED', 'REVERSED'] },
-        deletedAt: null,
-      },
+    const jeFilter: Prisma.JournalEntryWhereInput = {
+      fiscalYearId: query.fiscalYearId,
+      status: { in: ['POSTED', 'REVERSED'] },
+      deletedAt: null,
     };
+
     if (query.fromDate || query.toDate) {
-      where.journalEntry.entryDate = {};
-      if (query.fromDate) where.journalEntry.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.journalEntry.entryDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      jeFilter.entryDate = dateFilter;
     }
+
+    const where: Prisma.JournalLineWhereInput = { journalEntry: jeFilter };
 
     const lines = await this.prisma.journalLine.findMany({
       where,
       include: { account: true },
     });
 
-    const byAccount = new Map<string, any>();
+    const byAccount = new Map<string, DetailedTBAccum>();
     // ابتدا حسابهای دارای مانده اولیه
     for (const [accId, v] of Object.entries(opening)) {
       byAccount.set(accId, {
@@ -665,7 +677,7 @@ export class ReportsService {
           periodCredit: 0,
         });
       }
-      const row = byAccount.get(l.accountId);
+      const row = byAccount.get(l.accountId)!;
       row.accountCode = l.account.code;
       row.accountName = l.account.name;
       row.periodDebit += Number(l.debit);
