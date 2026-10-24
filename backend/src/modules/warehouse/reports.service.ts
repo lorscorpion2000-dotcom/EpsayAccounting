@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -15,12 +16,13 @@ export class WarehouseReportsService {
     });
     if (!item) return { item: null, rows: [], totals: null };
 
-    const where: any = { itemId: query.itemId };
+    const where: Prisma.StockMovementWhereInput = { itemId: query.itemId };
     if (query.warehouseId) where.warehouseId = query.warehouseId;
     if (query.fromDate || query.toDate) {
-      where.movementDate = {};
-      if (query.fromDate) where.movementDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.movementDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) dateFilter.lte = new Date(query.toDate);
+      where.movementDate = dateFilter;
     }
 
     const movements = await this.prisma.stockMovement.findMany({
@@ -68,9 +70,9 @@ export class WarehouseReportsService {
    * موجودی جاری همه انبارها
    */
   async currentInventory(query?: { warehouseId?: string; type?: string }) {
-    const where: any = { quantity: { gt: 0 } };
+    const where: Prisma.StockWhereInput = { quantity: { gt: 0 } };
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
-    if (query?.type) where.item = { type: query.type };
+    if (query?.type) where.item = { type: query.type as Prisma.ItemWhereInput['type'] };
 
     return this.prisma.stock.findMany({
       where,

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;;;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
@@ -11,6 +11,17 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { ReceiptStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  roles?: string[];
+  permissions?: string[];
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
+type AdminUser = Parameters<SoftDeleteService['adminDelete']>[0]['user'];
 
 @ApiTags('Goods Receipts - رسیدهای انبار')
 @ApiBearerAuth()
@@ -93,9 +104,10 @@ export class ReceiptsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'goodsReceipt',
       id,
@@ -103,22 +115,23 @@ export class ReceiptsController {
       reason: body?.reason || '',
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('warehouse.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'goodsReceipt',
       id,
       user,
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';;;;
@@ -8,6 +8,17 @@ import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  roles?: string[];
+  permissions?: string[];
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
+type AdminUser = Parameters<SoftDeleteService['adminDelete']>[0]['user'];
 @ApiTags('Warehouses - انبارها')
 @ApiBearerAuth()
 @Controller('warehouses')
@@ -43,9 +54,9 @@ export class WarehousesController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
-    const roles = (user?.roles || []) as string[];
+    const roles = user?.roles || [];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
     return this.s.remove(id, { force: wantForce && isAdmin, userId: user?.id });
@@ -60,9 +71,10 @@ export class WarehousesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'warehouse',
       id,
@@ -70,22 +82,23 @@ export class WarehousesController {
       reason: body?.reason || '',
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('warehouse.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'warehouse',
       id,
       user,
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }

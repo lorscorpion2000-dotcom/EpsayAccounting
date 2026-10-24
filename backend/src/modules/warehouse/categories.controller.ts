@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';;;;
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -8,6 +8,17 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  roles?: string[];
+  permissions?: string[];
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
+type AdminUser = Parameters<SoftDeleteService['adminDelete']>[0]['user'];
 
 @ApiTags('Categories - دسته‌بندی کالا')
 @ApiBearerAuth()
@@ -60,9 +71,10 @@ export class CategoriesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'itemCategory',
       id,
@@ -70,22 +82,23 @@ export class CategoriesController {
       reason: body?.reason || '',
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('warehouse.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'itemCategory',
       id,
       user,
       meta: {
         ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        userAgent: req.headers['user-agent'],
       },
     });
   }
