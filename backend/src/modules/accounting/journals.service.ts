@@ -6,10 +6,14 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { FiscalYearsService } from './fiscal-years.service';
-import { CreateJournalDto } from './dto/create-journal.dto';
+import { CreateJournalDto, JournalLineDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 
 const D = Prisma.Decimal;
+
+type JournalWithLines = Prisma.JournalEntryGetPayload<{
+  include: { lines: { include: { account: true } } };
+}>;
 
 @Injectable()
 export class JournalsService {
@@ -27,13 +31,14 @@ export class JournalsService {
     page?: number;
     pageSize?: number;
   }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.JournalEntryWhereInput = { deletedAt: null };
     if (query?.fiscalYearId) where.fiscalYearId = query.fiscalYearId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.JournalEntryWhereInput['status'];
     if (query?.fromDate || query?.toDate) {
-      where.entryDate = {};
-      if (query.fromDate) where.entryDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.entryDate.lte = new Date(query.toDate);
+      const entryDateFilter: Prisma.DateTimeFilter = {};
+      if (query.fromDate) entryDateFilter.gte = new Date(query.fromDate);
+      if (query.toDate) entryDateFilter.lte = new Date(query.toDate);
+      where.entryDate = entryDateFilter;
     }
     if (query?.search) {
       where.OR = [
@@ -92,7 +97,7 @@ export class JournalsService {
     return this.fiscalYears.assertPeriodOpen(entryDate);
   }
 
-  private async validateAccounts(lines: any[]) {
+  private async validateAccounts(lines: JournalLineDto[]) {
     const ids = [...new Set(lines.map((l) => l.accountId))];
     const accounts = await this.prisma.account.findMany({
       where: { id: { in: ids } },
@@ -109,7 +114,7 @@ export class JournalsService {
     }
   }
 
-  private validateAndCompute(lines: any[]) {
+  private validateAndCompute(lines: JournalLineDto[]) {
     if (!lines || lines.length < 2) {
       throw new BadRequestException('Entry must have at least two lines');
     }
@@ -266,7 +271,7 @@ export class JournalsService {
       // B2.3: period lock
       await this.fiscalYears.assertPeriodOpen(entry.entryDate, tx);
 
-      const data: any = {};
+      const data: Prisma.JournalEntryUpdateInput = {};
       if (dto.description !== undefined) data.description = dto.description;
       if (dto.reference !== undefined) data.reference = dto.reference;
 
@@ -464,7 +469,7 @@ export class JournalsService {
     meta: { ipAddress?: string; userAgent?: string } = {},
   ) {
     // 1) Load journal with lines
-    const journal: any = await this.prisma.journalEntry.findUnique({
+    const journal: JournalWithLines | null = await this.prisma.journalEntry.findUnique({
       where: { id },
       include: { lines: { include: { account: true } } },
     });
@@ -474,7 +479,7 @@ export class JournalsService {
 
     // B2.3: period lock
     await this.fiscalYears.assertPeriodOpen(journal.entryDate);
-    if ((journal as any).deletedAt) {
+    if (journal.deletedAt) {
       throw new Error('این سند قبلاً حذف شده است');
     }
 
@@ -489,7 +494,7 @@ export class JournalsService {
         description: journal.description,
         fiscalYearId: journal.fiscalYearId,
       },
-      lines: (journal.lines || []).map((l: any) => ({
+      lines: (journal.lines || []).map((l) => ({
         accountId: l.accountId,
         accountCode: l.account?.code,
         accountName: l.account?.name,
@@ -499,8 +504,8 @@ export class JournalsService {
       })),
     };
 
-    const totalDebit = (journal.lines || []).reduce((s: number, l: any) => s + Number(l.debit || 0), 0);
-    const totalCredit = (journal.lines || []).reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
+    const totalDebit = (journal.lines || []).reduce((s, l) => s + Number(l.debit || 0), 0);
+    const totalCredit = (journal.lines || []).reduce((s, l) => s + Number(l.credit || 0), 0);
 
     await this.prisma.journalDeletionLog.create({
       data: {
@@ -512,8 +517,8 @@ export class JournalsService {
         description: journal.description,
         totalDebit: totalDebit,
         totalCredit: totalCredit,
-        linesSnapshot: snapshot.lines as any,
-        journalSnapshot: snapshot.journal as any,
+        linesSnapshot: snapshot.lines as unknown as Prisma.InputJsonValue,
+        journalSnapshot: snapshot.journal as unknown as Prisma.InputJsonValue,
         reason: reason,
         deletedBy: user.id,
         ipAddress: meta.ipAddress,
@@ -527,13 +532,13 @@ export class JournalsService {
       data: {
         deletedAt: new Date(),
         deletedById: user.id,
-      } as any,
+      },
     });
 
     return {
       ok: true,
       journalId: journal.id,
-      journalNo: journal.no,
+      journalNo: journal.code,
       snapshotStored: true,
     };
   }
@@ -546,13 +551,13 @@ export class JournalsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.journalEntry.findUnique({ where: { id } });
+    const existing = await this.prisma.journalEntry.findUnique({ where: { id } });
     if (!existing) throw new Error('سند یافت نشد');
     if (!existing.deletedAt) throw new Error('سند حذف نشده است');
 
     await this.prisma.journalEntry.update({
       where: { id },
-      data: { deletedAt: null, deletedById: null } as any,
+      data: { deletedAt: null, deletedById: null },
     });
 
     return { ok: true, id, restored: true, by: userId || null };
@@ -567,7 +572,7 @@ export class JournalsService {
     reason: string,
     meta: { ipAddress?: string; userAgent?: string } = {},
   ) {
-    const journal: any = await this.prisma.journalEntry.findUnique({
+    const journal: JournalWithLines | null = await this.prisma.journalEntry.findUnique({
       where: { id },
       include: { lines: { include: { account: true } } },
     });
@@ -588,7 +593,7 @@ export class JournalsService {
         totalDebit: Number(journal.totalDebit || 0),
         totalCredit: Number(journal.totalCredit || 0),
       },
-      lines: (journal.lines || []).map((l: any) => ({
+      lines: (journal.lines || []).map((l) => ({
         accountId: l.accountId,
         accountCode: l.account?.code,
         accountName: l.account?.name,
@@ -598,8 +603,8 @@ export class JournalsService {
       })),
     };
 
-    const totalDebit = (journal.lines || []).reduce((s: number, l: any) => s + Number(l.debit || 0), 0);
-    const totalCredit = (journal.lines || []).reduce((s: number, l: any) => s + Number(l.credit || 0), 0);
+    const totalDebit = (journal.lines || []).reduce((s, l) => s + Number(l.debit || 0), 0);
+    const totalCredit = (journal.lines || []).reduce((s, l) => s + Number(l.credit || 0), 0);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.journalDeletionLog.create({
@@ -612,8 +617,8 @@ export class JournalsService {
           description: journal.description,
           totalDebit,
           totalCredit,
-          linesSnapshot: snapshot.lines as any,
-          journalSnapshot: snapshot.journal as any,
+          linesSnapshot: snapshot.lines as unknown as Prisma.InputJsonValue,
+          journalSnapshot: snapshot.journal as unknown as Prisma.InputJsonValue,
           reason: reason || 'حذف کامل توسط مدیر',
           deletedBy: user.id,
           ipAddress: meta.ipAddress,
