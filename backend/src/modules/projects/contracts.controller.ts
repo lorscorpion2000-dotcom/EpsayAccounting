@@ -9,6 +9,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Contracts - قراردادها')
 @ApiBearerAuth()
@@ -58,7 +59,7 @@ export class ContractsController {
 
   @Delete(':id/admin')
   @RequirePermissions('projects.update')
-  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: AuthenticatedRequest) {
     return this.contracts.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],

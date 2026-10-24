@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateWbsDto } from './dto/create-wbs.dto';
 import { UpdateWbsDto } from './dto/update-wbs.dto';
+
+type WbsItemRow = Prisma.WbsItemGetPayload<{}>;
+type WbsTreeNode = WbsItemRow & { children: WbsTreeNode[] };
 
 @Injectable()
 export class WbsService {
@@ -38,10 +42,10 @@ export class WbsService {
       orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
 
-    const map = new Map<string, any>();
+    const map = new Map<string, WbsTreeNode>();
     items.forEach((it) => map.set(it.id, { ...it, children: [] }));
 
-    const roots: any[] = [];
+    const roots: WbsTreeNode[] = [];
     map.forEach((item) => {
       if (item.parentId) {
         const parent = map.get(item.parentId);
@@ -69,7 +73,7 @@ export class WbsService {
         ? Number(dto.quantity) * Number(dto.unitPrice)
         : null;
 
-    const unitId = await this.resolveUnitId(dto.unit as any);
+    const unitId = await this.resolveUnitId(dto.unit as string | null | undefined);
     return this.prisma.wbsItem.create({
       data: {
         projectId: dto.projectId,
@@ -97,7 +101,7 @@ export class WbsService {
       const p = dto.unitPrice ?? Number(existing.unitPrice ?? 0);
       totalPrice = q * p;
     }
-    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit as any) : undefined;
+    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit as string | null | undefined) : undefined;
     return this.prisma.wbsItem.update({
       where: { id },
       data: {

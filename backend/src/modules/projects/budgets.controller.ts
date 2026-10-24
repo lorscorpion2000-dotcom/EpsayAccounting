@@ -9,6 +9,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Budgets - بودجه')
 @ApiBearerAuth()
@@ -61,7 +62,7 @@ export class BudgetsController {
   adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.budgets.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
