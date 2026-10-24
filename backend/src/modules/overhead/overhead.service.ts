@@ -1,6 +1,7 @@
 import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateOverheadDto, UpdateOverheadDto, PreviewDto } from './dto/overhead.dto';
 import { FiscalYearsService } from '../accounting/fiscal-years.service';
@@ -25,9 +26,9 @@ export class OverheadService {
   }
 
   async list(query?: { fiscalYearId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.OverheadAllocationWhereInput = {};
     if (query?.fiscalYearId) where.fiscalYearId = query.fiscalYearId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.OverheadAllocationWhereInput['status'];
     where.deletedAt = null;
     return this.prisma.overheadAllocation.findMany({
       where,
@@ -77,7 +78,7 @@ export class OverheadService {
 
     const projectIds = projects.map(p => p.id);
     const weights: Record<string, number> = {};
-    const details: Record<string, any> = {};
+    const details: Record<string, Record<string, unknown>> = {};
 
     if (dto.method === 'PERCENT_CONTRACT') {
       const contracts = await this.prisma.contract.groupBy({
@@ -160,7 +161,7 @@ export class OverheadService {
       projectId: it.projectId,
       percent: it.percent,
       amount: Math.round((dto.totalAmount * Number(it.percent)) / 100),
-      notes: (it as any).notes,
+      notes: (it as { notes?: string }).notes,
     }));
 
     const sumAmount = enriched.reduce((s, it) => s + it.amount, 0);
@@ -172,13 +173,13 @@ export class OverheadService {
         code,
         fiscalYearId: dto.fiscalYearId,
         periodMonth: dto.periodMonth,
-        method: dto.method as any,
+        method: dto.method as unknown as Prisma.OverheadAllocationUncheckedCreateInput['method'],
         totalAmount: dto.totalAmount,
         sourceAccountId: dto.sourceAccountId,
         destAccountId: dto.destAccountId,
         description: dto.description,
         status: 'DRAFT',
-        items: { create: enriched as any },
+        items: { create: enriched as unknown as Prisma.OverheadAllocationItemUncheckedCreateWithoutAllocationInput[] },
       },
       include: {
         items: {
@@ -193,7 +194,7 @@ export class OverheadService {
     const a = await this.get(id);
     if (a.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
 
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if (dto.totalAmount !== undefined) data.totalAmount = dto.totalAmount;
     if (dto.method !== undefined) data.method = dto.method;
     if (dto.description !== undefined) data.description = dto.description;
@@ -207,14 +208,14 @@ export class OverheadService {
         projectId: it.projectId,
         percent: it.percent,
         amount: Math.round((total * Number(it.percent)) / 100),
-        notes: (it as any).notes,
+        notes: (it as { notes?: string }).notes,
       }));
       data.items = { create: enriched };
     }
 
     return this.prisma.overheadAllocation.update({
       where: { id },
-      data,
+      data: data as unknown as Prisma.OverheadAllocationUncheckedUpdateInput,
       include: {
         items: {
           include: { project: { select: { id: true, code: true, name: true } } },
@@ -259,7 +260,7 @@ export class OverheadService {
         description: 'تسهیم سربار ستاد - ' + a.code,
         debit: 0,
         credit: totalDebit,
-        projectId: null as any,
+        projectId: null as string | null,
         sortOrder: 9999,
       },
     ];
@@ -318,7 +319,7 @@ export class OverheadService {
   }
 
   async stats(fiscalYearId?: string) {
-    const where: any = {};
+    const where: Prisma.OverheadAllocationWhereInput = {};
     if (fiscalYearId) where.fiscalYearId = fiscalYearId;
     const [total, drafts, posted, sum] = await Promise.all([
       this.prisma.overheadAllocation.count({ where }),

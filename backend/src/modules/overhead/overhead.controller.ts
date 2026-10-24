@@ -10,6 +10,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { OverheadAllocationStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Overhead - تسهیم سربار ستاد')
 @ApiBearerAuth()
@@ -51,7 +52,7 @@ export class OverheadController {
 
   @Delete(':id')
   @RequirePermissions('overhead.manage')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.remove(id, req.user?.id);
   }
 
@@ -74,9 +75,9 @@ export class OverheadController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'overheadAllocation',
       id,
@@ -91,8 +92,8 @@ export class OverheadController {
 
   @Patch(':id/restore')
   @RequirePermissions('overhead.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'overheadAllocation',
       id,
