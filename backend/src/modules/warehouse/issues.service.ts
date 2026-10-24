@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { StockService } from './stock.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -20,11 +21,11 @@ export class IssuesService {
   }
 
   async findAll(query?: { warehouseId?: string; projectId?: string; status?: string }) {
-    const where: any = {};
+    const where: Prisma.GoodsIssueWhereInput = {};
     where.deletedAt = null;
     if (query?.warehouseId) where.warehouseId = query.warehouseId;
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.GoodsIssueWhereInput['status'];
     return this.prisma.goodsIssue.findMany({
       where,
       include: {
@@ -60,7 +61,7 @@ export class IssuesService {
   /**
    * اعتبارسنجی موجودی
    */
-  private async validateStock(warehouseId: string, items: any[], tx?: any) {
+  private async validateStock(warehouseId: string, items: ReadonlyArray<{ itemId: string; quantity: number | Prisma.Decimal }>, tx?: Prisma.TransactionClient) {
     const prisma = tx || this.prisma;
     for (const it of items) {
       const stock = await prisma.stock.findUnique({
@@ -115,7 +116,7 @@ export class IssuesService {
     const r = await this.findOne(id);
     if (r.status !== 'DRAFT') throw new BadRequestException('فقط حواله پیش‌نویس قابل ویرایش است');
 
-    const data: any = {};
+    const data: Prisma.GoodsIssueUncheckedUpdateInput = {};
     if (dto.warehouseId !== undefined) data.warehouseId = dto.warehouseId;
     if (dto.projectId !== undefined) data.projectId = dto.projectId;
     if (dto.wbsItemId !== undefined) data.wbsItemId = dto.wbsItemId;
@@ -221,7 +222,7 @@ export class IssuesService {
 
     return this.prisma.$transaction(async (tx) => {
       let totalValue = 0;
-      const jeLines: any[] = [];
+      const jeLines: Array<{ accountId: string; debit: number; credit: number; projectId?: string; description: string }> = [];
 
       for (const it of r.items) {
         const stock = await tx.stock.findUnique({
@@ -260,7 +261,7 @@ export class IssuesService {
             debit: lineValue,
             credit: 0,
             projectId: r.projectId || undefined,
-            description: 'مصرف ' + ((it as any).item?.name || 'کالا') + ' طبق حواله ' + r.code,
+            description: 'مصرف ' + (it.item?.name || 'کالا') + ' طبق حواله ' + r.code,
           });
         }
       }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -25,9 +26,11 @@ export class CategoriesService {
       where: { deletedAt: null },
       include: { _count: { select: { items: true } } },
     });
-    const map = new Map<string, any>();
-    cats.forEach((c) => map.set(c.id, { ...c, children: [] }));
-    const roots: any[] = [];
+    type CatRow = (typeof cats)[number];
+    type CategoryNode = CatRow & { children: CatRow[] };
+    const map = new Map<string, CategoryNode>();
+    cats.forEach((c) => map.set(c.id, { ...c, children: [] } as CategoryNode));
+    const roots: CategoryNode[] = [];
     map.forEach((c) => {
       if (c.parentId) {
         const p = map.get(c.parentId);
@@ -52,7 +55,7 @@ export class CategoriesService {
       data: {
         code,
         name: dto.name,
-        type: (dto.type as any) || 'MATERIAL',
+        type: (dto.type as unknown as Prisma.ItemCategoryUncheckedCreateInput['type']) || 'MATERIAL',
         parentId: dto.parentId,
         description: dto.description,
       },
@@ -65,7 +68,7 @@ export class CategoriesService {
       where: { id },
       data: {
         name: dto.name,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.ItemCategoryUncheckedUpdateInput['type'],
         parentId: dto.parentId,
         description: dto.description,
       },

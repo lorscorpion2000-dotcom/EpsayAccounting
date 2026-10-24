@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -29,9 +30,9 @@ export class ItemsService {
   }
 
   async findAll(query?: { type?: string; categoryId?: string; search?: string; active?: boolean }) {
-    const where: any = {};
+    const where: Prisma.ItemWhereInput = {};
     where.deletedAt = null;
-    if (query?.type) where.type = query.type;
+    if (query?.type) where.type = query.type as Prisma.ItemWhereInput['type'];
     if (query?.categoryId) where.categoryId = query.categoryId;
     if (query?.active !== undefined) where.isActive = query.active;
     if (query?.search) {
@@ -83,12 +84,12 @@ export class ItemsService {
 
   async create(dto: CreateItemDto) {
     const code = await this.generateCode();
-    const unitId = await this.resolveUnitId(dto.unit as any);
+    const unitId = await this.resolveUnitId(dto.unit);
     return this.prisma.item.create({
       data: {
         code,
         name: dto.name,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.ItemUncheckedCreateInput['type'],
         unitId,
         categoryId: dto.categoryId,
         minStock: dto.minStock,
@@ -103,12 +104,12 @@ export class ItemsService {
 
   async update(id: string, dto: UpdateItemDto) {
     await this.findOne(id);
-    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit as any) : undefined;
+    const unitId = dto.unit !== undefined ? await this.resolveUnitId(dto.unit) : undefined;
     return this.prisma.item.update({
       where: { id },
       data: {
         name: dto.name,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.ItemUncheckedCreateInput['type'],
         ...(unitId !== undefined && { unitId }),
         categoryId: dto.categoryId,
         minStock: dto.minStock,

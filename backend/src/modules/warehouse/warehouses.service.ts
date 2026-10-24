@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
@@ -14,7 +15,7 @@ export class WarehousesService {
   }
 
   async findAll(query?: { active?: boolean; projectId?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.WarehouseWhereInput = { deletedAt: null };
     if (query?.active !== undefined) where.isActive = query.active;
     if (query?.projectId) where.projectId = query.projectId;
     return this.prisma.warehouse.findMany({
@@ -39,7 +40,7 @@ export class WarehousesService {
       data: {
         code,
         name: dto.name,
-        type: (dto.type as any) || 'MAIN',
+        type: (dto.type as unknown as Prisma.WarehouseUncheckedCreateInput['type']) || 'MAIN',
         projectId: dto.projectId,
         location: dto.location,
         managerId: dto.managerId,
@@ -55,7 +56,7 @@ export class WarehousesService {
       where: { id },
       data: {
         name: dto.name,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.WarehouseUncheckedUpdateInput['type'],
         projectId: dto.projectId,
         location: dto.location,
         managerId: dto.managerId,
