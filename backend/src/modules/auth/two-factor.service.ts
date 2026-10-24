@@ -22,7 +22,7 @@ interface OtpLibShape {
   };
 }
 
-interface RecoveryCodeEntry {
+export interface RecoveryCodeEntry {
   hash: string;
   used: boolean;
   usedAt: string | null;

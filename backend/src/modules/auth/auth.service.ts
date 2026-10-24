@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { validatePassword } from '../../common/validators/password.validator';
 import { AuditService } from '../audit/audit.service';
 import { TwoFactorService } from './two-factor.service';
+import type { RecoveryCodeEntry } from './two-factor.service';
 
 @Injectable()
 export class AuthService {
@@ -275,7 +276,7 @@ export class AuthService {
   }
 
   async updatePreferences(userId: string, themePreference?: string) {
-    const data: any = {};
+    const data: Prisma.UserUpdateInput = {};
     if (themePreference !== undefined) data.themePreference = themePreference;
 
     const user = await this.prisma.user.update({
@@ -385,13 +386,13 @@ export class AuthService {
 
     if (!ok && user.twoFactorRecoveryCodes) {
       const res = await this.twoFactor.verifyAndConsumeRecoveryCode(
-        user.twoFactorRecoveryCodes as any[],
+        user.twoFactorRecoveryCodes as unknown as RecoveryCodeEntry[],
         code,
       );
       if (res.ok && res.newCodes) {
         await this.prisma.user.update({
           where: { id: user.id },
-          data: { twoFactorRecoveryCodes: res.newCodes as any },
+          data: { twoFactorRecoveryCodes: res.newCodes as unknown as Prisma.InputJsonValue },
         });
         ok = true;
         usedRecovery = true;
@@ -502,7 +503,7 @@ export class AuthService {
       data: {
         twoFactorEnabled: true,
         twoFactorEnabledAt: new Date(),
-        twoFactorRecoveryCodes: hashed as any,
+        twoFactorRecoveryCodes: hashed as unknown as Prisma.InputJsonValue,
       },
     });
 
