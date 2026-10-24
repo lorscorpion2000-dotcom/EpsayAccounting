@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { startOfLocalDay } from '../../common/utils/date.util';
 
@@ -14,6 +15,13 @@ interface ScanRule {
   linkPrefix: string;
   title: string;
   label: string;
+}
+
+interface ScannableDelegate {
+  findMany: (args: {
+    where: Record<string, unknown>;
+    select: Record<string, boolean>;
+  }) => Promise<Record<string, unknown>[]>;
 }
 
 @Injectable()
@@ -39,8 +47,8 @@ export class NotificationService {
     try {
       const r = await this.scan();
       this.logger.log('Scan done: ' + r.created + ' created, ' + r.skipped + ' skipped');
-    } catch (e: any) {
-      this.logger.error('Scan failed: ' + e.message);
+    } catch (e) {
+      this.logger.error('Scan failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -49,35 +57,36 @@ export class NotificationService {
     let created = 0, skipped = 0;
     for (const rule of this.RULES) {
       try {
-        const model = (this.prisma as any)[rule.entity.charAt(0).toLowerCase() + rule.entity.slice(1)];
+        const prismaRecord = this.prisma as unknown as Record<string, ScannableDelegate | undefined>;
+        const model = prismaRecord[rule.entity.charAt(0).toLowerCase() + rule.entity.slice(1)];
         if (!model || typeof model.findMany !== 'function') { continue; }
-        const where: any = {};
+        const where: Record<string, unknown> = {};
         where[rule.field] = { gte: now, lte: addDays(now, rule.daysAhead) };
         const items = await model.findMany({ where, select: { id: true, [rule.field]: true } });
         for (const item of items) {
-          const dueDate: Date = item[rule.field];
+          const dueDate = item[rule.field] as Date;
           const daysLeft = daysBetween(dueDate, now);
           const severity = daysLeft <= 3 ? 'DANGER' : daysLeft <= 7 ? 'WARNING' : 'INFO';
           const msg = rule.label + ' تا ' + daysLeft + ' روز دیگر منقضی می‌شود';
           try {
             await this.prisma.notification.upsert({
-              where: { type_entity_entityId: { type: rule.type, entity: rule.entity, entityId: item.id } },
+              where: { type_entity_entityId: { type: rule.type, entity: rule.entity, entityId: String(item.id) } },
               update: { dueDate, daysLeft, severity, message: msg },
               create: {
-                type: rule.type, entity: rule.entity, entityId: item.id,
+                type: rule.type, entity: rule.entity, entityId: String(item.id),
                 title: rule.title, message: msg,
-                link: rule.linkPrefix + '/' + item.id,
+                link: rule.linkPrefix + '/' + String(item.id),
                 dueDate, daysLeft, severity,
               },
             });
             created++;
-          } catch (e: any) {
-            this.logger.warn('upsert ' + rule.type + '/' + item.id + ': ' + e.message);
+          } catch (e) {
+            this.logger.warn('upsert ' + rule.type + '/' + String(item.id) + ': ' + (e instanceof Error ? e.message : String(e)));
             skipped++;
           }
         }
-      } catch (e: any) {
-        this.logger.warn('rule ' + rule.type + ' failed: ' + e.message);
+      } catch (e) {
+        this.logger.warn('rule ' + rule.type + ' failed: ' + (e instanceof Error ? e.message : String(e)));
         skipped++;
       }
     }
@@ -85,7 +94,7 @@ export class NotificationService {
   }
 
   async list(params: { unreadOnly?: boolean; limit?: number }) {
-    const where: any = {};
+    const where: Prisma.NotificationWhereInput = {};
     if (params.unreadOnly) where.isRead = false;
     return this.prisma.notification.findMany({
       where,
