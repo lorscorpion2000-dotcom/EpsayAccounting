@@ -12,6 +12,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { ReasonDto } from '../../common/dto';
 import { LegalContractKind, LegalContractStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -51,7 +52,7 @@ export class ContractsController {
 
   @Post(':id/cancel')
   @RequirePermissions('contracts.cancel')
-  cancel(@Param('id') id: string, @Body() dto: CancelLegalContractDto, @Req() req: any) {
+  cancel(@Param('id') id: string, @Body() dto: CancelLegalContractDto, @Req() req: AuthenticatedRequest) {
     return this.svc.cancel(id, dto.reason, req.user?.id);
   }
 
@@ -148,7 +149,7 @@ export class ContractsController {
 
   @Delete(':id')
   @RequirePermissions('contracts.delete')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.svc.remove(id, req.user?.id);
   }
 
@@ -161,9 +162,9 @@ export class ContractsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'legalContract',
       id,
@@ -178,8 +179,8 @@ export class ContractsController {
 
   @Patch(':id/restore')
   @RequirePermissions('contracts.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'legalContract',
       id,

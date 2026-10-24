@@ -7,6 +7,7 @@ import { CreateLegalPartyDto } from './dto/create-party.dto';
 import { ContractService } from './services/contract.service';
 import { LegalPartyService } from './services/legal-party.service';
 import { LegalTemplateService } from './services/legal-template.service';
+import type { DeleteMeta } from '../../common/services/soft-delete.service';
 
 /**
  * Facade برای سازگاری با controller.
@@ -25,7 +26,7 @@ export class ContractsService {
   ) {}
 
   // ─── Contracts ───
-  list(q?: Parameters<ContractService['list']>[0]) { return this.contract.list(q as any); }
+  list(q?: Parameters<ContractService['list']>[0]) { return this.contract.list(q!); }
   listByParty(id: string, kind?: string) { return this.contract.listByParty(id, kind); }
   get(id: string) { return this.contract.get(id); }
   create(dto: CreateLegalContractDto) { return this.contract.create(dto); }
@@ -36,7 +37,7 @@ export class ContractsService {
   complete(id: string) { return this.contract.complete(id); }
   remove(id: string, userId?: string) { return this.contract.remove(id, userId); }
   restore(id: string, userId?: string) { return this.contract.restore(id, userId); }
-  adminDelete(id: string, userId?: string, reason?: string, meta?: any) {
+  adminDelete(id: string, userId?: string, reason?: string, meta?: DeleteMeta) {
     return this.contract.adminDelete(id, userId, reason, meta);
   }
   listDeleted(take = 100, skip = 0) { return this.contract.listDeleted(take, skip); }
