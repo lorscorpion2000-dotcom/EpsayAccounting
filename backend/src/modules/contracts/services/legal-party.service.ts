@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { CreateLegalPartyDto } from '../dto/create-party.dto';
 
@@ -7,7 +8,7 @@ export class LegalPartyService {
   constructor(private prisma: PrismaService) {}
 
   async listParties(search?: string) {
-    const where: any = {};
+    const where: Prisma.LegalContractPartyWhereInput = {};
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
@@ -30,7 +31,7 @@ export class LegalPartyService {
   async createParty(dto: CreateLegalPartyDto) {
     return this.prisma.legalContractParty.create({
       data: {
-        kind: dto.kind as any,
+        kind: dto.kind as unknown as Prisma.LegalContractPartyUncheckedCreateInput['kind'],
         fullName: dto.fullName,
         fatherName: dto.fatherName,
         nationalId: dto.nationalId || null,
@@ -40,7 +41,7 @@ export class LegalPartyService {
         mobilePhone: dto.mobilePhone,
         landlinePhone: dto.landlinePhone,
         email: dto.email,
-        maritalStatus: dto.maritalStatus as any,
+        maritalStatus: dto.maritalStatus as unknown as Prisma.LegalContractPartyUncheckedCreateInput['maritalStatus'],
         childrenCount: dto.childrenCount,
         education: dto.education,
         job: dto.job,
@@ -57,8 +58,29 @@ export class LegalPartyService {
 
   async updateParty(id: string, dto: CreateLegalPartyDto) {
     await this.getParty(id);
-    const data: any = { ...dto };
-    if (dto.birthDate) data.birthDate = new Date(dto.birthDate);
+    const data: Prisma.LegalContractPartyUncheckedUpdateInput = {
+      kind: dto.kind as unknown as Prisma.LegalContractPartyUncheckedUpdateInput['kind'],
+      fullName: dto.fullName,
+      fatherName: dto.fatherName,
+      nationalId: dto.nationalId || null,
+      economicCode: dto.economicCode,
+      registrationNumber: dto.registrationNumber,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      mobilePhone: dto.mobilePhone,
+      landlinePhone: dto.landlinePhone,
+      email: dto.email,
+      maritalStatus: dto.maritalStatus as unknown as Prisma.LegalContractPartyUncheckedUpdateInput['maritalStatus'],
+      childrenCount: dto.childrenCount,
+      education: dto.education,
+      job: dto.job,
+      insuranceNumber: dto.insuranceNumber,
+      address: dto.address,
+      postalCode: dto.postalCode,
+      bankName: dto.bankName,
+      bankAccount: dto.bankAccount,
+      bankSheba: dto.bankSheba,
+      notes: dto.notes,
+    };
     return this.prisma.legalContractParty.update({ where: { id }, data });
   }
 
@@ -79,8 +101,8 @@ export class LegalPartyService {
       });
     }
 
-    const partyData = {
-      kind: 'INDIVIDUAL' as any,
+    const partyData: Prisma.LegalContractPartyUncheckedCreateInput = {
+      kind: 'INDIVIDUAL' as unknown as Prisma.LegalContractPartyUncheckedCreateInput['kind'],
       fullName: partner.name,
       fatherName: partner.fatherName || null,
       nationalId,
@@ -96,7 +118,7 @@ export class LegalPartyService {
       job: emp.position || null,
       education: emp.education || null,
       birthDate: emp.birthDate || null,
-      maritalStatus: (emp.maritalStatus as any) || null,
+      maritalStatus: emp.maritalStatus || null,
       childrenCount: emp.childrenCount || null,
     };
 
@@ -121,20 +143,20 @@ export class LegalPartyService {
       existing = await this.prisma.legalContractParty.findFirst({ where: { nationalId } });
     }
 
-    const partyData: any = {
-      kind: 'COMPANY' as any,
+    const partyData: Prisma.LegalContractPartyUncheckedCreateInput = {
+      kind: 'COMPANY' as unknown as Prisma.LegalContractPartyUncheckedCreateInput['kind'],
       fullName: p.name,
-      fatherName: (p as any).fatherName || null,
+      fatherName: p.fatherName || null,
       nationalId,
       postalCode: p.postalCode || null,
       mobilePhone: p.phone || null,
       email: p.email || null,
       address: p.address || null,
-      job: (p as any).jobDescription || null,
+      job: p.jobDescription || null,
       bankName: null,
-      bankAccount: (p as any).bankAccountNumber || null,
-      bankSheba: (p as any).shabaNumber || null,
-      notes: (p as any).aliasName ? 'نام مستعار: ' + (p as any).aliasName : null,
+      bankAccount: p.bankAccountNumber || null,
+      bankSheba: p.shabaNumber || null,
+      notes: p.aliasName ? 'نام مستعار: ' + p.aliasName : null,
     };
 
     if (existing) {
