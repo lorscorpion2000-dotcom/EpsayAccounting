@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req } from '@nestjs/common';;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { JournalsService } from './journals.service';
 import { CreateJournalDto } from './dto/create-journal.dto';
@@ -7,7 +7,21 @@ import { ReverseJournalDto } from './dto/reverse-journal.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto, ReasonForceDto } from '../../common/dto';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  email?: string;
+  name?: string;
+  username?: string;
+  fullName?: string;
+  permissions?: string[];
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
 import { JournalStatus } from '@prisma/client';
+import type { JournalEntry } from '@prisma/client';
 
 @ApiTags('Journals - اسناد حسابداری')
 @ApiBearerAuth()
@@ -77,8 +91,8 @@ export class JournalsController {
     @Body() dto: ReverseJournalDto,
     @CurrentUser('id') userId: string,
   ) {
-    const reversalDate = (dto as any).reversalDate
-      ? new Date((dto as any).reversalDate)
+    const reversalDate = dto.reversalDate
+      ? new Date(dto.reversalDate)
       : new Date();
     return this.service.reverse(id, dto.reason, reversalDate, userId);
   }
@@ -89,17 +103,18 @@ export class JournalsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonForceDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user?.id) throw new UnauthorizedException('Authentication required');
+    const user = req.user as AuthUser & { id: string };
     const force = !!body.force;
 
     // If force=false, only allow DRAFT/REJECTED (Posted rejected)
     if (!force) {
-      const j: any = await this.service['prisma'].journalEntry.findUnique({ where: { id } });
+      const j: JournalEntry | null = await this.service['prisma'].journalEntry.findUnique({ where: { id } });
       if (!j) throw new Error('سند یافت نشد');
       if (j.status === 'POSTED') {
-        const err: any = new Error('سند Posted است — برای حذف force=true لازم است');
+        const err: Error & { status?: number } = new Error('سند Posted است — برای حذف force=true لازم است');
         err.status = 400;
         throw err;
       }
@@ -107,7 +122,7 @@ export class JournalsController {
       // force=true requires journal.force-delete permission
       const perms = (user.permissions || []) as string[];
       if (!perms.includes('journal.force-delete') && !perms.includes('*')) {
-        const err: any = new Error('اجازه حذف سند Posted را ندارید');
+        const err: Error & { status?: number } = new Error('اجازه حذف سند Posted را ندارید');
         err.status = 403;
         throw err;
       }
@@ -128,8 +143,9 @@ export class JournalsController {
 
   @Patch(':id/restore')
   @RequirePermissions('journal.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user?.id) throw new UnauthorizedException('Authentication required');
+    const user = req.user as AuthUser & { id: string };
     return this.service.restore(id, user.id);
   }
 
@@ -138,9 +154,10 @@ export class JournalsController {
   async hardDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user?.id) throw new UnauthorizedException('Authentication required');
+    const user = req.user as AuthUser & { id: string };
     return this.service.hardDelete(
       id,
       { id: user.id, username: user.username, fullName: user.fullName },
