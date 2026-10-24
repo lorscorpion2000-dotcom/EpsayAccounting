@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 export interface VatLine {
@@ -74,7 +75,7 @@ export class VatService {
       };
     }
 
-      const where: any = {
+      const where: Prisma.JournalEntryWhereInput = {
         deletedAt: null,
         status: { in: ['POSTED', 'REVERSED'] },
         entryDate: { gte: from, lte: to },
@@ -134,7 +135,7 @@ export class VatService {
         vatAmount: Math.round(vatAmount * 100) / 100,
         direction,
       };
-      line.projectId = (e as any).lines.find((l: any) => l.projectId)?.projectId || null;
+      line.projectId = e.lines.find((l) => l.projectId)?.projectId || null;
       (direction === 'SALE' ? sales : purchases).push(line);
     }
 

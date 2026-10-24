@@ -91,11 +91,11 @@ export class ARAgingDetailService {
       c.bucket[bucket] += remaining;
       c.invoices.push(row);
 
-      const key = bucket === 'CURRENT' ? 'current'
+      const key: 'current' | 'd1_30' | 'd31_60' | 'd61_90' | 'over90' = bucket === 'CURRENT' ? 'current'
         : bucket === 'D1_30'  ? 'd1_30'
         : bucket === 'D31_60' ? 'd31_60'
         : bucket === 'D61_90' ? 'd61_90' : 'over90';
-      (totals as any)[key] += remaining;
+      totals[key] += remaining;
       totals.total += remaining;
     }
 
