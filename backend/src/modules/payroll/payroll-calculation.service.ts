@@ -125,13 +125,13 @@ export class PayrollCalculationService {
     });
 
     // محاسبه کارکرد
-    let regularHours = 0;
+    let _regularHours = 0;
     let overtimeHours = 0;
     let holidayHours = 0;
     let daysWorked = 0;
 
     workLogs.forEach((log) => {
-      regularHours += Number(log.regularHours);
+      _regularHours += Number(log.regularHours);
       overtimeHours += Number(log.overtimeHours);
       holidayHours += Number(log.holidayHours);
       if (log.status === 'PRESENT') daysWorked++;
@@ -199,7 +199,7 @@ export class PayrollCalculationService {
         taxPercent = 10;
         taxAmount = (taxableBase * taxPercent) / 100;
       }
-    } catch (e) {
+    } catch {
       // در صورت خطا، fallback
       taxExempt = 100000000;
       const taxableBase = Math.max(0, grossSalary - taxExempt);
