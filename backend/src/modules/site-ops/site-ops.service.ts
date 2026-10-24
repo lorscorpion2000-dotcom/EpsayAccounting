@@ -1,10 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateDailyReportDto } from './dto/create-report.dto';
 import { UpdateDailyReportDto } from './dto/create-report.dto';
 import { DailyReportSectionsService } from './daily-report-sections.service';
 import { generateCode, withUniqueRetry } from '../../shared/utils/code-generator';
 import * as jalaali from 'jalaali-js';
+
+type WorkersDto = NonNullable<CreateDailyReportDto['workers']>;
+type EquipmentsDto = NonNullable<CreateDailyReportDto['equipments']>;
+type MaterialsDto = NonNullable<CreateDailyReportDto['materials']>;
+type ProgressesDto = NonNullable<CreateDailyReportDto['progresses']>;
+type RequestsDto = NonNullable<CreateDailyReportDto['requests']>;
+type EventsDto = NonNullable<CreateDailyReportDto['events']>;
 
 @Injectable()
 export class SiteOpsService {
@@ -14,19 +22,20 @@ export class SiteOpsService {
   ) {}
 
   private async generateCode(projectId: string): Promise<string> {
-    void projectId; // codes are globally unique, not per-project
+    void projectId;
     const year = new Date().getFullYear();
     return generateCode(this.prisma, 'dailyReport', 'code', 'DR-' + year + '-', { pad: 4 });
   }
 
   async findAll(query?: { projectId?: string; status?: string; fromDate?: string; toDate?: string }) {
-    const where: any = {};
+    const where: Prisma.DailyReportWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.DailyReportWhereInput['status'];
     if (query?.fromDate || query?.toDate) {
-      where.reportDate = {};
-      if (query.fromDate) where.reportDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.reportDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query?.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query?.toDate) dateFilter.lte = new Date(query.toDate);
+      where.reportDate = dateFilter;
     }
     return this.prisma.dailyReport.findMany({
       where,
@@ -60,7 +69,7 @@ export class SiteOpsService {
   // ─── Helper: create nested rows ───
   /** تبدیل رشته خالی به null برای UUIDهای اختیاری */
   /** تبدیل رشته زمان خالی به null */
-  private optTime(v: any): string | null {
+  private optTime(v: unknown): string | null {
     if (v === undefined || v === null || v === '') return null;
     const s = String(v).trim();
     if (!s) return null;
@@ -70,14 +79,12 @@ export class SiteOpsService {
     return null;
   }
 
-  private optUuid(v: any): string | null {
+  private optUuid(v: unknown): string | null {
     if (v === undefined || v === null || v === '' || v === 'null') return null;
     return String(v);
   }
 
-  /** پاکسازی همه فیلدهای Id از '' به null در یک آبجکت */
-
-  private buildWorkers(items: any[]) {
+  private buildWorkers(items: WorkersDto) {
     return items.map((w, i) => {
       const kind = String(w.kind || 'OWN').toUpperCase() === 'CONTRACTOR' ? 'CONTRACTOR' : 'OWN';
       const isContractor = kind === 'CONTRACTOR';
@@ -92,58 +99,94 @@ export class SiteOpsService {
         workerCount: w.workerCount,
         workHours: w.workHours ?? 8,
         overtime: w.overtime ?? 0,
-        status: (w.status as any) || 'PRESENT',
+        status: (w.status || 'PRESENT') as Prisma.DailyReportWorkerUncheckedCreateWithoutReportInput['status'],
         wbsItemId: this.optUuid(w.wbsItemId),
         description: w.description,
-      };
+      } as unknown as Prisma.DailyReportWorkerUncheckedCreateWithoutReportInput;
     });
   }
-  private buildEquipments(items: any[]) {
+
+  private buildEquipments(items: EquipmentsDto) {
     return items.map((e, i) => ({
-      rowNumber: i + 1, equipmentId: this.optUuid(e.equipmentId), name: e.name, plateNumber: e.plateNumber, operator: e.operator,
-      hoursWorked: e.hoursWorked ?? 0, status: (e.status as any) || 'ACTIVE',
-      wbsItemId: this.optUuid(e.wbsItemId), fuelLiters: e.fuelLiters ?? 0, stopReason: e.stopReason,
+      rowNumber: i + 1,
+      equipmentId: this.optUuid(e.equipmentId),
+      name: e.name,
+      plateNumber: e.plateNumber,
+      operator: e.operator,
+      hoursWorked: e.hoursWorked ?? 0,
+      status: (e.status || 'ACTIVE') as Prisma.DailyReportEquipmentUncheckedCreateWithoutReportInput['status'],
+      wbsItemId: this.optUuid(e.wbsItemId),
+      fuelLiters: e.fuelLiters ?? 0,
+      stopReason: e.stopReason,
       description: e.description,
-    }));
+    } as unknown as Prisma.DailyReportEquipmentUncheckedCreateWithoutReportInput));
   }
-  private buildMaterials(items: any[], unitMap?: Map<string, string>) {
+
+  private buildMaterials(items: MaterialsDto, unitMap?: Map<string, string>) {
     return items.map((m, i) => ({
-      rowNumber: i + 1, itemName: m.itemName, unit: m.unit,
+      rowNumber: i + 1,
+      itemName: m.itemName,
+      unit: m.unit,
       unitId: m.unit && unitMap ? (unitMap.get(m.unit) ?? null) : null,
       quantity: m.quantity,
-      itemId: this.optUuid(m.itemId), warehouseId: this.optUuid(m.warehouseId),
-      supplier: m.supplier, vehiclePlate: m.vehiclePlate, billNumber: m.billNumber,
-      movementType: m.movementType, qcResult: m.qcResult,
-      exitType: m.exitType, exitDest: m.exitDest, description: m.description,
-    }));
+      itemId: this.optUuid(m.itemId),
+      warehouseId: this.optUuid(m.warehouseId),
+      supplier: m.supplier,
+      vehiclePlate: m.vehiclePlate,
+      billNumber: m.billNumber,
+      movementType: m.movementType,
+      qcResult: m.qcResult,
+      exitType: m.exitType,
+      exitDest: m.exitDest,
+      description: m.description,
+    } as unknown as Prisma.DailyReportMaterialUncheckedCreateWithoutReportInput));
   }
-  private buildProgresses(items: any[], unitMap?: Map<string, string>) {
+
+  private buildProgresses(items: ProgressesDto, unitMap?: Map<string, string>) {
     return items.map((p, i) => ({
-      rowNumber: i + 1, wbsItemId: this.optUuid(p.wbsItemId), description: p.description,
-      progressPct: p.progressPct, quantity: p.quantity, unit: p.unit,
+      rowNumber: i + 1,
+      wbsItemId: this.optUuid(p.wbsItemId),
+      description: p.description,
+      progressPct: p.progressPct,
+      quantity: p.quantity,
+      unit: p.unit,
       unitId: p.unit && unitMap ? (unitMap.get(p.unit) ?? null) : null,
-      location: p.location, notes: p.notes,
-    }));
+      location: p.location,
+      notes: p.notes,
+    } as unknown as Prisma.DailyReportProgressUncheckedCreateWithoutReportInput));
   }
-  private buildRequests(items: any[], unitMap?: Map<string, string>) {
+
+  private buildRequests(items: RequestsDto, unitMap?: Map<string, string>) {
     return items.map((r, i) => ({
-      rowNumber: i + 1, requestType: r.requestType, title: r.title, description: r.description,
-      quantity: r.quantity, unit: r.unit,
+      rowNumber: i + 1,
+      requestType: r.requestType,
+      title: r.title,
+      description: r.description,
+      quantity: r.quantity,
+      unit: r.unit,
       unitId: r.unit && unitMap ? (unitMap.get(r.unit) ?? null) : null,
       priority: r.priority,
       requiredDate: r.requiredDate ? new Date(r.requiredDate) : null,
-      wbsItemId: this.optUuid(r.wbsItemId), amount: r.amount, status: 'PENDING',
+      wbsItemId: this.optUuid(r.wbsItemId),
+      amount: r.amount,
+      status: 'PENDING',
       pettyCashAccountId: this.optUuid(r.pettyCashAccountId),
-    }));
-  }
-  private buildEvents(items: any[]) {
-    return items.map((e, i) => ({
-      rowNumber: i + 1, eventType: e.eventType, title: e.title, description: e.description,
-      startTime: this.optTime(e.startTime), endTime: this.optTime(e.endTime), durationHrs: e.durationHrs,
-      severity: e.severity, actorName: e.actorName,
-    }));
+    } as unknown as Prisma.DailyReportRequestUncheckedCreateWithoutReportInput));
   }
 
+  private buildEvents(items: EventsDto) {
+    return items.map((e, i) => ({
+      rowNumber: i + 1,
+      eventType: e.eventType,
+      title: e.title,
+      description: e.description,
+      startTime: this.optTime(e.startTime),
+      endTime: this.optTime(e.endTime),
+      durationHrs: e.durationHrs,
+      severity: e.severity,
+      actorName: e.actorName,
+    } as unknown as Prisma.DailyReportEventUncheckedCreateWithoutReportInput));
+  }
 
   private async resolveUnitIds(codes: (string | null | undefined)[]): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
@@ -185,10 +228,10 @@ export class SiteOpsService {
     if (exists) throw new BadRequestException('برای این پروژه در این تاریخ گزارش ثبت شده است');
 
     // داده‌های پایه یک‌بار ساخته می‌شوند
-    const baseData: any = {
+    const baseData: Omit<Prisma.DailyReportUncheckedCreateInput, 'code'> = {
       projectId: dto.projectId,
       reportDate,
-      weather: dto.weather as any,
+      weather: dto.weather as unknown as Prisma.DailyReportUncheckedCreateInput['weather'],
       tempMin: dto.tempMin,
       tempMax: dto.tempMax,
       startTime: this.optTime(dto.startTime),
@@ -196,14 +239,14 @@ export class SiteOpsService {
       operations: dto.operations,
       issues: dto.issues,
       incidents: dto.incidents,
-      status: 'DRAFT',
+      status: 'DRAFT' as Prisma.DailyReportUncheckedCreateInput['status'],
       createdById: userId,
     };
 
     const createUnitMap = await this.resolveUnitIds([
-      ...(dto.materials || []).map((m: any) => m.unit),
-      ...(dto.progresses || []).map((p: any) => p.unit),
-      ...(dto.requests || []).map((r: any) => r.unit),
+      ...(dto.materials || []).map((m) => m.unit),
+      ...(dto.progresses || []).map((p) => p.unit),
+      ...(dto.requests || []).map((r) => r.unit),
     ]);
     if (dto.workers?.length) baseData.workers = { create: this.buildWorkers(dto.workers) };
     if (dto.equipments?.length) baseData.equipments = { create: this.buildEquipments(dto.equipments) };
@@ -237,9 +280,9 @@ export class SiteOpsService {
       throw new BadRequestException('فقط گزارش پیش‌نویس یا ردشده قابل ویرایش است');
     }
 
-    const data: any = {};
+    const data: Prisma.DailyReportUncheckedUpdateInput = {};
     if (dto.reportDate) data.reportDate = new Date(dto.reportDate);
-    if (dto.weather !== undefined) data.weather = dto.weather;
+    if (dto.weather !== undefined) data.weather = dto.weather as unknown as Prisma.DailyReportUncheckedUpdateInput['weather'];
     if (dto.tempMin !== undefined) data.tempMin = dto.tempMin;
     if (dto.tempMax !== undefined) data.tempMax = dto.tempMax;
     if (dto.startTime !== undefined) data.startTime = this.optTime(dto.startTime);
@@ -249,9 +292,9 @@ export class SiteOpsService {
     if (dto.incidents !== undefined) data.incidents = dto.incidents;
 
     const updateUnitMap = await this.resolveUnitIds([
-      ...(dto.materials || []).map((m: any) => m.unit),
-      ...(dto.progresses || []).map((p: any) => p.unit),
-      ...(dto.requests || []).map((r: any) => r.unit),
+      ...(dto.materials || []).map((m) => m.unit),
+      ...(dto.progresses || []).map((p) => p.unit),
+      ...(dto.requests || []).map((r) => r.unit),
     ]);
 
     return this.prisma.$transaction(async (tx) => {
@@ -307,6 +350,7 @@ export class SiteOpsService {
       },
     });
   }
+
   /**
    * F2 — تأییدکننده ≠ ثبت‌کننده
    * اگر کاربر ثبت‌کننده گزارش باشد اجازه تأیید ندارد، مگر super_admin با ثبت در AuditLog.
@@ -323,7 +367,7 @@ export class SiteOpsService {
       where: { id: userId },
       include: { roles: { include: { role: true } } },
     });
-    const isSuperAdmin = !!user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+    const isSuperAdmin = !!user?.roles.some((ur) => ur.role.code === 'super_admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('شما ثبت‌کننده این گزارش هستید و نمی‌توانید آن را تأیید کنید');
@@ -335,7 +379,7 @@ export class SiteOpsService {
         action: 'SELF_APPROVE_REPORT',
         entity: 'DailyReport',
         entityId: reportId,
-        payload: { override: 'super_admin' } as any,
+        payload: { override: 'super_admin' } as Prisma.InputJsonValue,
       },
     });
   }
@@ -452,7 +496,7 @@ export class SiteOpsService {
     const partnerIds = Array.from(byPartner.keys());
 
     // EmployeeProfile برای آن اشخاص (فیلتر پروژه اختیاری)
-    const profileWhere: any = {
+    const profileWhere: Prisma.EmployeeProfileWhereInput = {
       partnerId: { in: partnerIds },
       isActive: true,
       deletedAt: null,
@@ -487,9 +531,9 @@ export class SiteOpsService {
           lastAttendanceDate: agg.lastDate.toISOString().slice(0, 10),
         };
       })
-      .filter(Boolean);
+      .filter((e): e is NonNullable<typeof e> => e !== null);
 
-    employees.sort((a: any, b: any) => b.attendanceDays - a.attendanceDays);
+    employees.sort((a, b) => b.attendanceDays - a.attendanceDays);
 
     return {
       year,
