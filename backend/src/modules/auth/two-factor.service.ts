@@ -12,10 +12,34 @@ import * as crypto from 'node:crypto';
 import * as otplib from 'otplib';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
-const _otp: any = otplib as any;
+interface OtpLibShape {
+  generateSecret?: () => unknown;
+  verify?: (args: { token: string; secret: string }) => unknown;
+  generateURI?: (args: Record<string, unknown>) => unknown;
+  authenticator?: {
+    verify?: (args: { token: string; secret: string }) => unknown;
+    keyuri?: (username: string, issuer: string, secret: string) => unknown;
+  };
+}
 
-function isPromise(x: any): x is Promise<any> {
-  return x && typeof x.then === 'function';
+interface RecoveryCodeEntry {
+  hash: string;
+  used: boolean;
+  usedAt: string | null;
+}
+
+interface ValidatableObject {
+  valid?: unknown;
+}
+
+const _otp = otplib as unknown as OtpLibShape;
+
+function isPromise(x: unknown): x is Promise<unknown> {
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    typeof (x as { then?: unknown }).then === 'function'
+  );
 }
 
 function otpGenerateSecret(): string {
@@ -43,8 +67,8 @@ async function otpVerify(token: string, secret: string): Promise<boolean> {
       const r = _otp.authenticator.verify({ token: clean, secret });
       const resolved = isPromise(r) ? await r : r;
       if (typeof resolved === 'boolean') return resolved;
-      if (resolved && typeof resolved === 'object' && typeof (resolved as any).valid === 'boolean') {
-        return (resolved as any).valid === true;
+      if (resolved && typeof resolved === 'object' && typeof (resolved as ValidatableObject).valid === 'boolean') {
+        return (resolved as ValidatableObject).valid === true;
       }
       return false;
     }
@@ -54,8 +78,8 @@ async function otpVerify(token: string, secret: string): Promise<boolean> {
       const r = _otp.verify({ token: clean, secret });
       const resolved = isPromise(r) ? await r : r;
       if (typeof resolved === 'boolean') return resolved;
-      if (resolved && typeof resolved === 'object' && typeof (resolved as any).valid === 'boolean') {
-        return (resolved as any).valid === true;
+      if (resolved && typeof resolved === 'object' && typeof (resolved as ValidatableObject).valid === 'boolean') {
+        return (resolved as ValidatableObject).valid === true;
       }
       return false;
     }
@@ -130,7 +154,7 @@ export class TwoFactorService {
     return codes;
   }
 
-  async hashRecoveryCodes(codes: string[]) {
+  async hashRecoveryCodes(codes: string[]): Promise<RecoveryCodeEntry[]> {
     return Promise.all(
       codes.map(async (c) => ({
         hash: await bcrypt.hash(c.replace('-', ''), 10),
@@ -141,9 +165,9 @@ export class TwoFactorService {
   }
 
   async verifyAndConsumeRecoveryCode(
-    storedCodes: any[],
+    storedCodes: RecoveryCodeEntry[],
     inputCode: string,
-  ): Promise<{ ok: boolean; newCodes: any[] | null }> {
+  ): Promise<{ ok: boolean; newCodes: RecoveryCodeEntry[] | null }> {
     if (!Array.isArray(storedCodes)) return { ok: false, newCodes: null };
     const normalized = String(inputCode).trim().toUpperCase().replace('-', '');
     for (let i = 0; i < storedCodes.length; i++) {
@@ -169,7 +193,10 @@ export class TwoFactorService {
 
   verifyTotpPendingToken(token: string): { sub: string } {
     try {
-      const payload = this.jwt.verify(token, { secret: this.totpPendingSecret }) as any;
+      const payload = this.jwt.verify<{ sub: string; type?: string }>(
+        token,
+        { secret: this.totpPendingSecret },
+      );
       if (payload.type !== 'totp-pending') throw new Error('bad type');
       return { sub: payload.sub };
     } catch {
