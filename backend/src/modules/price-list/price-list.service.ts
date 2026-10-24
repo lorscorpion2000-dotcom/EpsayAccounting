@@ -1,6 +1,7 @@
 import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import {
   CreatePriceListDto, UpdatePriceListDto,
@@ -35,9 +36,9 @@ export class PriceListService {
 
   // ─── Price Lists ───
   async list(query?: { year?: number; status?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.PriceListWhereInput = {};
     if (query?.year) where.year = query.year;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.PriceListWhereInput['status'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -71,7 +72,7 @@ export class PriceListService {
         year: dto.year,
         effectiveFrom: new Date(dto.effectiveFrom),
         effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null,
-        status: (dto.status as any) || 'DRAFT',
+        status: (dto.status as unknown as Prisma.PriceListUncheckedCreateInput['status']) || 'DRAFT',
         description: dto.description,
       },
     });
@@ -79,7 +80,7 @@ export class PriceListService {
 
   async update(id: string, dto: UpdatePriceListDto) {
     await this.get(id);
-    const data: any = { ...dto };
+    const data = { ...dto } as unknown as Prisma.PriceListUncheckedUpdateInput;
     if (dto.effectiveFrom) data.effectiveFrom = new Date(dto.effectiveFrom);
     if (dto.effectiveTo !== undefined) data.effectiveTo = dto.effectiveTo ? new Date(dto.effectiveTo) : null;
     return this.prisma.priceList.update({ where: { id }, data });
@@ -106,7 +107,7 @@ export class PriceListService {
 
   // ─── Items ───
   async listItems(priceListId: string, query?: { search?: string; chapter?: string }) {
-    const where: any = { priceListId };
+    const where: Prisma.PriceListItemWhereInput = { priceListId };
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -132,7 +133,7 @@ export class PriceListService {
 
   async createItem(priceListId: string, dto: CreatePriceListItemDto) {
     await this.get(priceListId);
-    const unitId = await this.resolveUnitId(dto.unit as any);
+    const unitId = await this.resolveUnitId(dto.unit as string | null | undefined);
     return this.prisma.priceListItem.create({
       data: {
         priceListId,
@@ -150,9 +151,9 @@ export class PriceListService {
 
   async updateItem(id: string, dto: UpdatePriceListItemDto) {
     await this.getItem(id);
-    const data: any = { ...dto };
+    const data = { ...dto } as unknown as Prisma.PriceListItemUncheckedUpdateInput;
     if (dto.unit !== undefined) {
-      data.unitId = await this.resolveUnitId(dto.unit as any);
+      data.unitId = await this.resolveUnitId(dto.unit as string | null | undefined);
     }
     return this.prisma.priceListItem.update({ where: { id }, data });
   }
@@ -206,8 +207,8 @@ export class PriceListService {
             },
           });
           created++;
-        } catch (e: any) {
-          errors.push({ row: i + 1, code: row.code, reason: e.message });
+        } catch (e) {
+          errors.push({ row: i + 1, code: row.code, reason: e instanceof Error ? e.message : String(e) });
         }
       }
       return { created, skipped, errors };

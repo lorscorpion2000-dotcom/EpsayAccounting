@@ -11,6 +11,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { PriceListStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Price List - فهرست بها (BOQ)')
 @ApiBearerAuth()
@@ -53,7 +54,7 @@ export class PriceListController {
 
   @Delete(':id')
   @RequirePermissions('price-list.manage')
-  remove(@Param('id') id: string, @Req() req: any) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.svc.remove(id, req.user?.id);
   }
 
@@ -125,9 +126,9 @@ export class PriceListController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'priceList',
       id,
@@ -142,8 +143,8 @@ export class PriceListController {
 
   @Patch(':id/restore')
   @RequirePermissions('price-lists.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'priceList',
       id,
