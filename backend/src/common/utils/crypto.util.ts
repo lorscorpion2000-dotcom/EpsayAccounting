@@ -76,13 +76,13 @@ export function decrypt(envelope: EncryptedEnvelope): string {
   return decrypted.toString('utf8');
 }
 
-export function isEncryptedEnvelope(obj: any): obj is EncryptedEnvelope {
+export function isEncryptedEnvelope(obj: unknown): obj is EncryptedEnvelope {
+  if (!obj || typeof obj !== 'object') return false;
+  const o = obj as Record<string, unknown>;
   return (
-    obj &&
-    typeof obj === 'object' &&
-    typeof obj.version === 'number' &&
-    typeof obj.algorithm === 'string' &&
-    typeof obj.payload === 'string' &&
-    obj.algorithm === ALGO
+    typeof o.version === 'number' &&
+    typeof o.algorithm === 'string' &&
+    typeof o.payload === 'string' &&
+    o.algorithm === ALGO
   );
 }

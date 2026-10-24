@@ -16,17 +16,21 @@ const EXCLUDED_MODELS = new Set<string>([
   "PettyCashAccount", // ممکن است company-wide باشد
 ]);
 
+interface DmmfField { name: string }
+interface DmmfModel { name: string; fields: DmmfField[] }
+interface DmmfShape { datamodel: { models: DmmfModel[] } }
+
 (function init() {
   try {
-    const dmmf: any = (Prisma as any).dmmf;
+    const dmmf = (Prisma as unknown as { dmmf?: DmmfShape }).dmmf;
     const models = dmmf?.datamodel?.models || [];
     for (const m of models) {
-      if (Array.isArray(m.fields) && m.fields.some((f: any) => f.name === "projectId")) {
+      if (Array.isArray(m.fields) && m.fields.some((f) => f.name === "projectId")) {
         PROJECT_SCOPED_MODELS.add(m.name);
       }
     }
   } catch (e) {
-    logger.warn("Failed to build DMMF model set: " + (e as Error).message);
+    logger.warn("Failed to build DMMF model set: " + (e instanceof Error ? e.message : String(e)));
   }
 })();
 
@@ -59,7 +63,7 @@ export const projectScopeMiddleware: Prisma.Middleware = async (params, next) =>
   // ─── خواندن ───
   if (READ_ACTIONS.has(params.action)) {
     if (params.action === "findUnique") {
-      (params as any).action = "findFirst";
+      (params as { action: string }).action = "findFirst";
     }
     params.args = params.args || {};
     const where = { ...(params.args.where || {}) };
@@ -80,9 +84,9 @@ export const projectScopeMiddleware: Prisma.Middleware = async (params, next) =>
   // ─── ساخت (اگر خارج از محدوده باشد، رد شود) ───
   if (CREATE_ACTIONS.has(params.action)) {
     const data = params.args?.data;
-    const items: any[] = Array.isArray(data) ? data : [data];
+    const items = (Array.isArray(data) ? data : [data]) as Record<string, unknown>[];
     for (const it of items) {
-      const pid = it?.projectId;
+      const pid = it?.projectId as string | null | undefined;
       if (pid !== undefined && pid !== null) {
         const allowed = single ? (pid === single) : projectIds.includes(pid);
         if (!allowed) {

@@ -27,24 +27,25 @@ export function isSensitiveKey(key: string): boolean {
 /**
  * پاک‌سازی بازگشتی یک آبجکت — هر کلید حساس به REDACTED تبدیل می‌شود
  */
-export function sanitize<T = any>(input: T): T {
+export function sanitize<T = unknown>(input: T): T {
   if (input === null || input === undefined) return input;
-  if (typeof input === 'string') return input as any; // رشته‌ها رو دست نمی‌زنیم
+  if (typeof input === 'string') return input; // رشته‌ها رو دست نمی‌زنیم
 
   if (Array.isArray(input)) {
-    return input.map((item) => sanitize(item)) as any;
+    return input.map((item) => sanitize(item)) as unknown as T;
   }
 
   if (typeof input === 'object') {
-    const copy: any = {};
-    for (const key of Object.keys(input as any)) {
+    const src = input as Record<string, unknown>;
+    const copy: Record<string, unknown> = {};
+    for (const key of Object.keys(src)) {
       if (isSensitiveKey(key)) {
         copy[key] = REDACTED;
       } else {
-        copy[key] = sanitize((input as any)[key]);
+        copy[key] = sanitize(src[key]);
       }
     }
-    return copy;
+    return copy as unknown as T;
   }
 
   return input;

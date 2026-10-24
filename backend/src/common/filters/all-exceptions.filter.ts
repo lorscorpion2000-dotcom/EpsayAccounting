@@ -4,13 +4,14 @@ import {
 import { Prisma } from '@prisma/client';
 import { TelegramService } from '../services/telegram.service';
 import { sanitizeString } from '../utils/sanitize.util';
+import type { Response, Request } from 'express';
 
 /**
  * ترجمه خطاهای Prisma به پیام‌های فارسی قابل فهم برای کاربر
  */
 function translatePrismaError(exception: unknown): string | null {
   if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-    const meta = exception.meta as any;
+    const meta = exception.meta as { target?: string | string[] } | undefined;
     const target = meta?.target;
     const field = Array.isArray(target) ? target.join(', ') : (target || '');
 
@@ -53,11 +54,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   async catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<any>();
-    const request = ctx.getRequest<any>();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request & { user?: { username?: string } }>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: any = 'خطای داخلی سرور';
+    let message: string | object = 'خطای داخلی سرور';
 
     // ۱) اول Prisma errors
     const prismaMsg = translatePrismaError(exception);
@@ -68,7 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // ۲) NestJS HttpException
       status = exception.getStatus();
       const r = exception.getResponse();
-      message = typeof r === 'string' ? r : (r as any).message || r;
+      message = typeof r === 'string' ? r : ((r as { message?: string }).message || r);
     } else if (exception instanceof Error) {
       // ۳) سایر خطاها — اگر شامل Prisma بود، ترجمه
       const m = exception.message || '';

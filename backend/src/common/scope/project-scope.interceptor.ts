@@ -1,11 +1,20 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { RequestScope, ScopeContext } from './scope.context';
+import type { Request } from 'express';
+
+interface ScopedUser {
+  id?: string;
+  isStaff?: boolean;
+  projectIds?: string[];
+}
+
+type ScopedRequest = Request & { user?: ScopedUser };
 
 @Injectable()
 export class ProjectScopeInterceptor implements NestInterceptor {
-  intercept(ctx: ExecutionContext, next: CallHandler): Observable<any> {
-    const req: any = ctx.switchToHttp().getRequest();
+  intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const req = ctx.switchToHttp().getRequest<ScopedRequest>();
     const user = req?.user || {};
 
     const rawHeader = req?.headers?.['x-active-project'] || req?.headers?.['X-Active-Project'];

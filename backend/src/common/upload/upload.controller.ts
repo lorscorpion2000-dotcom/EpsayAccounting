@@ -10,6 +10,7 @@ import {
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'node:path';
+import type { Request } from 'express';
 import { existsSync, mkdirSync } from 'node:fs';
 import {
   isAllowedExtension,
@@ -43,7 +44,7 @@ const storage = diskStorage({
 
 // فیلتر فایل
 const fileFilter = (
-  _req: any,
+  _req: Request,
   file: Express.Multer.File,
   cb: (err: Error | null, accept: boolean) => void,
 ) => {
@@ -123,7 +124,7 @@ export class UploadController {
     }
 
     const fh = await import('node:fs/promises');
-    const results: any[] = [];
+    const results: { url: string; size: number; mimetype: string; filename: string }[] = [];
 
     for (const file of files) {
       try {
