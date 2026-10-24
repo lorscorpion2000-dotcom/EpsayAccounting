@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, DailyReportSectionType, DailyReportSectionStatus, ReportStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DailyReportForwarderService } from './daily-report-forwarder.service';
 
@@ -15,6 +16,12 @@ export const SECTION_TYPES = [
 
 export type SectionType = (typeof SECTION_TYPES)[number];
 
+export interface ForwardResult {
+  success: number;
+  failed: number;
+  error?: string;
+}
+
 @Injectable()
 export class DailyReportSectionsService {
   constructor(
@@ -28,15 +35,15 @@ export class DailyReportSectionsService {
       select: { sectionType: true },
     });
     const have = new Set(existing.map((s) => s.sectionType));
-    const missing = SECTION_TYPES.filter((t) => !have.has(t as any));
+    const missing = SECTION_TYPES.filter((t) => !have.has(t as DailyReportSectionType));
 
     if (missing.length === 0) return existing;
 
     await this.prisma.dailyReportSection.createMany({
       data: missing.map((t) => ({
         reportId,
-        sectionType: t as any,
-        status: 'PENDING' as any,
+        sectionType: t as DailyReportSectionType,
+        status: 'PENDING' as DailyReportSectionStatus,
       })),
       skipDuplicates: true,
     });
@@ -57,7 +64,7 @@ export class DailyReportSectionsService {
     const anyRejected = sections.some((s) => s.status === 'REJECTED');
     const anyPending = sections.some((s) => s.status === 'PENDING');
 
-    let newStatus: string | null = null;
+    let newStatus: ReportStatus | null = null;
 
     if (allApprovedOrForwarded) {
       newStatus = 'APPROVED';
@@ -70,7 +77,7 @@ export class DailyReportSectionsService {
     if (newStatus) {
       await this.prisma.dailyReport.update({
         where: { id: reportId },
-        data: { status: newStatus as any },
+        data: { status: newStatus },
       });
     }
   }
@@ -94,14 +101,14 @@ export class DailyReportSectionsService {
     const type = this.normalizeType(sectionType);
 
     const section = await this.prisma.dailyReportSection.findUnique({
-      where: { reportId_sectionType: { reportId, sectionType: type as any } },
+      where: { reportId_sectionType: { reportId, sectionType: type as DailyReportSectionType } },
     });
     if (!section) {
       await this.initSections(reportId);
     }
 
     const s = await this.prisma.dailyReportSection.findUnique({
-      where: { reportId_sectionType: { reportId, sectionType: type as any } },
+      where: { reportId_sectionType: { reportId, sectionType: type as DailyReportSectionType } },
     });
     if (!s) throw new NotFoundException('بخش یافت نشد');
 
@@ -112,18 +119,19 @@ export class DailyReportSectionsService {
     const updated = await this.prisma.dailyReportSection.update({
       where: { id: s.id },
       data: {
-        status: 'APPROVED' as any,
+        status: 'APPROVED' as DailyReportSectionStatus,
         approvedById: userId,
         approvedAt: new Date(),
         rejectedReason: null,
       },
     });
 
-    let forward: any = null;
+    let forward: ForwardResult | null = null;
     try {
       forward = await this.forwarder.forwardSection(reportId, type);
-    } catch (e: any) {
-      forward = { success: 0, failed: 0, error: e?.message || 'forward failed' };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      forward = { success: 0, failed: 0, error: msg || 'forward failed' };
     }
 
     await this.syncReportStatus(reportId);
@@ -137,7 +145,7 @@ export class DailyReportSectionsService {
     const type = this.normalizeType(sectionType);
 
     const s = await this.prisma.dailyReportSection.findUnique({
-      where: { reportId_sectionType: { reportId, sectionType: type as any } },
+      where: { reportId_sectionType: { reportId, sectionType: type as DailyReportSectionType } },
     });
     if (!s) throw new NotFoundException('بخش یافت نشد');
 
@@ -148,7 +156,7 @@ export class DailyReportSectionsService {
     const rejected = await this.prisma.dailyReportSection.update({
       where: { id: s.id },
       data: {
-        status: 'REJECTED' as any,
+        status: 'REJECTED' as DailyReportSectionStatus,
         rejectedReason: reason,
         approvedById: null,
         approvedAt: null,
@@ -201,7 +209,7 @@ export class DailyReportSectionsService {
       where: { id: userId },
       include: { roles: { include: { role: true } } },
     });
-    const isSuperAdmin = !!user?.roles.some((ur: any) => ur.role.code === 'super_admin');
+    const isSuperAdmin = !!user?.roles.some((ur) => ur.role.code === 'super_admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('شما ثبت‌کننده این گزارش هستید و نمی‌توانید آن را تأیید کنید');
@@ -213,7 +221,7 @@ export class DailyReportSectionsService {
         action: 'SELF_APPROVE_REPORT',
         entity: 'DailyReport',
         entityId: reportId,
-        payload: { override: 'super_admin' } as any,
+        payload: { override: 'super_admin' } as Prisma.InputJsonValue,
       },
     });
   }
