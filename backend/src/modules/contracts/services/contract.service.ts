@@ -1,9 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma, LegalContractKind, LegalContractStatus } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
+import type { DeleteMeta } from '../../../common/services/soft-delete.service';
 import {
   CreateLegalContractDto,
   UpdateLegalContractDto,
 } from '../dto/create-contract.dto';
+
+interface ContractItemCalc {
+  quantity?: number | string | null;
+  unitPrice?: number | string | null;
+}
 
 @Injectable()
 export class ContractService {
@@ -23,9 +30,9 @@ export class ContractService {
   }
 
   async list(params: { kind?: string; status?: string; search?: string; projectId?: string }) {
-    const where: any = { deletedAt: null };
-    if (params.kind) where.kind = params.kind;
-    if (params.status) where.status = params.status;
+    const where: Prisma.LegalContractWhereInput = { deletedAt: null };
+    if (params.kind) where.kind = params.kind as LegalContractKind;
+    if (params.status) where.status = params.status as LegalContractStatus;
     if (params.projectId) where.projectId = params.projectId;
     if (params.search) {
       where.OR = [
@@ -79,11 +86,11 @@ export class ContractService {
       resolvedPartyId = linkedParty.id;
     }
 
-    const where: any = {
+    const where: Prisma.LegalContractWhereInput = {
       partyId: resolvedPartyId,
-      status: { in: ['DRAFT', 'ACTIVE', 'SUSPENDED'] },
+      status: { in: ['DRAFT', 'ACTIVE', 'SUSPENDED'] as LegalContractStatus[] },
     };
-    if (kind) where.kind = kind;
+    if (kind) where.kind = kind as LegalContractKind;
 
     return this.prisma.legalContract.findMany({
       where,
@@ -109,14 +116,16 @@ export class ContractService {
     return item;
   }
 
-  private calcItemTotal(it: any) {
+  private calcItemTotal(it: ContractItemCalc) {
     const q = Number(it.quantity) || 0;
     const p = Number(it.unitPrice) || 0;
     return q * p;
   }
 
-
-  private async resolveUnitIds(codes: (string | null | undefined)[], client: any = this.prisma): Promise<Map<string, string>> {
+  private async resolveUnitIds(
+    codes: (string | null | undefined)[],
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<Map<string, string>> {
     const unique = Array.from(new Set(codes.filter((c): c is string => !!c)));
     if (unique.length === 0) return new Map();
     const units = await client.unit.findMany({
@@ -143,7 +152,7 @@ export class ContractService {
       const contract = await tx.legalContract.create({
         data: {
           code,
-          kind: dto.kind as any,
+          kind: dto.kind as unknown as Prisma.LegalContractUncheckedCreateInput['kind'],
           status: 'DRAFT',
           title: dto.title,
           partyId: dto.partyId,
@@ -196,11 +205,11 @@ export class ContractService {
 
   async update(id: string, dto: UpdateLegalContractDto) {
     await this.get(id);
-    const data: any = { ...dto };
+    const data: Prisma.LegalContractUncheckedUpdateInput = { ...dto } as unknown as Prisma.LegalContractUncheckedUpdateInput;
     if (dto.registrationDate) data.registrationDate = new Date(dto.registrationDate);
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
-    delete data.items;
+    delete (data as unknown as Record<string, unknown>).items;
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.items !== undefined) {
@@ -288,10 +297,10 @@ export class ContractService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.legalContract.findUnique({
+    const existing = await this.prisma.legalContract.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.LegalContractFindUniqueArgs);
     if (!existing) throw new NotFoundException('قرارداد پیدا نشد');
     if (!existing.deletedAt) throw new Error('قرارداد حذف نشده است');
     await this.prisma.legalContract.update({
@@ -301,18 +310,18 @@ export class ContractService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.legalContract.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: DeleteMeta = {}) {
+    const existing = await this.prisma.legalContract.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.LegalContractFindUniqueArgs);
     if (!existing) throw new NotFoundException('قرارداد پیدا نشد');
 
     const refs = await this.countReferences(id);
-    const total = Object.values(refs).reduce((sum: number, n: any) => sum + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((sum, n) => sum + Number(n || 0), 0);
     if (total > 0) {
       const details = Object.entries(refs)
-        .filter(([, v]: any) => Number(v) > 0)
+        .filter(([, v]) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
       throw new BadRequestException(
@@ -335,12 +344,12 @@ export class ContractService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.LegalContractFindManyArgs),
       this.prisma.legalContract.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.LegalContractCountArgs),
     ]);
     return { items, total, take, skip };
   }
@@ -349,7 +358,8 @@ export class ContractService {
     const p = this.prisma;
     const r = await Promise.all([
       p.subcontractorStatement.count({ where: { contractId: id } }).catch(() => 0),
-      (p as any).workerStatement?.count({ where: { contractId: id } }).catch(() => 0) || Promise.resolve(0),
+      (p as unknown as { workerStatement?: { count: (args: { where: { contractId: string } }) => Promise<number> } })
+        .workerStatement?.count({ where: { contractId: id } }).catch(() => 0) || Promise.resolve(0),
     ]);
     return {
       subcontractorStatements: Number(r[0] || 0),
