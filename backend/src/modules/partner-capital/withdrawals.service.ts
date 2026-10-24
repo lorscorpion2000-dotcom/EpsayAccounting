@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import type { DeleteMeta } from '../../common/services/soft-delete.service';
 import { CapitalAccountsService } from './accounts.service';
 import { CreateWithdrawalDto, UpdateWithdrawalDto } from './dto/withdrawal.dto';
 
@@ -17,10 +19,10 @@ export class WithdrawalsService {
   }
 
   async findAll(query?: { partnerId?: string; projectId?: string; status?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.PartnerCapitalWithdrawalWhereInput = { deletedAt: null };
     if (query?.partnerId) where.partnerId = query.partnerId;
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.PartnerCapitalWithdrawalWhereInput['status'];
 
     return this.prisma.partnerCapitalWithdrawal.findMany({
       where,
@@ -89,10 +91,10 @@ export class WithdrawalsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.partnerCapitalWithdrawal.findUnique({
+    const existing = await this.prisma.partnerCapitalWithdrawal.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.PartnerCapitalWithdrawalFindUniqueArgs);
     if (!existing) throw new NotFoundException('برداشت یافت نشد');
     if (!existing.deletedAt) throw new Error('برداشت حذف نشده است');
     await this.prisma.partnerCapitalWithdrawal.update({
@@ -102,11 +104,11 @@ export class WithdrawalsService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.partnerCapitalWithdrawal.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: DeleteMeta = {}) {
+    const existing = await this.prisma.partnerCapitalWithdrawal.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.PartnerCapitalWithdrawalFindUniqueArgs);
     if (!existing) throw new NotFoundException('برداشت یافت نشد');
     if (existing.status !== 'DRAFT') {
       throw new Error('فقط برداشت‌های پیش‌نویس قابل حذف قطعی هستند — چون تأییدشده موجودی حساب را تغییر داده');
@@ -122,12 +124,12 @@ export class WithdrawalsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.PartnerCapitalWithdrawalFindManyArgs),
       this.prisma.partnerCapitalWithdrawal.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.PartnerCapitalWithdrawalCountArgs),
     ]);
     return { items, total, take, skip };
   }
