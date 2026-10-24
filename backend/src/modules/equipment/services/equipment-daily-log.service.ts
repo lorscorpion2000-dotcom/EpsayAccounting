@@ -1,11 +1,32 @@
 import {
   Injectable, NotFoundException, BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { AccountingEngineService } from '../../accounting/engine/accounting-engine.service';
 import {
   CreateDailyLogDto, UpdateDailyLogDto,
 } from '../dto/equipment.dto';
+
+interface ComputeCostInput {
+  equipmentId: string;
+  workHours?: unknown;
+  idleHours?: unknown;
+  fuelCost?: unknown;
+}
+
+export interface EquipmentAggregate {
+  equipmentId: string;
+  equipmentCode?: string;
+  equipmentName?: string;
+  workHours: number;
+  idleHours: number;
+  stopHours: number;
+  breakdownHours: number;
+  fuelLiters: number;
+  cost: number;
+  logCount: number;
+}
 
 @Injectable()
 export class EquipmentDailyLogService {
@@ -33,14 +54,15 @@ export class EquipmentDailyLogService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.EquipmentDailyLogWhereInput = {};
     if (query?.equipmentId) where.equipmentId = query.equipmentId;
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.EquipmentDailyLogWhereInput['status'];
     if (query?.fromDate || query?.toDate) {
-      where.logDate = {};
-      if (query.fromDate) where.logDate.gte = new Date(query.fromDate);
-      if (query.toDate) where.logDate.lte = new Date(query.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (query?.fromDate) dateFilter.gte = new Date(query.fromDate);
+      if (query?.toDate) dateFilter.lte = new Date(query.toDate);
+      where.logDate = dateFilter;
     }
     return this.prisma.equipmentDailyLog.findMany({
       where,
@@ -120,9 +142,9 @@ export class EquipmentDailyLogService {
     if (log.status !== 'DRAFT') {
       throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
     }
-    const data: any = { ...dto };
+    const data = { ...dto } as unknown as Prisma.EquipmentDailyLogUncheckedUpdateInput;
     if (dto.logDate) data.logDate = new Date(dto.logDate);
-    data.computedCost = await this.computeCost({ ...log, ...dto } as any);
+    data.computedCost = await this.computeCost({ ...log, ...dto } as unknown as ComputeCostInput);
     return this.prisma.equipmentDailyLog.update({
       where: { id },
       data,
@@ -155,7 +177,7 @@ export class EquipmentDailyLogService {
     const cost = Number(log.computedCost);
 
     return this.prisma.$transaction(async (tx) => {
-      let je: any = null;
+      let je: { code: string } | null = null;
       if (cost > 0.01) {
         je = await this.engine.postEvent('EQUIPMENT_COST', {
           amount: cost,
@@ -178,7 +200,7 @@ export class EquipmentDailyLogService {
     });
   }
 
-  private async computeCost(dto: any): Promise<number> {
+  private async computeCost(dto: ComputeCostInput): Promise<number> {
     const eq = await this.prisma.equipment.findUnique({ where: { id: dto.equipmentId } });
     if (!eq) return 0;
     const hours = Number(dto.workHours || 0) + Number(dto.idleHours || 0) * 0.5;
@@ -194,13 +216,14 @@ export class EquipmentDailyLogService {
     projectId?: string;
     equipmentId?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.EquipmentDailyLogWhereInput = {};
     if (params.equipmentId) where.equipmentId = params.equipmentId;
     if (params.projectId) where.projectId = params.projectId;
     if (params.fromDate || params.toDate) {
-      where.logDate = {};
-      if (params.fromDate) where.logDate.gte = new Date(params.fromDate);
-      if (params.toDate) where.logDate.lte = new Date(params.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (params.fromDate) dateFilter.gte = new Date(params.fromDate);
+      if (params.toDate) dateFilter.lte = new Date(params.toDate);
+      where.logDate = dateFilter;
     }
 
     const logs = await this.prisma.equipmentDailyLog.findMany({
@@ -215,7 +238,7 @@ export class EquipmentDailyLogService {
     const totalFuelLiters = logs.reduce((s, l) => s + Number(l.fuelLiters), 0);
     const totalCost = logs.reduce((s, l) => s + Number(l.computedCost), 0);
 
-    const byEquipment = new Map<string, any>();
+    const byEquipment = new Map<string, EquipmentAggregate>();
     for (const l of logs) {
       const key = l.equipmentId;
       if (!byEquipment.has(key)) {
@@ -227,7 +250,7 @@ export class EquipmentDailyLogService {
           fuelLiters: 0, cost: 0, logCount: 0,
         });
       }
-      const e = byEquipment.get(key);
+      const e = byEquipment.get(key)!;
       e.workHours += Number(l.workHours);
       e.idleHours += Number(l.idleHours);
       e.stopHours += Number(l.stopHours);

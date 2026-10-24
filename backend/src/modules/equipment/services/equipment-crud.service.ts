@@ -1,6 +1,7 @@
 import {
   Injectable, NotFoundException, BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import {
   CreateEquipmentDto, UpdateEquipmentDto,
@@ -30,9 +31,9 @@ export class EquipmentCrudService {
     projectId?: string;
     isActive?: boolean;
   }) {
-    const where: any = {};
-    if (query?.ownership) where.ownership = query.ownership;
-    if (query?.status) where.status = query.status;
+    const where: Prisma.EquipmentWhereInput = {};
+    if (query?.ownership) where.ownership = query.ownership as unknown as Prisma.EquipmentWhereInput['ownership'];
+    if (query?.status) where.status = query.status as unknown as Prisma.EquipmentWhereInput['status'];
     if (query?.projectId) where.currentProjectId = query.projectId;
     if (query?.isActive !== undefined) where.isActive = query.isActive;
     if (query?.search) {
@@ -73,7 +74,7 @@ export class EquipmentCrudService {
       data: {
         code,
         name: dto.name,
-        ownership: (dto.ownership as any) || 'OWNED',
+        ownership: (dto.ownership as unknown as Prisma.EquipmentUncheckedCreateInput['ownership']) || 'OWNED',
         category: dto.category,
         brand: dto.brand,
         model: dto.model,
@@ -87,7 +88,7 @@ export class EquipmentCrudService {
         fuelNormPerHour: dto.fuelNormPerHour,
         ownerId: dto.ownerId,
         currentProjectId: dto.currentProjectId,
-        status: (dto.status as any) || 'ACTIVE',
+        status: (dto.status as unknown as Prisma.EquipmentUncheckedCreateInput['status']) || 'ACTIVE',
         isActive: dto.isActive ?? true,
         description: dto.description,
       },
@@ -96,8 +97,8 @@ export class EquipmentCrudService {
 
   async updateEquipment(id: string, dto: UpdateEquipmentDto) {
     await this.getEquipment(id);
-    const data: any = { ...dto };
-    delete data.code;
+    const data = { ...dto } as unknown as Prisma.EquipmentUncheckedUpdateInput;
+    delete (data as unknown as Record<string, unknown>).code;
     return this.prisma.equipment.update({ where: { id }, data });
   }
 
@@ -106,13 +107,13 @@ export class EquipmentCrudService {
     const force = options?.force === true;
 
     const refs = await this.countEquipmentReferences(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s: number, n) => s + Number(n || 0), 0);
 
     if (!force) {
       if (total > 0) {
         await this.prisma.equipment.update({
           where: { id },
-          data: { isActive: false, status: 'RETIRED' as any },
+          data: { isActive: false, status: 'RETIRED' as unknown as Prisma.EquipmentUncheckedUpdateInput['status'] },
         });
         return { success: true, softDeleted: true };
       }
@@ -122,7 +123,7 @@ export class EquipmentCrudService {
 
     if (total > 0) {
       const details = Object.entries(refs)
-        .filter(([, v]: any) => Number(v) > 0)
+        .filter(([, v]) => Number(v) > 0)
         .map(([k, v]) => '  - ' + k + ': ' + v)
         .join('\n');
       throw new BadRequestException({
@@ -135,7 +136,7 @@ export class EquipmentCrudService {
     await this.prisma.$transaction(async (tx) => {
       await tx.equipmentDailyLog.deleteMany({ where: { equipmentId: id } });
       await tx.equipmentMaintenance.deleteMany({ where: { equipmentId: id } });
-      await (tx as any).dailyReportEquipment?.deleteMany({ where: { equipmentId: id } }).catch(() => {});
+      await Promise.resolve((tx as unknown as { dailyReportEquipment?: { deleteMany: (args: { where: { equipmentId: string } }) => Promise<unknown> } }).dailyReportEquipment?.deleteMany({ where: { equipmentId: id } })).catch(() => {});
       await tx.equipment.delete({ where: { id } });
     });
     return { success: true, hardDeleted: true };
@@ -146,7 +147,7 @@ export class EquipmentCrudService {
     const [dailyLogs, maintenances, reportLinks] = await Promise.all([
       p.equipmentDailyLog.count({ where: { equipmentId: id } }),
       p.equipmentMaintenance.count({ where: { equipmentId: id } }),
-      (p as any).dailyReportEquipment?.count({ where: { equipmentId: id } }).catch(() => 0) || Promise.resolve(0),
+      Promise.resolve((p as unknown as { dailyReportEquipment?: { count: (args: { where: { equipmentId: string } }) => Promise<number> } }).dailyReportEquipment?.count({ where: { equipmentId: id } })).then(v => v ?? 0).catch(() => 0),
     ]);
     return { dailyLogs, maintenances, reportLinks };
   }
