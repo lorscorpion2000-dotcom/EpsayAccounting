@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AccountDetailType } from '@prisma/client';
+import { AccountDetailType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { DetailAccountsService } from '../accounting/detail-accounts.service';
 import { AccountingEngineService } from '../accounting/engine/accounting-engine.service';
@@ -38,9 +38,9 @@ export class SalesService {
   // Units
   // ═══════════════════════════════════════════
   listUnits(params: { projectId?: string; status?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.SalesUnitWhereInput = {};
     if (params.projectId) where.projectId = params.projectId;
-    if (params.status) where.status = params.status;
+    if (params.status) where.status = params.status as Prisma.SalesUnitWhereInput['status'];
     if (params.search) {
       where.OR = [
         { unitNumber: { contains: params.search, mode: 'insensitive' } },
@@ -75,7 +75,7 @@ export class SalesService {
         parkingCount: dto.parkingCount,
         storageCount: dto.storageCount,
         listPrice: dto.listPrice,
-        status: (dto.status as any) || 'AVAILABLE',
+        status: (dto.status as unknown as Prisma.SalesUnitUncheckedCreateInput['status']) || 'AVAILABLE',
         notes: dto.notes,
       },
     });
@@ -85,7 +85,7 @@ export class SalesService {
     await this.getUnit(id);
     return this.prisma.salesUnit.update({
       where: { id },
-      data: { ...dto, status: dto.status as any },
+      data: { ...dto, status: dto.status as unknown as Prisma.SalesUnitUncheckedUpdateInput['status'] },
     });
   }
 
@@ -101,7 +101,7 @@ export class SalesService {
   // Customers
   // ═══════════════════════════════════════════
   listCustomers(search?: string) {
-    const where: any = { isActive: true };
+    const where: Prisma.SalesCustomerWhereInput = { isActive: true };
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
@@ -126,7 +126,7 @@ export class SalesService {
 
       // ─── تفضیل خودکار مشتری زیر معین 1.1.2 ───
       try {
-        await this.detailAccounts.ensureDetailAccount(tx as any, {
+        await this.detailAccounts.ensureDetailAccount(tx, {
           detailType: AccountDetailType.CUSTOMER,
           entityId: customer.id,
           entityName: customer.fullName,
@@ -151,7 +151,7 @@ export class SalesService {
       // ─── همگامسازی نام تفضیل با نام مشتری ───
       if (dto.fullName) {
         const existingDetail = await tx.account.findFirst({
-          where: { detailType: AccountDetailType.CUSTOMER, detailId: id } as any,
+          where: { detailType: AccountDetailType.CUSTOMER, detailId: id },
         });
         if (existingDetail && existingDetail.name !== dto.fullName) {
           await tx.account.update({
@@ -171,8 +171,8 @@ export class SalesService {
     const force = options?.force === true;
 
     if (!force) {
-      return this.prisma.$transaction(async (tx: any) => {
-        await tx.salesCustomer.update({ where: { id }, data: { isActive: false, deletedAt: new Date() } as any });
+      return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.salesCustomer.update({ where: { id }, data: { isActive: false, deletedAt: new Date() } });
         const acc = await tx.account.findFirst({ where: { detailType: 'CUSTOMER', detailId: id } });
         if (acc) await tx.account.update({ where: { id: acc.id }, data: { isActive: false } });
         return { success: true, softDeleted: true };
@@ -181,7 +181,7 @@ export class SalesService {
 
     // force (admin)
     const refs = await this.countCustomerRefs(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s, n) => s + Number(n || 0), 0);
 
     if (total > 0) {
       const details = Object.entries(refs)
@@ -195,7 +195,7 @@ export class SalesService {
       });
     }
 
-    await this.prisma.$transaction(async (tx: any) => {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.account.deleteMany({ where: { detailType: 'CUSTOMER', detailId: id } });
       await tx.salesCustomer.delete({ where: { id } });
     });
@@ -205,9 +205,9 @@ export class SalesService {
   private async countCustomerRefs(id: string) {
     const p = this.prisma;
     const [contracts, invoices, receipts] = await Promise.all([
-      (p as any).salesContract.count({ where: { customerId: id } }).catch(() => 0),
-      (p as any).salesInvoice.count({ where: { customerId: id } }).catch(() => 0),
-      (p as any).salesReceipt.count({ where: { customerId: id } }).catch(() => 0),
+      p.salesContract.count({ where: { customerId: id } }).catch(() => 0),
+      p.salesInvoice.count({ where: { customerId: id } }).catch(() => 0),
+      p.salesReceipt.count({ where: { customerId: id } }).catch(() => 0),
     ]);
     return { contracts, invoices, receipts };
   }
@@ -215,8 +215,8 @@ export class SalesService {
   // Contracts
   // ═══════════════════════════════════════════
   listContracts(params: { status?: string; search?: string; unitId?: string; customerId?: string }) {
-    const where: any = {};
-    if (params.status) where.status = params.status;
+    const where: Prisma.SalesContractWhereInput = {};
+    if (params.status) where.status = params.status as Prisma.SalesContractWhereInput['status'];
     if (params.unitId) where.unitId = params.unitId;
     if (params.customerId) where.customerId = params.customerId;
     if (params.search) {
@@ -296,7 +296,7 @@ export class SalesService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const data: any = {};
+      const data: Prisma.SalesContractUncheckedUpdateInput = {};
       if (dto.customerId !== undefined) data.customerId = dto.customerId;
       if (dto.totalPrice !== undefined) data.totalPrice = dto.totalPrice;
       if (dto.discountAmount !== undefined) data.discountAmount = dto.discountAmount;
@@ -349,7 +349,7 @@ export class SalesService {
         await tx.salesUnit.update({ where: { id: c.unitId }, data: { status: 'AVAILABLE' } });
         await tx.salesContract.update({
           where: { id },
-          data: { deletedAt: new Date() } as any,
+          data: { deletedAt: new Date() },
         });
         return { success: true, softDeleted: true };
       });
@@ -357,7 +357,7 @@ export class SalesService {
 
     // force (admin)
     const refs = await this.countContractRefs(id);
-    const total = Object.values(refs).reduce((s: number, n: any) => s + Number(n || 0), 0);
+    const total = Object.values(refs).reduce((s, n) => s + Number(n || 0), 0);
 
     if (total > 0) {
       const details = Object.entries(refs)
@@ -382,8 +382,8 @@ export class SalesService {
   private async countContractRefs(id: string) {
     const p = this.prisma;
     const [payments, invoices] = await Promise.all([
-      (p as any).salesPayment.count({ where: { contractId: id } }).catch(() => 0),
-      (p as any).salesInvoice.count({ where: { contractId: id } }).catch(() => 0),
+      p.salesPayment.count({ where: { contractId: id } }).catch(() => 0),
+      p.salesInvoice.count({ where: { contractId: id } }).catch(() => 0),
     ]);
     return { payments, invoices };
   }
@@ -477,8 +477,9 @@ export class SalesService {
         salesCustomerId: contract.customerId,
         sourceId: payment.id,
       });
-    } catch (e: any) {
-      console.error('[SalesPayment] Auto journal failed:', e?.message || e);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[SalesPayment] Auto journal failed:', msg);
     }
 
     return payment;

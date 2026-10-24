@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';;;;
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SalesService } from './sales.service';
 import { SoftDeleteService } from '../../common/services/soft-delete.service';
@@ -18,6 +18,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ReasonDto } from '../../common/dto';
 import { SalesUnitStatus } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+
+import type { Request } from 'express';
+
+interface AuthUser {
+  id?: string;
+  roles?: string[];
+  permissions?: string[];
+}
+
+type AuthenticatedRequest = Request & { user?: AuthUser };
+type AdminUser = Parameters<SoftDeleteService['adminDelete']>[0]['user'];
 
 // ═══════════════════════════════════════════════
 // Units
@@ -79,27 +90,29 @@ export class SalesUnitsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'salesUnit',
       id,
       user,
       reason: body?.reason || '',
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('sales.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'salesUnit',
       id,
       user,
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 }
@@ -154,9 +167,9 @@ export class SalesCustomersController {
   remove(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
-    const roles = (user?.roles || []) as string[];
+    const roles = user?.roles || [];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
     return this.svc.removeCustomer(id, { force: wantForce && isAdmin });
@@ -167,27 +180,29 @@ export class SalesCustomersController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'salesCustomer',
       id,
       user,
       reason: body?.reason || '',
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('sales.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'salesCustomer',
       id,
       user,
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 }
@@ -265,9 +280,9 @@ export class SalesContractsController {
   removeContract(
     @Param('id') id: string,
     @Query('force') force: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
-    const roles = (user?.roles || []) as string[];
+    const roles = user?.roles || [];
     const isAdmin = roles.includes('admin') || roles.includes('super_admin');
     const wantForce = force === 'true' || force === '1';
     return this.svc.removeContract(id, { force: wantForce && isAdmin });
@@ -278,27 +293,29 @@ export class SalesContractsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.adminDelete({
       model: 'salesContract',
       id,
       user,
       reason: body?.reason || '',
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 
   @Patch(':id/restore')
   @RequirePermissions('sales.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user) throw new UnauthorizedException('Authentication required');
+    const user = req.user as unknown as AdminUser;
     return this.softDelete.restore({
       model: 'salesContract',
       id,
       user,
-      meta: { ipAddress: req.ip, userAgent: req.headers?.['user-agent'] },
+      meta: { ipAddress: req.ip, userAgent: req.headers['user-agent'] },
     });
   }
 }
