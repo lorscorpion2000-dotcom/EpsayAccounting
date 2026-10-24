@@ -1,5 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+
+export interface ByItemRow {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  category: string;
+  unit: string;
+  totalQuantity: number;
+  totalCost: number;
+  count: number;
+}
+
+export interface ByProjectRow {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  totalCost: number;
+  count: number;
+}
 
 @Injectable()
 export class MaterialReportService {
@@ -15,16 +35,17 @@ export class MaterialReportService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const where: any = {
+    const where: Prisma.StockMovementWhereInput = {
       type: 'OUT',
     };
     if (params.projectId) where.projectId = params.projectId;
     if (params.wbsItemId) where.wbsItemId = params.wbsItemId;
     if (params.itemId) where.itemId = params.itemId;
     if (params.fromDate || params.toDate) {
-      where.movementDate = {};
-      if (params.fromDate) where.movementDate.gte = new Date(params.fromDate);
-      if (params.toDate) where.movementDate.lte = new Date(params.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (params.fromDate) dateFilter.gte = new Date(params.fromDate);
+      if (params.toDate) dateFilter.lte = new Date(params.toDate);
+      where.movementDate = dateFilter;
     }
 
     const movements = await this.prisma.stockMovement.findMany({
@@ -79,7 +100,7 @@ export class MaterialReportService {
     const totalCost = rows.reduce((s, r) => s + r.totalCost, 0);
 
     // Group by item
-    const byItemMap = new Map<string, any>();
+        const byItemMap = new Map<string, ByItemRow>();
     for (const r of rows) {
       if (!byItemMap.has(r.itemId)) {
         byItemMap.set(r.itemId, {
@@ -93,14 +114,14 @@ export class MaterialReportService {
           count: 0,
         });
       }
-      const e = byItemMap.get(r.itemId);
+      const e = byItemMap.get(r.itemId)!;
       e.totalQuantity += r.quantity;
       e.totalCost += r.totalCost;
       e.count += 1;
     }
 
     // Group by project
-    const byProjectMap = new Map<string, any>();
+        const byProjectMap = new Map<string, ByProjectRow>();
     for (const r of rows) {
       if (!r.projectId) continue;
       if (!byProjectMap.has(r.projectId)) {
@@ -112,7 +133,7 @@ export class MaterialReportService {
           count: 0,
         });
       }
-      const e = byProjectMap.get(r.projectId);
+      const e = byProjectMap.get(r.projectId)!;
       e.totalCost += r.totalCost;
       e.count += 1;
     }
@@ -139,7 +160,7 @@ export class MaterialReportService {
     });
     if (!project) throw new NotFoundException('پروژه یافت نشد');
 
-    const whereWbs: any = { projectId };
+    const whereWbs: Prisma.WbsItemWhereInput = { projectId };
     if (wbsItemId) whereWbs.id = wbsItemId;
 
     const wbsItems = await this.prisma.wbsItem.findMany({
@@ -182,7 +203,7 @@ export class MaterialReportService {
 
       // درصد این WBS از کل پروژه (بر اساس مبلغ)
       const totalWbsValue = await this.prisma.wbsItem.aggregate({
-        where: { projectId, isPostable: true } as any,
+        where: { projectId, isPostable: true } as unknown as Prisma.WbsItemWhereInput,
         _sum: { totalPrice: true },
       });
       const projectWbsTotal = Number(totalWbsValue._sum.totalPrice || 0);

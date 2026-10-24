@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -9,8 +10,7 @@ export class TaxReportsService {
   // 1) گزارش ارزش افزوده (VAT)
   // ═══════════════════════════════════════════════════════════
   async vatReport(params: { fromDate: string; toDate: string; projectId?: string; partnerId?: string }) {
-    const whereBase: any = {};
-    if (params.projectId) whereBase.projectId = params.projectId;
+    const baseFilter: { projectId?: string } = params.projectId ? { projectId: params.projectId } : {};
 
     const dateFilter = {
       gte: new Date(params.fromDate),
@@ -18,8 +18,8 @@ export class TaxReportsService {
     };
 
     // ─── خرید (ارزش افزوده ورودی) ───
-    const purchaseWhere: any = {
-      ...whereBase,
+    const purchaseWhere: Prisma.PurchaseInvoiceWhereInput = {
+      ...baseFilter,
       invoiceDate: dateFilter,
       status: { in: ['APPROVED', 'PARTIALLY_PAID', 'PAID'] },
       deletedAt: null,
@@ -36,8 +36,8 @@ export class TaxReportsService {
     });
 
     // ─── فروش (ارزش افزوده خروجی) ───
-    const salesWhere: any = {
-      ...whereBase,
+    const salesWhere: Prisma.SalesInvoiceWhereInput = {
+      ...baseFilter,
       invoiceDate: dateFilter,
       status: { in: ['APPROVED', 'PARTIALLY_RECEIVED', 'PAID'] },
       deletedAt: null,
@@ -109,12 +109,12 @@ export class TaxReportsService {
   // 2) مالیات بر حقوق (لیست مالیات حقوق)
   // ═══════════════════════════════════════════════════════════
   async payrollTaxReport(params: { year: number; month: number; projectId?: string }) {
-    const where: any = {
-      period: { year: params.year, month: params.month },
+    const periodFilter: Prisma.PayrollPeriodWhereInput = {
+      year: params.year,
+      month: params.month,
     };
-    if (params.projectId) {
-      where.period.projectId = params.projectId;
-    }
+    if (params.projectId) periodFilter.projectId = params.projectId;
+    const where: Prisma.PayrollRecordWhereInput = { period: periodFilter };
 
     const records = await this.prisma.payrollRecord.findMany({
       where,
@@ -179,12 +179,12 @@ export class TaxReportsService {
   // 3) لیست بیمه تأمین اجتماعی
   // ═══════════════════════════════════════════════════════════
   async insuranceReport(params: { year: number; month: number; projectId?: string }) {
-    const where: any = {
-      period: { year: params.year, month: params.month },
+    const periodFilter: Prisma.PayrollPeriodWhereInput = {
+      year: params.year,
+      month: params.month,
     };
-    if (params.projectId) {
-      where.period.projectId = params.projectId;
-    }
+    if (params.projectId) periodFilter.projectId = params.projectId;
+    const where: Prisma.PayrollRecordWhereInput = { period: periodFilter };
 
     const records = await this.prisma.payrollRecord.findMany({
       where,

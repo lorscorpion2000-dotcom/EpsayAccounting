@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { diskStorage } from 'multer';
+import type { Request } from 'express';
 import { extname } from 'path';
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx', '.dwg'];
@@ -9,7 +10,7 @@ export const multerUploadOptions = {
   limits: {
     fileSize: MAX_FILE_SIZE,
   },
-  fileFilter: (_req: any, file: any, callback: any) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, callback: (error: Error | null, acceptFile: boolean) => void) => {
     const ext = extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return callback(

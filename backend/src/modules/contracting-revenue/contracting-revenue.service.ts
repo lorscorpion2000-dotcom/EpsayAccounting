@@ -1,4 +1,5 @@
 import * as jalaali from 'jalaali-js';
+import { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import ExcelJS from 'exceljs';
@@ -15,32 +16,34 @@ export interface RevenueFilters {
 export class ContractingRevenueService {
   constructor(private prisma: PrismaService) {}
 
-  private statementWhere(f: RevenueFilters): any {
-    const where: any = {
+  private statementWhere(f: RevenueFilters): Prisma.ClientStatementWhereInput {
+    const where: Prisma.ClientStatementWhereInput = {
       deletedAt: null,
       status: { in: ['APPROVED', 'PAID'] },
     };
     if (f.projectId) where.projectId = f.projectId;
     if (f.fromDate || f.toDate) {
-      where.periodEnd = {};
-      if (f.fromDate) where.periodEnd.gte = new Date(f.fromDate);
-      if (f.toDate) where.periodEnd.lte = new Date(f.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (f.fromDate) dateFilter.gte = new Date(f.fromDate);
+      if (f.toDate) dateFilter.lte = new Date(f.toDate);
+      where.periodEnd = dateFilter;
     }
     if (f.clientId) where.project = { clientId: f.clientId };
     return where;
   }
 
-  private expenseWhere(f: RevenueFilters): any {
-    const where: any = {
+  private expenseWhere(f: RevenueFilters): Prisma.ExpenseWhereInput {
+    const where: Prisma.ExpenseWhereInput = {
       status: 'POSTED',
       costType: 'COMPANY',
     };
     if (f.projectId) where.projectId = f.projectId;
     if (f.clientId) where.project = { clientId: f.clientId };
     if (f.fromDate || f.toDate) {
-      where.expenseDate = {};
-      if (f.fromDate) where.expenseDate.gte = new Date(f.fromDate);
-      if (f.toDate) where.expenseDate.lte = new Date(f.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (f.fromDate) dateFilter.gte = new Date(f.fromDate);
+      if (f.toDate) dateFilter.lte = new Date(f.toDate);
+      where.expenseDate = dateFilter;
     }
     return where;
   }

@@ -39,7 +39,7 @@ export class ApprovalsService {
     if (!user) return false;
     const roleCodes = new Set<string>();
     const permCodes = new Set<string>();
-    for (const ur of (user as any).roles || []) {
+    for (const ur of user.roles || []) {
       if (ur.role?.code) roleCodes.add(ur.role.code);
       for (const rp of ur.role?.permissions || []) {
         if (rp.permission?.code) permCodes.add(rp.permission.code);
@@ -84,7 +84,7 @@ export class ApprovalsService {
     });
     if (!user) return { all: false, roleCodes: new Set(), access: {} };
     const roleCodes = new Set<string>();
-    for (const ur of (user as any).roles || []) {
+    for (const ur of user.roles || []) {
       if (ur.role?.code) roleCodes.add(ur.role.code);
     }
     const isSuper = roleCodes.has('super_admin') || roleCodes.has('admin');

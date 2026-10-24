@@ -1,5 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+
+export interface DiscrepancyRow {
+  countId: string;
+  countCode: string;
+  countDate: Date;
+  warehouseId?: string;
+  warehouseName?: string;
+  itemId?: string;
+  itemCode?: string;
+  itemName?: string;
+  unit: string;
+  systemQty: number;
+  physicalQty: number;
+  difference: number;
+  unitCost: number;
+  differenceCost: number;
+  notes?: string | null;
+}
 
 @Injectable()
 export class OperationalReportsService {
@@ -14,7 +33,7 @@ export class OperationalReportsService {
     projectId?: string;
     equipmentId?: string;
   }) {
-    const where: any = {
+    const where: Prisma.EquipmentDailyLogWhereInput = {
       deletedAt: null,
       logDate: {
         gte: new Date(params.fromDate),
@@ -134,12 +153,13 @@ export class OperationalReportsService {
     fromDate?: string;
     toDate?: string;
   }) {
-    const stmtWhere: any = {};
+    const stmtWhere: Prisma.SubcontractorStatementWhereInput = {};
     if (params.projectId) stmtWhere.projectId = params.projectId;
     if (params.fromDate || params.toDate) {
-      stmtWhere.periodEnd = {};
-      if (params.fromDate) stmtWhere.periodEnd.gte = new Date(params.fromDate);
-      if (params.toDate) stmtWhere.periodEnd.lte = new Date(params.toDate);
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (params.fromDate) dateFilter.gte = new Date(params.fromDate);
+      if (params.toDate) dateFilter.lte = new Date(params.toDate);
+      stmtWhere.periodEnd = dateFilter;
     }
 
     const statements = await this.prisma.subcontractorStatement.findMany({
@@ -225,7 +245,7 @@ export class OperationalReportsService {
     warehouseId?: string;
     itemId?: string;
   }) {
-    const where: any = {
+    const where: Prisma.InventoryCountWhereInput = {
       countDate: {
         gte: new Date(params.fromDate),
         lte: new Date(params.toDate),
@@ -248,7 +268,7 @@ export class OperationalReportsService {
     });
 
     // ساخت ردیف‌ها
-    const rows: any[] = [];
+    const rows: DiscrepancyRow[] = [];
     for (const c of counts) {
       for (const it of c.items) {
         if (params.itemId && it.itemId !== params.itemId) continue;
