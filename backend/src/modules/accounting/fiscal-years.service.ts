@@ -1,7 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { FiscalYear } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
+
+/**
+ * Prisma soft-delete extension supports a `__withDeleted` flag that is not
+ * part of the generated Prisma types. Narrow the call site explicitly.
+ */
+type FiscalYearFindFirstWithDeleted = (
+  args: Prisma.FiscalYearFindFirstArgs & { __withDeleted?: boolean },
+) => Prisma.PrismaPromise<FiscalYear | null>;
 
 @Injectable()
 export class FiscalYearsService {
@@ -27,9 +36,11 @@ export class FiscalYearsService {
 
   async create(dto: CreateFiscalYearDto) {
     // چک وجود soft-deleted با همان code
-    const softDeleted = await (this.prisma.fiscalYear as any).findFirst({
-      __withDeleted: true,
+    const softDeleted = await (
+      this.prisma.fiscalYear.findFirst as unknown as FiscalYearFindFirstWithDeleted
+    )({
       where: { code: dto.code, deletedAt: { not: null } },
+      __withDeleted: true,
     });
     if (softDeleted) {
       throw new BadRequestException(
@@ -75,7 +86,7 @@ export class FiscalYearsService {
 
   async update(id: string, dto: Partial<CreateFiscalYearDto>) {
     await this.findOne(id);
-    const data: any = {};
+    const data: Prisma.FiscalYearUpdateInput = {};
     if (dto.code !== undefined) data.code = dto.code;
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.startDate !== undefined) data.startDate = new Date(dto.startDate);
@@ -182,7 +193,7 @@ export class FiscalYearsService {
     });
     const accountById = new Map(accounts.map((a) => [a.id, a]));
 
-    const closingLines: any[] = [];
+    const closingLines: Prisma.JournalLineUncheckedCreateWithoutJournalEntryInput[] = [];
 
     for (const l of lines) {
       const acc = accountById.get(l.accountId);
@@ -310,7 +321,7 @@ export class FiscalYearsService {
     });
     const accountById = new Map(accounts.map((a) => [a.id, a]));
 
-    const openingLines: any[] = [];
+    const openingLines: Prisma.JournalLineUncheckedCreateWithoutJournalEntryInput[] = [];
     for (const l of lines) {
       const acc = accountById.get(l.accountId);
       if (!acc) continue;
@@ -384,7 +395,7 @@ export class FiscalYearsService {
     date: Date | string,
     tx?: Prisma.TransactionClient,
   ) {
-    const client: any = (tx as any) ?? this.prisma;
+    const client: Prisma.TransactionClient = tx ?? (this.prisma as Prisma.TransactionClient);
     const d = typeof date === 'string' ? new Date(date) : date;
     if (!d || isNaN(d.getTime())) {
       throw new BadRequestException('PERIOD_LOCKED: invalid date');
