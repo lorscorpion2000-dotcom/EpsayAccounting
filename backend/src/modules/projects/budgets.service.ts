@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import type { DeleteMeta } from '../../common/services/soft-delete.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 
@@ -8,7 +10,7 @@ export class BudgetsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(projectId?: string) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.ProjectBudgetWhereInput = { deletedAt: null };
     if (projectId) where.projectId = projectId;
     return this.prisma.projectBudget.findMany({
       where,
@@ -44,7 +46,7 @@ export class BudgetsService {
 
   async update(id: string, dto: UpdateBudgetDto) {
     await this.findOne(id);
-    const data: any = { ...dto };
+    const data = { ...dto } as unknown as Prisma.ProjectBudgetUncheckedUpdateInput;
     if (dto.approvedAt) data.approvedAt = new Date(dto.approvedAt);
     return this.prisma.projectBudget.update({ where: { id }, data });
   }
@@ -59,10 +61,10 @@ export class BudgetsService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.projectBudget.findUnique({
+    const existing = await this.prisma.projectBudget.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.ProjectBudgetFindUniqueArgs);
     if (!existing) throw new NotFoundException('ردیف بودجه یافت نشد');
     if (!existing.deletedAt) throw new Error('ردیف بودجه حذف نشده است');
     await this.prisma.projectBudget.update({
@@ -72,11 +74,11 @@ export class BudgetsService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.projectBudget.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: DeleteMeta = {}) {
+    const existing = await this.prisma.projectBudget.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.ProjectBudgetFindUniqueArgs);
     if (!existing) throw new NotFoundException('ردیف بودجه یافت نشد');
     if (existing.isLocked) {
       throw new Error('این ردیف بودجه قفل شده است — ابتدا باز کنید');
@@ -92,12 +94,12 @@ export class BudgetsService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.ProjectBudgetFindManyArgs),
       this.prisma.projectBudget.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.ProjectBudgetCountArgs),
     ]);
     return { items, total, take, skip };
   }
