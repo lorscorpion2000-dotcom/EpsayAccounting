@@ -1,7 +1,9 @@
-﻿import {
+import {
   BadRequestException, Injectable, NotFoundException,
 } from '@nestjs/common';
+import { Prisma, ClientStatementCategory } from '@prisma/client';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
+import type { DeleteMeta } from '../../../common/services/soft-delete.service';
 import {
   CreateCSDto, UpdateCSDto,
 } from '../dto/client-statement.dto';
@@ -9,6 +11,21 @@ import {
 const CATEGORIES = ['MATERIAL', 'LABOR', 'MISC', 'TRANSPORT', 'EQUIPMENT'] as const;
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 type Category = typeof CATEGORIES[number];
+
+type ContractSummary = Prisma.ContractGetPayload<{
+  select: {
+    id: true;
+    code: true;
+    taxPercent: true;
+    baseAmount: true;
+    prepaymentAmount: true;
+    prepaymentDepreciationPercent: true;
+  };
+}>;
+
+type PassThroughExpense = Prisma.ExpenseGetPayload<{
+  select: { id: true; code: true; totalAmount: true; expenseDate: true; description: true };
+}>;
 
 @Injectable()
 export class ClientStatementCrudService {
@@ -53,13 +70,13 @@ export class ClientStatementCrudService {
       where: { projectId },
       orderBy: { statementNumber: 'desc' },
       select: { statementNumber: true },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.ClientStatementFindFirstArgs);
     return (last?.statementNumber || 0) + 1;
   }
 
   private computeTotals(
-    items: { category: string; totalPrice: any }[],
+    items: { category: string; totalPrice: unknown }[],
     coefficient: number,
     prepaymentAmount: number,
     prepaymentDeductionPercent: number,
@@ -105,9 +122,9 @@ export class ClientStatementCrudService {
   }
 
   async list(query?: { projectId?: string; status?: string; search?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.ClientStatementWhereInput = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.status) where.status = query.status;
+    if (query?.status) where.status = query.status as Prisma.ClientStatementWhereInput['status'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -154,7 +171,7 @@ export class ClientStatementCrudService {
     if (!s) throw new NotFoundException('صورت‌وضعیت یافت نشد');
 
     // اطلاعات قرارداد (relation در schema نیست — query جداگانه)
-    let contract: any = null;
+    let contract: ContractSummary | null = null;
     if (s.contractId) {
       contract = await this.prisma.contract.findUnique({
         where: { id: s.contractId },
@@ -170,7 +187,7 @@ export class ClientStatementCrudService {
     }
 
     // صورت‌وضعیت‌های قبلی همان پروژه/قرارداد که پرداخت شده‌اند
-    const previousWhere: any = {
+    const previousWhere: Prisma.ClientStatementWhereInput = {
       projectId: s.projectId,
       id: { not: id },
       status: 'PAID',
@@ -191,7 +208,7 @@ export class ClientStatementCrudService {
       orderBy: { statementNumber: 'asc' },
     });
     // هزینه‌های پاس‌تروگ باز (بسته‌نشده) برای کارفرمای این پروژه
-    let passThroughOpenExpenses: any[] = [];
+    let passThroughOpenExpenses: PassThroughExpense[] = [];
     let passThroughOpenAmount = 0;
     const clientId = s.project?.clientId || null;
     if (clientId) {
@@ -241,7 +258,7 @@ export class ClientStatementCrudService {
     const prepaymentDeductionPercent = dto.prepaymentDeductionPercent ?? 20;
 
     const items = (dto.items || []).map((it, idx) => ({
-      category: it.category as any,
+      category: it.category as unknown as ClientStatementCategory,
       rowNumber: idx + 1,
       priceListCode: it.priceListCode,
       description: it.description,
@@ -257,7 +274,7 @@ export class ClientStatementCrudService {
     const csCreateUnitMap = await this.resolveUnitIds(items.map((x) => x.unit));
     for (const it of items) {
   it.unitId = it.unit ? (csCreateUnitMap.get(it.unit) ?? null) : null;
-  delete (it as any).unit;
+  delete (it as { unit?: string | null }).unit;
 }
 
     const totals = this.computeTotals(items, coefficient, contractData.prepaymentAmount, prepaymentDeductionPercent, {
@@ -289,7 +306,7 @@ export class ClientStatementCrudService {
         netPayable: totals.netPayable,
         description: dto.description,
         status: 'DRAFT',
-        items: { create: items as any },
+        items: { create: items as unknown as Prisma.ClientStatementItemCreateWithoutStatementInput[] },
       },
       include: {
         items: { orderBy: [{ category: 'asc' }, { rowNumber: 'asc' }] },
@@ -325,7 +342,7 @@ export class ClientStatementCrudService {
   async update(id: string, dto: UpdateCSDto) {
     const s = await this.get(id);
     if (s.status !== 'DRAFT') throw new BadRequestException('فقط پیش‌نویس قابل ویرایش است');
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if (dto.periodStart) data.periodStart = new Date(dto.periodStart);
     if (dto.periodEnd) data.periodEnd = new Date(dto.periodEnd);
     if (dto.coefficient !== undefined) data.coefficient = dto.coefficient;
@@ -333,13 +350,13 @@ export class ClientStatementCrudService {
     if (dto.prepaymentDeductionPercent !== undefined) data.prepaymentDeductionPercent = dto.prepaymentDeductionPercent;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.contractId !== undefined) data.contractId = dto.contractId;
-    await this.prisma.clientStatement.update({ where: { id }, data });
+    await this.prisma.clientStatement.update({ where: { id }, data: data as unknown as Prisma.ClientStatementUncheckedUpdateInput });
 
     if (dto.items) {
       await this.prisma.clientStatementItem.deleteMany({ where: { statementId: id } });
       const items = dto.items.map((it, idx) => ({
         statementId: id,
-        category: it.category as any,
+        category: it.category as unknown as ClientStatementCategory,
         rowNumber: idx + 1,
         priceListCode: it.priceListCode,
         description: it.description,
@@ -371,10 +388,10 @@ export class ClientStatementCrudService {
   }
 
   async restore(id: string, userId?: string) {
-    const existing: any = await this.prisma.clientStatement.findUnique({
+    const existing = await this.prisma.clientStatement.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.ClientStatementFindUniqueArgs);
     if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
     if (!existing.deletedAt) throw new Error('صورت‌وضعیت حذف نشده است');
     await this.prisma.clientStatement.update({
@@ -384,11 +401,11 @@ export class ClientStatementCrudService {
     return { ok: true, id, restored: true, by: userId ?? null };
   }
 
-  async adminDelete(id: string, userId?: string, reason?: string, _meta: any = {}) {
-    const existing: any = await this.prisma.clientStatement.findUnique({
+  async adminDelete(id: string, userId?: string, reason?: string, _meta: DeleteMeta = {}) {
+    const existing = await this.prisma.clientStatement.findUnique({
       where: { id },
-      ...({ __withDeleted: true } as any),
-    });
+      __withDeleted: true,
+    } as unknown as Prisma.ClientStatementFindUniqueArgs);
     if (!existing) throw new NotFoundException('صورت‌وضعیت یافت نشد');
     if (existing.status !== 'DRAFT') {
       throw new Error('فقط پیش‌نویس قابل حذف قطعی است — چون تاییدشده سند حسابداری دارد');
@@ -407,18 +424,18 @@ export class ClientStatementCrudService {
         orderBy: { deletedAt: 'desc' },
         take: Math.min(take, 500),
         skip,
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.ClientStatementFindManyArgs),
       this.prisma.clientStatement.count({
         where: { deletedAt: { not: null } },
-        ...({ __withDeleted: true } as any),
-      }),
+        __withDeleted: true,
+      } as unknown as Prisma.ClientStatementCountArgs),
     ]);
     return { items, total, take, skip };
   }
 
   async stats(projectId?: string) {
-    const where: any = {};
+    const where: Prisma.ClientStatementWhereInput = {};
     if (projectId) where.projectId = projectId;
     const [total, drafts, submitted, approved, paid, sum] = await Promise.all([
       this.prisma.clientStatement.count({ where }),
