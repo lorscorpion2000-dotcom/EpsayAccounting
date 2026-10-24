@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AccountDetailType, Prisma } from '@prisma/client';
+import { AccountDetailType, AccountLevel, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 export interface EnsureDetailAccountInput {
@@ -44,7 +44,7 @@ export class DetailAccountsService {
 
     // ۱. بررسی وجود قبلی
     const existing = await tx.account.findFirst({
-      where: { detailType, detailId: entityId } as any,
+      where: { detailType, detailId: entityId },
     });
 
     if (existing) {
@@ -86,19 +86,18 @@ export class DetailAccountsService {
     const nextCode = `${parentCode}.${String(maxLast + 1).padStart(padding, '0')}`;
 
     // ۴. ساخت حساب تفصیلی
-    const created = await tx.account.create({
-      data: {
-        code: nextCode,
-        name: entityName,
-        level: 'DETAIL' as any,
-        nature: parent.nature,
-        parentId: parent.id,
-        isPostable: true,
-        isActive: true,
-        detailType: detailType as any,
-        detailId: entityId,
-      } as any,
-    });
+    const createData: Prisma.AccountUncheckedCreateInput = {
+      code: nextCode,
+      name: entityName,
+      level: AccountLevel.DETAIL,
+      nature: parent.nature,
+      parentId: parent.id,
+      isPostable: true,
+      isActive: true,
+      detailType: detailType,
+      detailId: entityId,
+    };
+    const created = await tx.account.create({ data: createData });
 
     this.logger.log(`✅ Created detail account ${nextCode} for ${detailType}:${entityId} (${entityName})`);
 
@@ -123,7 +122,7 @@ export class DetailAccountsService {
     entityId: string,
   ) {
     const account = await tx.account.findFirst({
-      where: { detailType, detailId: entityId } as any,
+      where: { detailType, detailId: entityId },
     });
     if (account) {
       await tx.account.update({
@@ -155,9 +154,9 @@ export class DetailAccountsService {
     });
 
     const mapPartnerTypeToDetail: Partial<Record<string, AccountDetailType>> = {
-      CLIENT: 'CUSTOMER' as any,
-      SUPPLIER: 'SUPPLIER' as any,
-      CONTRACTOR: 'CONTRACTOR' as any,
+      CLIENT: AccountDetailType.CUSTOMER,
+      SUPPLIER: AccountDetailType.SUPPLIER,
+      CONTRACTOR: AccountDetailType.CONTRACTOR,
     };
 
     for (const p of partners) {
@@ -165,12 +164,12 @@ export class DetailAccountsService {
       if (!dt) { results.skipped++; continue; }
 
       const exists = await this.prisma.account.findFirst({
-        where: { detailType: dt as any, detailId: p.id } as any,
+        where: { detailType: dt, detailId: p.id },
       });
       if (exists) { results.skipped++; continue; }
 
       const created = await this.ensureDetailAccount(this.prisma, {
-        detailType: dt as any,
+        detailType: dt,
         entityId: p.id,
         entityName: p.name,
       });
@@ -183,17 +182,17 @@ export class DetailAccountsService {
 
     // ─── پرسنل (Employee) ───
     const employees = await this.prisma.employee.findMany({
-      where: { isActive: true } as any,
+      where: { isActive: true },
     });
 
     for (const e of employees) {
       const exists = await this.prisma.account.findFirst({
-        where: { detailType: 'EMPLOYEE' as any, detailId: e.id } as any,
+        where: { detailType: AccountDetailType.EMPLOYEE, detailId: e.id },
       });
       if (exists) { results.skipped++; continue; }
 
       const created = await this.ensureDetailAccount(this.prisma, {
-        detailType: 'EMPLOYEE' as any,
+        detailType: AccountDetailType.EMPLOYEE,
         entityId: e.id,
         entityName: e.fullName,
       });
@@ -202,19 +201,19 @@ export class DetailAccountsService {
 
     // ─── تنخواه ───
     const pettyCashAccounts = await this.prisma.pettyCashAccount.findMany({
-      where: { isActive: true } as any,
+      where: { isActive: true },
     });
 
     for (const pc of pettyCashAccounts) {
       const exists = await this.prisma.account.findFirst({
-        where: { detailType: 'PETTY_CASH' as any, detailId: pc.id } as any,
+        where: { detailType: AccountDetailType.PETTY_CASH, detailId: pc.id },
       });
       if (exists) { results.skipped++; continue; }
 
       const created = await this.ensureDetailAccount(this.prisma, {
-        detailType: 'PETTY_CASH' as any,
+        detailType: AccountDetailType.PETTY_CASH,
         entityId: pc.id,
-        entityName: (pc as any).name || 'تنخواه',
+        entityName: (pc as unknown as { name?: string }).name || 'تنخواه',
       });
       if (created) results.pettyCash++;
     }
