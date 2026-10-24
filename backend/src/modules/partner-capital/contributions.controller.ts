@@ -8,6 +8,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
 import { CapitalTransactionStatus } from '@prisma/client';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Capital Contributions - آورده شرکا')
 @ApiBearerAuth()
@@ -59,7 +60,7 @@ export class ContributionsController {
 
   @Delete(':id/admin')
   @RequirePermissions('partners.update')
-  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: any) {
+  adminDelete(@Param('id') id: string, @Body() body: ReasonDto, @Req() req: AuthenticatedRequest) {
     return this.s.adminDelete(id, req.user?.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],

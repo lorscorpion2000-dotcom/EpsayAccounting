@@ -1,7 +1,19 @@
-﻿import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateShareDto, UpdateShareDto, AddPartnerWithDilutionDto } from './dto/share.dto';
 import Decimal from 'decimal.js';
+import { Prisma } from '@prisma/client';
+
+interface ShareRecord {
+  projectId: string;
+  partnerId: string;
+  sharePercent: Decimal;
+  effectiveFrom: Date;
+  usdRate: Decimal;
+  valuationAmountUsd: Decimal;
+  valuationAmountRial: Decimal;
+  notes: string;
+}
 
 @Injectable()
 export class SharesService {
@@ -43,7 +55,7 @@ export class SharesService {
         effectiveFrom: { lte: effectiveFrom },
       },
     });
-    const total = shares.reduce((s: number, sh: any) => s + Number(sh.sharePercent), 0);
+    const total = shares.reduce((s, sh) => s + Number(sh.sharePercent), 0);
     return total;
   }
 
@@ -123,7 +135,7 @@ export class SharesService {
 
     const dilutionFactor = new Decimal(1).minus(newPartnerShareDecimal.dividedBy(100));
 
-    return this.prisma.$transaction(async (tx: any) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const activeShares = await tx.projectPartnerShare.findMany({
         where: {
           projectId: dto.projectId,
@@ -133,7 +145,7 @@ export class SharesService {
       });
 
       if (activeShares.length > 0) {
-        const currentSum = activeShares.reduce((s: Decimal, sh: any) => s.plus(new Decimal(sh.sharePercent.toString())), new Decimal(0));
+        const currentSum = activeShares.reduce((s: Decimal, sh) => s.plus(new Decimal(sh.sharePercent.toString())), new Decimal(0));
         if (!currentSum.equals(100)) {
           throw new BadRequestException(`مجموع سهم‌های فعلی پروژه برابر ۱۰۰٪ نیست (جمع فعلی: ${currentSum.toString()}٪). ابتدا سهم‌های فعلی را اصلاح کنید.`);
         }
@@ -151,7 +163,7 @@ export class SharesService {
       }
 
       let allocatedTotal = new Decimal(0);
-      const newShareRecords: any[] = [];
+      const newShareRecords: ShareRecord[] = [];
 
       for (const oldShare of activeShares) {
         const oldPercent = new Decimal(oldShare.sharePercent.toString());

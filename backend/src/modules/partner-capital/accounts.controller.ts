@@ -5,6 +5,7 @@ import { CreateCapitalAccountDto } from './dto/capital-account.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { ReasonDto } from '../../common/dto';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Partner Capital Accounts - حساب‌های سرمایه شرکا')
 @ApiBearerAuth()
@@ -39,9 +40,9 @@ export class CapitalAccountsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.s.adminDelete(id, user.id, body?.reason, {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
@@ -50,8 +51,8 @@ export class CapitalAccountsController {
 
   @Patch(':id/restore')
   @RequirePermissions('capitalaccount.delete')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.s.restore(id, user.id);
   }
 
