@@ -23,8 +23,8 @@ export class BackupService implements OnModuleInit {
         mkdirSync(this.backupRoot, { recursive: true });
         this.logger.log('Created backup root: ' + this.backupRoot);
       }
-    } catch (e: any) {
-      this.logger.error('Failed to create backup root: ' + e.message);
+    } catch (e) {
+      this.logger.error('Failed to create backup root: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -72,13 +72,13 @@ export class BackupService implements OnModuleInit {
         sizeBytes: stats.size,
         timestamp: ts,
       };
-    } catch (e: any) {
-      this.logger.error('Backup failed: ' + e.message);
+    } catch (e) {
+      this.logger.error('Backup failed: ' + (e instanceof Error ? e.message : String(e)));
       // اگر فایل نیمه‌کاره ساخته شده، پاکش کن
       if (existsSync(fullPath)) {
         try { unlinkSync(fullPath); } catch { /* ignore */ }
       }
-      throw new BadRequestException('Backup failed: ' + e.message);
+      throw new BadRequestException('Backup failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -107,8 +107,8 @@ export class BackupService implements OnModuleInit {
           };
         })
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    } catch (e: any) {
-      this.logger.error('Failed to list backups: ' + e.message);
+    } catch (e) {
+      this.logger.error('Failed to list backups: ' + (e instanceof Error ? e.message : String(e)));
       return [];
     }
   }
@@ -135,8 +135,8 @@ export class BackupService implements OnModuleInit {
     try {
       const r = await this.createBackup('AUTO');
       this.logger.log('Daily backup succeeded: ' + r.filename);
-    } catch (e: any) {
-      this.logger.error('Daily backup failed: ' + e.message);
+    } catch (e) {
+      this.logger.error('Daily backup failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -146,8 +146,8 @@ export class BackupService implements OnModuleInit {
     try {
       const r = await this.createBackup('AUTO');
       this.logger.log('Weekly backup succeeded: ' + r.filename);
-    } catch (e: any) {
-      this.logger.error('Weekly backup failed: ' + e.message);
+    } catch (e) {
+      this.logger.error('Weekly backup failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -173,8 +173,8 @@ export class BackupService implements OnModuleInit {
       if (deleted > 0) {
         this.logger.log('Cleaned up ' + deleted + ' old backups (older than ' + retentionDays + ' days)');
       }
-    } catch (e: any) {
-      this.logger.error('Cleanup failed: ' + e.message);
+    } catch (e) {
+      this.logger.error('Cleanup failed: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { TelegramService } from '../../common/services/telegram.service';
 import { sanitize } from '../../common/utils/sanitize.util';
@@ -36,8 +37,8 @@ export class AuditService {
     userId?: string;
     action: string;
     entity: string;
-    entityId?: string;
-    payload?: any;
+    entityId?: string | null;
+    payload?: unknown;
     ipAddress?: string;
     userAgent?: string;
   }) {
@@ -50,7 +51,7 @@ export class AuditService {
           action: data.action,
           entity: data.entity,
           entityId: data.entityId,
-          payload: safePayload,
+          payload: safePayload as Prisma.InputJsonValue | undefined,
           ipAddress: data.ipAddress,
           userAgent: data.userAgent,
         },
@@ -75,7 +76,7 @@ export class AuditService {
     page?: number;
     pageSize?: number;
   }) {
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
     if (params.userId) where.userId = params.userId;
     if (params.entity) where.entity = params.entity;
     if (params.action) where.action = params.action;
@@ -117,7 +118,7 @@ export class AuditService {
   }
 
   async stats(params?: { fromDate?: string; toDate?: string }) {
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
     if (params && (params.fromDate || params.toDate)) {
       where.createdAt = {};
       if (params.fromDate) where.createdAt.gte = new Date(params.fromDate);
@@ -167,7 +168,7 @@ export class AuditService {
     page?: number;
     pageSize?: number;
   }) {
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       action: params.action ? params.action : { in: SECURITY_ACTIONS },
     };
 
@@ -208,7 +209,7 @@ export class AuditService {
     const from = params?.fromDate ? new Date(params.fromDate) : defaultFrom;
     const to = params?.toDate ? new Date(params.toDate) : now;
 
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       action: { in: SECURITY_ACTIONS },
       createdAt: { gte: from, lte: to },
     };
@@ -258,7 +259,7 @@ export class AuditService {
   private async checkSuspiciousLogin(
     ip: string | undefined,
     action: string,
-    username: string | undefined,
+    username: string | null | undefined,
   ) {
     if (!ip || !FAILED_ACTIONS.has(action)) return;
 

@@ -2,13 +2,18 @@
  * مشترک — تولید کد یکتا با startsWith + max + 1 + retry
  * جایگزین الگوی count() + 1 که با soft-delete کد تکراری می‌ساخت.
  */
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+
+interface ModelDelegate {
+  findFirst: (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+}
 
 export interface GenerateCodeOptions {
   /** تعداد رقم‌های شمارنده. پیش‌فرض ۴ */
   pad?: number;
   /** استفاده از tx به‌جای prisma اصلی (برای idempotency داخل تراکنش) */
-  tx?: any;
+  tx?: Prisma.TransactionClient;
   /** بررسی رکوردهای soft-deleted هم (پیش‌فرض true) */
   withDeleted?: boolean;
   /** حداکثر تلاش برای پیدا کردن عدد بعدی. پیش‌فرض ۵۰ */
@@ -29,7 +34,7 @@ export async function generateCode(
   const pad = opts.pad ?? 4;
   const maxAttempts = opts.maxAttempts ?? 50;
   const withDeleted = opts.withDeleted !== false;
-  const client: any = opts.tx ?? prisma;
+  const client = (opts.tx ?? prisma) as unknown as Record<string, ModelDelegate | undefined>;
 
   const model = client[modelName];
   if (!model || typeof model.findFirst !== 'function') {
@@ -77,14 +82,15 @@ export async function withUniqueRetry<T>(
   run: () => Promise<T>,
   maxAttempts = 3,
 ): Promise<T> {
-  let lastErr: any = null;
+  let lastErr: unknown = null;
   for (let i = 0; i < maxAttempts; i++) {
     try {
       return await run();
-    } catch (e: any) {
+    } catch (e) {
       lastErr = e;
-      const code = e?.code || e?.meta?.code;
-      const msg = String(e?.message || '');
+      const errObj = e as { code?: string; meta?: { code?: string }; message?: string };
+      const code = errObj?.code || errObj?.meta?.code;
+      const msg = String(errObj?.message || '');
       const isP2002 =
         code === 'P2002' ||
         msg.includes('P2002') ||

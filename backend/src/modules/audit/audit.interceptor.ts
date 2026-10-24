@@ -1,8 +1,10 @@
-﻿import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor, Optional } from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor, Optional } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from './audit.service';
 import { sanitize as sanitizeUtil } from '../../common/utils/sanitize.util';
+
+type AuditLogEntry = Parameters<AuditService['log']>[0];
 
 const EXCLUDED = ['/api/auth/login', '/api/auth/me', '/api/auth/preferences', '/api/dashboard', '/api/audit', '/api/upload', '/api/attachments'];
 
@@ -12,7 +14,7 @@ export class AuditInterceptor implements NestInterceptor {
 
   constructor(@Optional() private readonly audit?: AuditService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest();
     const method = req.method ? req.method.toUpperCase() : '';
     if (['POST', 'PATCH', 'PUT', 'DELETE'].indexOf(method) === -1) return next.handle();
@@ -24,15 +26,15 @@ export class AuditInterceptor implements NestInterceptor {
     const entity = this.extractEntity(url);
     const entityId = req.params ? req.params.id : null;
 
-    const safeLog = (entry: any) => {
+    const safeLog = (entry: AuditLogEntry) => {
       try {
         if (this.audit && typeof this.audit.log === 'function') {
           Promise.resolve(this.audit.log(entry)).catch((err) => {
             this.logger.debug?.(`Audit log failed: ${err?.message}`);
           });
         }
-      } catch (err: any) {
-        this.logger.debug?.(`Audit log caught error: ${err?.message}`);
+      } catch (err) {
+        this.logger.debug?.(`Audit log caught error: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
 
@@ -44,7 +46,7 @@ export class AuditInterceptor implements NestInterceptor {
             action: method,
             entity,
             entityId,
-            payload: { url: req.url, body: sanitizeUtil(req.body), responseId: response ? response.id : null },
+            payload: { url: req.url, body: sanitizeUtil(req.body), responseId: response ? (response as { id?: string }).id : null },
             ipAddress: req.ip || (req.connection ? req.connection.remoteAddress : undefined),
             userAgent: req.headers && req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 500) : undefined,
           });

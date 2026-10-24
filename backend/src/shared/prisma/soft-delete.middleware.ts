@@ -5,6 +5,8 @@
  *    مثال: DailyReport, SalesInvoice, RFQ
  */
 
+import { Prisma } from '@prisma/client';
+
 const SOFT_DELETE_MODELS = new Set([
   'User', 'Role', 'Partner', 'Project', 'Contract', 'LegalContract', 'LegalContractParty', 'Unit', 'FiscalYear',
   'JournalEntry', 'Cheque', 'PettyCashAccount', 'PettyCashRequest', 'PettyCashTransaction',
@@ -35,9 +37,9 @@ const READ_ACTIONS = new Set([
 
 const UNIQUE_ACTIONS = new Set(['findUnique', 'findUniqueOrThrow']);
 
-export async function softDeleteMiddleware(params: any, next: any) {
+export const softDeleteMiddleware: Prisma.Middleware = async (params, next) => {
   // ۱. Bypass
-  if ((globalThis as any).__BYPASS_SOFT_DELETE) {
+  if ((globalThis as unknown as { __BYPASS_SOFT_DELETE?: boolean }).__BYPASS_SOFT_DELETE) {
     return next(params);
   }
 
@@ -88,14 +90,15 @@ export async function softDeleteMiddleware(params: any, next: any) {
         !(val instanceof Date);
 
       if (isCompoundCandidate) {
-        const innerKeys = Object.keys(val);
+        const valObj = val as Record<string, unknown>;
+        const innerKeys = Object.keys(valObj);
         const parts = key.split('_');
         // Only flatten if inner keys match the split parts — confirms compound unique
         const matches = parts.length >= 2
           && parts.length === innerKeys.length
           && parts.every((p, i) => p === innerKeys[i]);
         if (matches) {
-          for (const [ik, iv] of Object.entries(val)) {
+          for (const [ik, iv] of Object.entries(valObj)) {
             if (params.args.where[ik] === undefined) {
               params.args.where[ik] = iv;
             }
@@ -114,4 +117,4 @@ export async function softDeleteMiddleware(params: any, next: any) {
 
   // ۵. سایر actions (create/update/delete) → دست نخورده
   return next(params);
-}
+};
