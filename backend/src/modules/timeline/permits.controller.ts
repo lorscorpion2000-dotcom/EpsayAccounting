@@ -8,6 +8,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { PermitStatus, PermitType } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest, AuthUserPayload } from '../auth/auth.controller';
 
 @ApiTags('Timeline Permits - مجوزها و پروانه‌ها')
 @ApiBearerAuth()
@@ -54,7 +55,7 @@ export class PermitsController {
 
   @Delete(':id')
   @RequirePermissions('timeline.delete')
-  remove(@Param('id') id: string, @CurrentUser() _user: any) {
+  remove(@Param('id') id: string, @CurrentUser() _user: AuthUserPayload) {
     return this.s.remove(id, { force: true });
   }
 
@@ -67,9 +68,9 @@ export class PermitsController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'permit',
       id,
@@ -84,8 +85,8 @@ export class PermitsController {
 
   @Patch(':id/restore')
   @RequirePermissions('timeline.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'permit',
       id,

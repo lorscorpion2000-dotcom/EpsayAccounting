@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateInsuranceDto, UpdateInsuranceDto } from './dto/insurance.dto';
 
@@ -13,9 +14,9 @@ export class InsurancesService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.InsuranceWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
+    if (query?.type) where.type = query.type as Prisma.InsuranceWhereInput['type'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -45,7 +46,7 @@ export class InsurancesService {
       data: {
         code,
         projectId: dto.projectId,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.InsuranceUncheckedCreateInput['type'],
         title: dto.title,
         insurer: dto.insurer,
         policyNumber: dto.policyNumber,
@@ -66,7 +67,7 @@ export class InsurancesService {
     return this.prisma.insurance.update({
       where: { id },
       data: {
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.InsuranceUncheckedCreateInput['type'],
         title: dto.title,
         insurer: dto.insurer,
         policyNumber: dto.policyNumber,

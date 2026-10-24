@@ -8,6 +8,7 @@ import { SoftDeleteService } from '../../common/services/soft-delete.service';
 import { ReasonDto } from '../../common/dto';
 import { GuaranteeType } from '@prisma/client';
 import { OptionalIntPipe } from '../../common/pipes/optional-int.pipe';
+import type { AuthenticatedRequest } from '../auth/auth.controller';
 
 @ApiTags('Timeline Guarantees - تضامین')
 @ApiBearerAuth()
@@ -65,9 +66,9 @@ export class GuaranteesController {
   async adminDelete(
     @Param('id') id: string,
     @Body() body: ReasonDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const user = req.user || {};
+    const user = req.user!;
     return this.softDelete.adminDelete({
       model: 'guarantee',
       id,
@@ -82,8 +83,8 @@ export class GuaranteesController {
 
   @Patch(':id/restore')
   @RequirePermissions('timeline.update')
-  async restore(@Param('id') id: string, @Req() req: any) {
-    const user = req.user || {};
+  async restore(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const user = req.user!;
     return this.softDelete.restore({
       model: 'guarantee',
       id,

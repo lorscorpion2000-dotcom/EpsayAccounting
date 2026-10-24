@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateDocumentDto, UpdateDocumentDto } from './dto/document.dto';
 
@@ -13,10 +14,10 @@ export class DocumentsService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; phase?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.TechnicalDocumentWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
-    if (query?.phase) where.phase = query.phase;
+    if (query?.type) where.type = query.type as Prisma.TechnicalDocumentWhereInput['type'];
+    if (query?.phase) where.phase = query.phase as Prisma.TechnicalDocumentWhereInput['phase'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -45,8 +46,8 @@ export class DocumentsService {
       data: {
         code,
         projectId: dto.projectId,
-        type: dto.type as any,
-        phase: dto.phase as any,
+        type: dto.type as unknown as Prisma.TechnicalDocumentUncheckedCreateInput['type'],
+        phase: dto.phase as unknown as Prisma.TechnicalDocumentUncheckedCreateInput['phase'],
         title: dto.title,
         version: dto.version,
         isApproved: dto.isApproved ?? false,
@@ -64,8 +65,8 @@ export class DocumentsService {
     return this.prisma.technicalDocument.update({
       where: { id },
       data: {
-        type: dto.type as any,
-        phase: dto.phase as any,
+        type: dto.type as unknown as Prisma.TechnicalDocumentUncheckedCreateInput['type'],
+        phase: dto.phase as unknown as Prisma.TechnicalDocumentUncheckedCreateInput['phase'],
         title: dto.title,
         version: dto.version,
         isApproved: dto.isApproved,

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateGuaranteeDto, UpdateGuaranteeDto } from './dto/guarantee.dto';
 
@@ -13,9 +14,9 @@ export class GuaranteesService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; search?: string }) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.GuaranteeWhereInput = { deletedAt: null };
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
+    if (query?.type) where.type = query.type as Prisma.GuaranteeWhereInput['type'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -45,7 +46,7 @@ export class GuaranteesService {
       data: {
         code,
         projectId: dto.projectId,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.GuaranteeUncheckedCreateInput['type'],
         title: dto.title,
         issuer: dto.issuer,
         beneficiary: dto.beneficiary,
@@ -65,7 +66,7 @@ export class GuaranteesService {
     return this.prisma.guarantee.update({
       where: { id },
       data: {
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.GuaranteeUncheckedCreateInput['type'],
         title: dto.title,
         issuer: dto.issuer,
         beneficiary: dto.beneficiary,

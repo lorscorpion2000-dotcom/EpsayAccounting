@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateChecklistDto, UpdateChecklistDto } from './dto/checklist.dto';
 
@@ -13,10 +14,10 @@ export class ChecklistsService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; status?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.PhaseChecklistWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
-    if (query?.status) where.status = query.status;
+    if (query?.type) where.type = query.type as Prisma.PhaseChecklistWhereInput['type'];
+    if (query?.status) where.status = query.status as Prisma.PhaseChecklistWhereInput['status'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -46,11 +47,11 @@ export class ChecklistsService {
         code,
         projectId: dto.projectId,
         wbsItemId: dto.wbsItemId,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.PhaseChecklistUncheckedCreateInput['type'],
         title: dto.title,
         checklistDate: new Date(dto.checklistDate),
         status: 'DRAFT',
-        items: dto.items as any,
+        items: dto.items as unknown as Prisma.InputJsonValue,
         inspectorName: dto.inspectorName,
         supervisorName: dto.supervisorName,
         notes: dto.notes,
@@ -69,10 +70,10 @@ export class ChecklistsService {
       where: { id },
       data: {
         wbsItemId: dto.wbsItemId,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.PhaseChecklistUncheckedCreateInput['type'],
         title: dto.title,
         checklistDate: new Date(dto.checklistDate),
-        items: dto.items as any,
+        items: dto.items as unknown as Prisma.InputJsonValue,
         inspectorName: dto.inspectorName,
         supervisorName: dto.supervisorName,
         notes: dto.notes,

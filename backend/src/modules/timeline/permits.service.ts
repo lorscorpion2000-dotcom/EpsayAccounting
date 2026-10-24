@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreatePermitDto, UpdatePermitDto } from './dto/permit.dto';
 
@@ -13,10 +14,10 @@ export class PermitsService {
   }
 
   async findAll(query?: { projectId?: string; type?: string; status?: string; search?: string }) {
-    const where: any = {};
+    const where: Prisma.PermitWhereInput = {};
     if (query?.projectId) where.projectId = query.projectId;
-    if (query?.type) where.type = query.type;
-    if (query?.status) where.status = query.status;
+    if (query?.type) where.type = query.type as Prisma.PermitWhereInput['type'];
+    if (query?.status) where.status = query.status as Prisma.PermitWhereInput['status'];
     if (query?.search) {
       where.OR = [
         { code: { contains: query.search, mode: 'insensitive' } },
@@ -46,11 +47,11 @@ export class PermitsService {
       data: {
         code,
         projectId: dto.projectId,
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.PermitUncheckedCreateInput['type'],
         title: dto.title,
         number: dto.number,
         authority: dto.authority,
-        status: (dto.status as any) || 'PENDING',
+        status: (dto.status as unknown as Prisma.PermitUncheckedCreateInput['status']) || 'PENDING',
         issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
         attachmentUrl: dto.attachmentUrl,
@@ -66,11 +67,11 @@ export class PermitsService {
     return this.prisma.permit.update({
       where: { id },
       data: {
-        type: dto.type as any,
+        type: dto.type as unknown as Prisma.PermitUncheckedCreateInput['type'],
         title: dto.title,
         number: dto.number,
         authority: dto.authority,
-        status: dto.status as any,
+        status: dto.status as unknown as Prisma.PermitUncheckedUpdateInput['status'],
         issueDate: dto.issueDate ? new Date(dto.issueDate) : undefined,
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
         attachmentUrl: dto.attachmentUrl,
